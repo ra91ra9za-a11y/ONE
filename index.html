@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ONE</title>
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  background: #fff;
+  color: #111;
+}
+header {
+  text-align: center;
+  padding: 16px;
+  font-size: 22px;
+  font-weight: 600;
+}
+main {
+  padding: 12px;
+}
+button {
+  font-size: 16px;
+  padding: 12px;
+  margin: 4px 0;
+  width: 100%;
+}
+.seats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.seat {
+  border: 1px solid #ccc;
+  padding: 16px;
+  text-align: center;
+}
+.seat.active {
+  border-color: #2DBE60;
+}
+.hidden {
+  display: none;
+}
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px;
+  background: #f9f9f9;
+}
+</style>
+</head>
+
+<body>
+
+<header>ONE</header>
+
+<main>
+
+<!-- メイン -->
+<section id="mainView">
+  <div class="seats" id="seatList"></div>
+  <button onclick="openSeatRegister()">＋ 席登録</button>
+</section>
+
+<!-- 席登録 -->
+<section id="seatRegisterView" class="hidden">
+  <input id="seatInput" placeholder="席番号" />
+  <button onclick="addSeat()">保存</button>
+  <button onclick="backToMain()">戻る</button>
+</section>
+
+<!-- 注文 -->
+<section id="orderView" class="hidden">
+  <h3 id="orderTitle"></h3>
+  <input id="itemName" placeholder="商品名" />
+  <input id="itemPrice" type="number" placeholder="金額" />
+  <button onclick="addItem()">追加</button>
+  <ul id="orderList"></ul>
+  <button onclick="openCheckout()">会計へ</button>
+  <button onclick="backToMain()">戻る</button>
+</section>
+
+<!-- 会計 -->
+<section id="checkoutView" class="hidden">
+  <h3>会計</h3>
+  <div id="total"></div>
+  <button onclick="confirmCheckout()">会計確定</button>
+  <button onclick="backToMain()">戻る</button>
+</section>
+
+</main>
+
+<script>
+let seats = [];
+let currentSeat = null;
+
+function renderSeats() {
+  const list = document.getElementById("seatList");
+  list.innerHTML = "";
+  seats.forEach(s => {
+    const div = document.createElement("div");
+    div.className = "seat";
+    div.textContent = s.name + "\n¥" + totalPrice(s);
+    div.onclick = () => openOrder(s.id);
+    list.appendChild(div);
+  });
+}
+
+function openSeatRegister() {
+  show("seatRegisterView");
+}
+
+function addSeat() {
+  const name = document.getElementById("seatInput").value;
+  if (!name) return;
+  seats.push({ id: Date.now(), name, orders: [] });
+  document.getElementById("seatInput").value = "";
+  backToMain();
+}
+
+function openOrder(id) {
+  currentSeat = seats.find(s => s.id === id);
+  document.getElementById("orderTitle").textContent = currentSeat.name;
+  renderOrders();
+  show("orderView");
+}
+
+function addItem() {
+  const name = itemName.value;
+  const price = Number(itemPrice.value);
+  if (!name || !price) return;
+  currentSeat.orders.push({ name, price });
+  itemName.value = "";
+  itemPrice.value = "";
+  renderOrders();
+}
+
+function renderOrders() {
+  const ul = document.getElementById("orderList");
+  ul.innerHTML = "";
+  currentSeat.orders.forEach(o => {
+    const li = document.createElement("li");
+    li.textContent = o.name + " ¥" + o.price;
+    ul.appendChild(li);
+  });
+}
+
+function openCheckout() {
+  document.getElementById("total").textContent =
+    "合計 ¥" + totalPrice(currentSeat);
+  show("checkoutView");
+}
+
+function confirmCheckout() {
+  currentSeat.orders = [];
+  backToMain();
+}
+
+function totalPrice(seat) {
+  return seat.orders.reduce((sum, o) => sum + o.price, 0);
+}
+
+function backToMain() {
+  show("mainView");
+  renderSeats();
+}
+
+function show(id) {
+  ["mainView","seatRegisterView","orderView","checkoutView"]
+    .forEach(v => document.getElementById(v).classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
+
+renderSeats();
+</script>
+
+</body>
+</html>
