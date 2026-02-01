@@ -1,181 +1,1420 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>ONE</title>
 <style>
-body {
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  margin: 0;
-  background: #fff;
-  color: #111;
-}
-header {
-  text-align: center;
-  padding: 16px;
-  font-size: 22px;
-  font-weight: 600;
-}
-main {
-  padding: 12px;
-}
-button {
-  font-size: 16px;
-  padding: 12px;
-  margin: 4px 0;
-  width: 100%;
-}
-.seats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-.seat {
-  border: 1px solid #ccc;
-  padding: 16px;
-  text-align: center;
-}
-.seat.active {
-  border-color: #2DBE60;
-}
-.hidden {
-  display: none;
-}
-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 8px;
-  background: #f9f9f9;
-}
+  :root{
+    --bg:#0b0d10;
+    --card:#151a21;
+    --card2:#0f1319;
+    --txt:#e8eef8;
+    --muted:#9aa7bd;
+    --line:#273245;
+    --good:#2DBE60;
+    --warn:#ffb020;
+    --bad:#ff4d4d;
+    --accent:#4aa3ff;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+    --r:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:linear-gradient(180deg,#0b0d10,#07090c);
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,Segoe UI,Roboto,sans-serif;
+  }
+  a{color:var(--accent)}
+  header{
+    position:sticky; top:0; z-index:20;
+    background:rgba(11,13,16,.88);
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid rgba(39,50,69,.65);
+    padding:12px 12px 10px;
+  }
+  .toprow{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .brand{
+    font-weight:800; letter-spacing:.08em;
+    display:flex; align-items:center; gap:10px;
+  }
+  .badge{
+    font-size:12px; color:#0b0d10; background:var(--good);
+    padding:3px 8px; border-radius:999px; font-weight:800;
+  }
+  .sub{
+    margin-top:6px;
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    color:var(--muted); font-size:12px;
+  }
+  .pill{
+    border:1px solid rgba(39,50,69,.85);
+    background:rgba(21,26,33,.6);
+    padding:6px 10px; border-radius:999px; cursor:pointer;
+    user-select:none;
+  }
+  .pill.active{border-color:rgba(74,163,255,.9); box-shadow: 0 0 0 2px rgba(74,163,255,.15) inset}
+  main{padding:12px 12px 86px; max-width:980px; margin:0 auto}
+  .row{display:flex; gap:10px; flex-wrap:wrap}
+  .card{
+    background:linear-gradient(180deg,rgba(21,26,33,.95),rgba(15,19,25,.9));
+    border:1px solid rgba(39,50,69,.75);
+    border-radius:var(--r);
+    padding:12px;
+    box-shadow:var(--shadow);
+  }
+  .card.tight{padding:10px}
+  .card h2,.card h3{margin:0 0 10px}
+  .muted{color:var(--muted)}
+  .btn{
+    width:100%;
+    border:none;
+    padding:12px 12px;
+    border-radius:14px;
+    font-weight:800;
+    color:#0b0d10;
+    background:var(--accent);
+    cursor:pointer;
+  }
+  .btn:active{transform: translateY(1px)}
+  .btn.ghost{
+    background:transparent;
+    color:var(--txt);
+    border:1px solid rgba(39,50,69,.9);
+  }
+  .btn.good{background:var(--good)}
+  .btn.warn{background:var(--warn)}
+  .btn.bad{background:var(--bad); color:#fff}
+  .btn.small{padding:9px 10px; font-size:14px}
+  .btn.inline{width:auto}
+  .grid3{display:grid; grid-template-columns: repeat(3, 1fr); gap:10px}
+  @media (max-width:860px){ .grid3{grid-template-columns: repeat(2,1fr)} }
+  @media (max-width:560px){ .grid3{grid-template-columns: repeat(3,1fr)} }
+  .seatCard{
+    border-radius:18px;
+    padding:12px;
+    border:1px solid rgba(39,50,69,.85);
+    background:radial-gradient(120% 120% at 10% 0%, rgba(74,163,255,.16), rgba(21,26,33,.95));
+    cursor:pointer;
+    min-height:112px;
+    display:flex; flex-direction:column; gap:6px;
+    position:relative;
+  }
+  .seatCard .no{font-size:20px; font-weight:900}
+  .seatCard .name{font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .seatCard .meta{font-size:12px; color:var(--muted); display:flex; justify-content:space-between; gap:8px}
+  .seatCard .yen{font-size:16px; font-weight:900}
+  .seatCard.selected{outline:2px solid rgba(74,163,255,.85)}
+  .dot{
+    width:10px; height:10px; border-radius:99px; display:inline-block; vertical-align:middle; margin-right:6px;
+    border:1px solid rgba(255,255,255,.25);
+  }
+  .kpi{
+    display:grid; grid-template-columns: repeat(3,1fr); gap:10px;
+  }
+  @media (max-width:720px){ .kpi{grid-template-columns:1fr} }
+  .kpi .big{font-size:22px; font-weight:900}
+  .kpi .lbl{font-size:12px; color:var(--muted)}
+  input,select,textarea{
+    width:100%;
+    padding:12px 12px;
+    border-radius:14px;
+    border:1px solid rgba(39,50,69,.95);
+    background:rgba(11,13,16,.6);
+    color:var(--txt);
+    outline:none;
+  }
+  textarea{min-height:120px}
+  .formRow{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+  @media (max-width:640px){ .formRow{grid-template-columns:1fr} }
+  .list{
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .item{
+    border:1px solid rgba(39,50,69,.8);
+    border-radius:14px;
+    padding:10px;
+    background:rgba(15,19,25,.75);
+    display:flex; gap:10px; align-items:center; justify-content:space-between;
+  }
+  .item .left{display:flex; flex-direction:column; gap:2px; min-width:0}
+  .item .title{font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .item .subtxt{font-size:12px; color:var(--muted)}
+  .item .right{display:flex; gap:8px; align-items:center; flex-shrink:0}
+  .qty{display:flex; gap:6px; align-items:center}
+  .qty button{width:34px; height:34px; border-radius:10px}
+  .tabs{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    background:rgba(11,13,16,.92);
+    border-top:1px solid rgba(39,50,69,.8);
+    display:flex; gap:6px;
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+  }
+  .tab{
+    flex:1;
+    border:1px solid rgba(39,50,69,.8);
+    border-radius:14px;
+    padding:10px 8px;
+    text-align:center;
+    color:var(--muted);
+    background:rgba(21,26,33,.55);
+    font-weight:800;
+    cursor:pointer;
+    user-select:none;
+  }
+  .tab.active{color:var(--txt); border-color: rgba(74,163,255,.9)}
+  .hidden{display:none!important}
+  .hr{height:1px; background:rgba(39,50,69,.7); margin:12px 0}
+  .notice{
+    border:1px solid rgba(255,176,32,.55);
+    background:rgba(255,176,32,.10);
+    padding:10px; border-radius:14px; color:#ffd79a;
+    font-size:13px;
+  }
+  .danger{
+    border:1px solid rgba(255,77,77,.55);
+    background:rgba(255,77,77,.10);
+    padding:10px; border-radius:14px; color:#ffb0b0;
+    font-size:13px;
+  }
+  .ok{
+    border:1px solid rgba(45,190,96,.55);
+    background:rgba(45,190,96,.10);
+    padding:10px; border-radius:14px; color:#bff4d3;
+    font-size:13px;
+  }
+  /* slider confirm */
+  .sliderWrap{
+    border:1px solid rgba(39,50,69,.9);
+    border-radius:18px;
+    padding:10px;
+    background:rgba(15,19,25,.7);
+  }
+  .sliderRow{display:flex; align-items:center; gap:10px}
+  .sliderRow input[type="range"]{width:100%}
+  .rangeLbl{font-size:12px; color:var(--muted)}
 </style>
 </head>
 
 <body>
-
-<header>ONE</header>
+<header>
+  <div class="toprow">
+    <div class="brand">
+      <span>ONE</span>
+      <span class="badge">FREE</span>
+    </div>
+    <button class="btn small inline ghost" onclick="openBackup()">バックアップ</button>
+  </div>
+  <div class="sub">
+    <span class="pill" id="pillOffline">オフラインOK（端末内保存）</span>
+    <span class="pill" onclick="toast('ヒント：会計確定はスライドで誤操作防止')">ヒント</span>
+    <span class="pill" onclick="openRescue()">救済（復元）</span>
+  </div>
+</header>
 
 <main>
 
-<!-- メイン -->
-<section id="mainView">
-  <div class="seats" id="seatList"></div>
-  <button onclick="openSeatRegister()">＋ 席登録</button>
-</section>
+  <!-- HOME / SEATS -->
+  <section id="view_home">
+    <div class="row">
+      <div class="card" style="flex:2; min-width:280px">
+        <h2>席</h2>
+        <div class="muted" style="font-size:12px; margin-bottom:10px">
+          ・タップ：注文へ　/　長押し：席移動（入替）　/　複数選択：合算・まとめ操作
+        </div>
+        <div class="grid3" id="seatGrid"></div>
 
-<!-- 席登録 -->
-<section id="seatRegisterView" class="hidden">
-  <input id="seatInput" placeholder="席番号" />
-  <button onclick="addSeat()">保存</button>
-  <button onclick="backToMain()">戻る</button>
-</section>
+        <div class="hr"></div>
 
-<!-- 注文 -->
-<section id="orderView" class="hidden">
-  <h3 id="orderTitle"></h3>
-  <input id="itemName" placeholder="商品名" />
-  <input id="itemPrice" type="number" placeholder="金額" />
-  <button onclick="addItem()">追加</button>
-  <ul id="orderList"></ul>
-  <button onclick="openCheckout()">会計へ</button>
-  <button onclick="backToMain()">戻る</button>
-</section>
+        <div class="row">
+          <button class="btn good" style="flex:1; min-width:180px" onclick="nav('seat')">＋ 席登録</button>
+          <button class="btn" style="flex:1; min-width:180px" onclick="nav('menu')">メニュー登録</button>
+          <button class="btn ghost" style="flex:1; min-width:180px" onclick="nav('sales')">売上</button>
+        </div>
 
-<!-- 会計 -->
-<section id="checkoutView" class="hidden">
-  <h3>会計</h3>
-  <div id="total"></div>
-  <button onclick="confirmCheckout()">会計確定</button>
-  <button onclick="backToMain()">戻る</button>
-</section>
+        <div class="hr"></div>
+
+        <div class="row">
+          <button class="btn warn" style="flex:1; min-width:180px" onclick="mergeSelected()">選択席を合算（まとめ）</button>
+          <button class="btn ghost" style="flex:1; min-width:180px" onclick="clearSelection()">選択解除</button>
+        </div>
+
+        <div class="notice" style="margin-top:10px">
+          ✅ **会計の合算／分ける** は「会計画面」でできます。<br/>
+          ✅ 誤ってまとめても **救済（復元）** できます。
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; min-width:260px">
+        <h3>今日の状況</h3>
+        <div class="kpi">
+          <div class="card tight" style="box-shadow:none">
+            <div class="lbl">営業中 合計</div>
+            <div class="big" id="kpi_open_total">¥0</div>
+          </div>
+          <div class="card tight" style="box-shadow:none">
+            <div class="lbl">今日 売上（確定）</div>
+            <div class="big" id="kpi_today_sales">¥0</div>
+          </div>
+          <div class="card tight" style="box-shadow:none">
+            <div class="lbl">着席数</div>
+            <div class="big" id="kpi_open_seats">0</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="ok">
+          端末内に自動保存します（オフラインでも動作）。<br/>
+          念のため、定期的に **バックアップ（JSON）** を取ってください。
+        </div>
+
+        <div class="hr"></div>
+
+        <button class="btn bad" onclick="factoryReset()">⚠️ 全データ初期化（最終手段）</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEAT REGISTER -->
+  <section id="view_seat" class="hidden">
+    <div class="card">
+      <h2>席登録</h2>
+      <div class="formRow">
+        <div>
+          <label class="muted">席番号（例：A1 / 1 / 10）</label>
+          <input id="in_seat_no" placeholder="例：A1" />
+        </div>
+        <div>
+          <label class="muted">席名（任意：例：カウンター右）</label>
+          <input id="in_seat_name" placeholder="任意" />
+        </div>
+      </div>
+
+      <div class="formRow" style="margin-top:10px">
+        <div>
+          <label class="muted">色（席グループ）</label>
+          <select id="in_seat_color">
+            <option value="#4aa3ff">青</option>
+            <option value="#2DBE60">緑</option>
+            <option value="#ffb020">橙</option>
+            <option value="#ff4d4d">赤</option>
+            <option value="#b07cff">紫</option>
+            <option value="#8aa0b6">灰</option>
+          </select>
+        </div>
+        <div>
+          <label class="muted">人数（初期）</label>
+          <input id="in_seat_people" type="number" placeholder="空欄OK（テンキー入力）" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button class="btn good" style="flex:1; min-width:180px" onclick="addSeat()">保存</button>
+        <button class="btn ghost" style="flex:1; min-width:180px" onclick="nav('home')">戻る</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3>登録済み</h3>
+      <div class="list" id="seatManageList"></div>
+    </div>
+  </section>
+
+  <!-- ORDER -->
+  <section id="view_order" class="hidden">
+    <div class="card">
+      <h2 id="order_title">注文</h2>
+      <div class="muted" id="order_sub" style="font-size:12px; margin-bottom:10px"></div>
+
+      <div class="card tight" style="box-shadow:none; margin-bottom:10px">
+        <div class="formRow">
+          <div>
+            <label class="muted">人数（変更）</label>
+            <input id="in_people_now" type="number" placeholder="例：3" />
+          </div>
+          <div>
+            <label class="muted">＋差分（自動表示）</label>
+            <input id="out_people_diff" disabled />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn small good" style="flex:1; min-width:160px" onclick="applyPeople()">人数更新</button>
+          <button class="btn small ghost" style="flex:1; min-width:160px" onclick="nav('home')">席一覧へ</button>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3>追加（手入力）</h3>
+      <div class="formRow">
+        <div>
+          <input id="in_item_name" placeholder="商品名" />
+        </div>
+        <div>
+          <input id="in_item_price" type="number" placeholder="金額" />
+        </div>
+      </div>
+      <div class="formRow" style="margin-top:10px">
+        <div>
+          <select id="in_item_tax">
+            <option value="10">税10%</option>
+            <option value="8">税8%</option>
+          </select>
+        </div>
+        <div>
+          <select id="in_item_genre"></select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" style="flex:1; min-width:180px" onclick="addOrderItem()">追加</button>
+        <button class="btn ghost" style="flex:1; min-width:180px" onclick="openMenuPicker()">登録メニューから追加</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3>注文一覧（現在の会計）</h3>
+      <div class="list" id="order_list"></div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <button class="btn warn" style="flex:1; min-width:180px" onclick="navCheckout()">会計へ</button>
+        <button class="btn ghost" style="flex:1; min-width:180px" onclick="nav('home')">戻る</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECKOUT -->
+  <section id="view_checkout" class="hidden">
+    <div class="card">
+      <h2 id="checkout_title">会計</h2>
+      <div class="muted" id="checkout_sub" style="font-size:12px; margin-bottom:10px"></div>
+
+      <div class="card tight" style="box-shadow:none">
+        <div class="row" style="align-items:center">
+          <div style="flex:1">
+            <div class="muted" style="font-size:12px">合計</div>
+            <div style="font-size:26px; font-weight:900" id="checkout_total">¥0</div>
+          </div>
+          <button class="btn small ghost inline" onclick="splitCheck()">会計を分ける</button>
+          <button class="btn small warn inline" onclick="mergeChecksInSeat()">会計を合算</button>
+        </div>
+        <div class="muted" style="font-size:12px; margin-top:8px">
+          ※「分ける」は救済用。誤ってまとめても復元できます。
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3>会計（この席の会計一覧）</h3>
+      <div class="list" id="check_list"></div>
+
+      <div class="hr"></div>
+
+      <h3>確定（スライド）</h3>
+      <div class="sliderWrap">
+        <div class="rangeLbl">右端までスライドすると会計確定（誤操作防止）</div>
+        <div class="sliderRow">
+          <input id="range_confirm" type="range" min="0" max="100" value="0" />
+          <button class="btn small good inline" onclick="confirmCheckout()">確定</button>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <button class="btn ghost" style="flex:1; min-width:180px" onclick="nav('order')">注文に戻る</button>
+        <button class="btn ghost" style="flex:1; min-width:180px" onclick="nav('home')">席一覧へ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MENU REGISTER -->
+  <section id="view_menu" class="hidden">
+    <div class="card">
+      <h2>メニュー登録（無料版）</h2>
+      <div class="notice">
+        📷 カメラは「写真を選ぶ」までは無料。<br/>
+        写真から自動抽出（AI）は **Pro** に回す想定（誤認識対策・確認UI込みで作るため）。
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" style="flex:1; min-width:180px" onclick="pickPhoto()">📷 写真を選ぶ</button>
+        <input id="photo_input" type="file" accept="image/*" class="hidden" />
+        <button class="btn ghost" style="flex:1; min-width:180px" onclick="nav('home')">戻る</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3>手入力で追加</h3>
+      <div class="formRow">
+        <div><input id="m_name" placeholder="商品名" /></div>
+        <div><input id="m_price" type="number" placeholder="価格" /></div>
+      </div>
+      <div class="formRow" style="margin-top:10px">
+        <div>
+          <select id="m_tax">
+            <option value="10">税10%</option>
+            <option value="8">税8%</option>
+          </select>
+        </div>
+        <div><input id="m_genre" placeholder="ジャンル（例：ドリンク/揚げ物）" /></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" style="flex:1; min-width:180px" onclick="addMenuItem()">登録</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3>登録メニュー</h3>
+      <div class="list" id="menu_list"></div>
+    </div>
+  </section>
+
+  <!-- SALES -->
+  <section id="view_sales" class="hidden">
+    <div class="card">
+      <h2>売上</h2>
+      <div class="muted" style="font-size:12px; margin-bottom:10px">
+        ※無料版は「集計と確認」まで。税務対応の本格出力や複数端末共有などは後で拡張。
+      </div>
+
+      <div class="kpi">
+        <div class="card tight" style="box-shadow:none">
+          <div class="lbl">今日 売上</div>
+          <div class="big" id="sales_today">¥0</div>
+        </div>
+        <div class="card tight" style="box-shadow:none">
+          <div class="lbl">今月 売上</div>
+          <div class="big" id="sales_month">¥0</div>
+        </div>
+        <div class="card tight" style="box-shadow:none">
+          <div class="lbl">今年 売上</div>
+          <div class="big" id="sales_year">¥0</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3>会計履歴（確定済み）</h3>
+      <div class="list" id="sales_list"></div>
+
+      <div class="hr"></div>
+
+      <button class="btn ghost" onclick="nav('home')">戻る</button>
+    </div>
+  </section>
+
+  <!-- BACKUP -->
+  <section id="view_backup" class="hidden">
+    <div class="card">
+      <h2>バックアップ（JSON）</h2>
+      <div class="notice">
+        端末が壊れた時に復元できるように、たまに保存してね。<br/>
+        ・**ダウンロード**：ファイルとして保存<br/>
+        ・**復元**：JSONを貼り付けて復元
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn good" style="flex:1; min-width:180px" onclick="downloadBackup()">JSONをダウンロード</button>
+        <button class="btn ghost" style="flex:1; min-width:180px" onclick="nav('home')">戻る</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3>復元（貼り付け）</h3>
+      <textarea id="backup_text" placeholder="ここにJSONを貼り付け → 復元"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn warn" style="flex:1; min-width:180px" onclick="restoreFromText()">復元する</button>
+      </div>
+
+      <div class="danger" style="margin-top:10px">
+        復元すると、今のデータは上書きされます（戻せません）。
+      </div>
+    </div>
+  </section>
+
+  <!-- RESCUE -->
+  <section id="view_rescue" class="hidden">
+    <div class="card">
+      <h2>救済（復元）</h2>
+      <div class="notice">
+        「会計を合算してしまった」「席を間違えて入替えた」などの時の救済です。<br/>
+        直近の状態に戻せます（最大20回）。
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn warn" style="flex:1; min-width:180px" onclick="undo()">ひとつ戻す</button>
+        <button class="btn ghost" style="flex:1; min-width:180px" onclick="nav('home')">戻る</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="muted" id="undo_info"></div>
+    </div>
+  </section>
 
 </main>
 
+<!-- Bottom Tabs -->
+<div class="tabs">
+  <div class="tab" id="tab_home" onclick="nav('home')">席</div>
+  <div class="tab" id="tab_seat" onclick="nav('seat')">席登録</div>
+  <div class="tab" id="tab_menu" onclick="nav('menu')">メニュー</div>
+  <div class="tab" id="tab_sales" onclick="nav('sales')">売上</div>
+</div>
+
 <script>
-let seats = [];
-let currentSeat = null;
+/** =========================
+ *  ONE FREE - Single HTML
+ *  - localStorage persistence
+ *  - seats, orders, checks (split/merge), rescue undo
+ *  - sales history + simple month/year sums
+ *  ========================= */
 
-function renderSeats() {
-  const list = document.getElementById("seatList");
+const LS_KEY = "ONE_FREE_STATE_V1";
+
+const state = {
+  version: 1,
+  seats: [],       // [{id, no, name, color, peopleDefault, peopleNow, startedAt, checks:[{id, items:[] }], activeCheckId}]
+  menu: [],        // [{id, name, price, tax, genre}]
+  sales: [],       // [{id, at, seatNo, seatName, total, items:[...]}]
+  ui: { selectedSeatIds: [], currentSeatId: null },
+  undoStack: []    // snapshots (stringified)
+};
+
+// ---------- Utils ----------
+function nowISO(){ return new Date().toISOString(); }
+function yen(n){ return "¥" + (Math.round(n)||0).toLocaleString("ja-JP"); }
+function safeText(s){ return (s ?? "").toString(); }
+function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+function bySeatOrder(a,b){ return seatSortKey(a.no) < seatSortKey(b.no) ? -1 : 1; }
+function seatSortKey(no){
+  const s = (no||"").toString().trim();
+  // "A10" => ["A",10], "10" => ["",10]
+  const m = s.match(/^([A-Za-zぁ-んァ-ヶ一-龠]+)?\s*(\d+)?/);
+  const head = (m && m[1]) ? m[1].toUpperCase() : "";
+  const num = (m && m[2]) ? parseInt(m[2],10) : 0;
+  return head.padEnd(8," ") + num.toString().padStart(6,"0") + "|" + s;
+}
+function toast(msg){
+  const el = document.createElement("div");
+  el.textContent = msg;
+  el.style.position="fixed";
+  el.style.left="50%";
+  el.style.bottom="88px";
+  el.style.transform="translateX(-50%)";
+  el.style.background="rgba(0,0,0,.8)";
+  el.style.color="#fff";
+  el.style.padding="10px 12px";
+  el.style.borderRadius="12px";
+  el.style.border="1px solid rgba(255,255,255,.15)";
+  el.style.zIndex="9999";
+  el.style.maxWidth="92vw";
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 1700);
+}
+function pushUndo(label){
+  // keep last 20
+  const snap = JSON.stringify({label, at: nowISO(), data: exportState()});
+  state.undoStack.unshift(snap);
+  if(state.undoStack.length>20) state.undoStack.pop();
+  save();
+  renderUndoInfo();
+}
+function undo(){
+  if(state.undoStack.length===0){ toast("戻せる履歴がありません"); return; }
+  const snap = JSON.parse(state.undoStack.shift());
+  importState(snap.data);
+  toast("復元しました： " + (snap.label||""));
+  save();
+  renderAll();
+  renderUndoInfo();
+}
+function renderUndoInfo(){
+  const el = document.getElementById("undo_info");
+  if(!el) return;
+  el.textContent = "履歴数： " + state.undoStack.length;
+}
+
+// ---------- Persistence ----------
+function exportState(){
+  // exclude undo? keep it
+  return {
+    version: state.version,
+    seats: state.seats,
+    menu: state.menu,
+    sales: state.sales,
+    ui: state.ui,
+    undoStack: state.undoStack
+  };
+}
+function importState(obj){
+  state.version = obj.version || 1;
+  state.seats = Array.isArray(obj.seats) ? obj.seats : [];
+  state.menu  = Array.isArray(obj.menu) ? obj.menu : [];
+  state.sales = Array.isArray(obj.sales) ? obj.sales : [];
+  state.ui    = obj.ui || { selectedSeatIds: [], currentSeatId: null };
+  state.undoStack = Array.isArray(obj.undoStack) ? obj.undoStack : [];
+}
+function save(){
+  localStorage.setItem(LS_KEY, JSON.stringify(exportState()));
+}
+function load(){
+  const raw = localStorage.getItem(LS_KEY);
+  if(!raw){
+    // initial seed
+    state.menu = [
+      {id:uid(), name:"生ビール", price:700, tax:10, genre:"ドリンク"},
+      {id:uid(), name:"焼き鳥", price:200, tax:10, genre:"料理"},
+      {id:uid(), name:"枝豆", price:350, tax:10, genre:"お通し"},
+    ];
+    save();
+    return;
+  }
+  try{
+    importState(JSON.parse(raw));
+  }catch(e){
+    console.warn(e);
+    toast("保存データの読み込みに失敗。初期化します");
+    localStorage.removeItem(LS_KEY);
+  }
+}
+
+// ---------- Navigation ----------
+const views = ["home","seat","order","checkout","menu","sales","backup","rescue"];
+function nav(name){
+  // update tab active (home/seat/menu/sales only)
+  document.getElementById("tab_home").classList.toggle("active", name==="home");
+  document.getElementById("tab_seat").classList.toggle("active", name==="seat");
+  document.getElementById("tab_menu").classList.toggle("active", name==="menu");
+  document.getElementById("tab_sales").classList.toggle("active", name==="sales");
+
+  views.forEach(v=>{
+    const el = document.getElementById("view_"+v);
+    if(el) el.classList.toggle("hidden", v!==name);
+  });
+
+  if(name==="home"){ renderHome(); }
+  if(name==="seat"){ renderSeatManage(); }
+  if(name==="order"){ renderOrder(); }
+  if(name==="checkout"){ renderCheckout(); }
+  if(name==="menu"){ renderMenu(); }
+  if(name==="sales"){ renderSales(); }
+  if(name==="backup"){ /* nothing */ }
+  if(name==="rescue"){ renderUndoInfo(); }
+}
+function openBackup(){ nav("backup"); }
+function openRescue(){ nav("rescue"); }
+
+// ---------- Seats ----------
+function addSeat(){
+  const no = safeText(document.getElementById("in_seat_no").value).trim();
+  const name = safeText(document.getElementById("in_seat_name").value).trim();
+  const color = document.getElementById("in_seat_color").value || "#4aa3ff";
+  const peopleRaw = safeText(document.getElementById("in_seat_people").value).trim();
+  const people = peopleRaw==="" ? null : Math.max(0, parseInt(peopleRaw,10)||0);
+  if(!no){ toast("席番号を入れてください"); return; }
+
+  // duplicate check by no
+  const exists = state.seats.some(s=> (s.no||"").toString().trim().toUpperCase() === no.toUpperCase());
+  if(exists){ toast("同じ席番号がすでにあります"); return; }
+
+  pushUndo("席追加");
+  const seatId = uid();
+  const checkId = uid();
+  state.seats.push({
+    id: seatId,
+    no, name,
+    color,
+    peopleDefault: people,
+    peopleNow: people,
+    startedAt: nowISO(),
+    checks: [{ id: checkId, items: [] }], // default single check
+    activeCheckId: checkId
+  });
+  state.seats.sort(bySeatOrder);
+  save();
+  document.getElementById("in_seat_no").value="";
+  document.getElementById("in_seat_name").value="";
+  document.getElementById("in_seat_people").value="";
+  renderAll();
+  nav("home");
+}
+function removeSeat(id){
+  const seat = state.seats.find(s=>s.id===id);
+  if(!seat) return;
+  if(!confirm(`席「${seat.no}」を削除しますか？\n（注文も消えます）`)) return;
+  pushUndo("席削除");
+  state.seats = state.seats.filter(s=>s.id!==id);
+  state.ui.selectedSeatIds = state.ui.selectedSeatIds.filter(x=>x!==id);
+  if(state.ui.currentSeatId===id) state.ui.currentSeatId=null;
+  save();
+  renderAll();
+}
+function selectSeatToggle(id){
+  const sel = state.ui.selectedSeatIds;
+  const i = sel.indexOf(id);
+  if(i>=0) sel.splice(i,1); else sel.push(id);
+  save();
+  renderHome();
+}
+function clearSelection(){
+  state.ui.selectedSeatIds = [];
+  save();
+  renderHome();
+  toast("選択解除");
+}
+function openSeat(id){
+  state.ui.currentSeatId = id;
+  save();
+  nav("order");
+}
+function seatTotalOpen(seat){
+  // total of all checks
+  return (seat.checks||[]).reduce((sum,c)=> sum + checkTotal(c), 0);
+}
+function checkTotal(check){
+  const items = check.items || [];
+  return items.reduce((sum,it)=> sum + (it.price||0) * (it.qty||1), 0);
+}
+function getCurrentSeat(){
+  return state.seats.find(s=>s.id===state.ui.currentSeatId);
+}
+function getActiveCheck(seat){
+  if(!seat) return null;
+  let c = (seat.checks||[]).find(x=>x.id===seat.activeCheckId);
+  if(!c){
+    // fallback
+    if(!seat.checks) seat.checks=[];
+    if(seat.checks.length===0){ seat.checks.push({id:uid(), items:[]}); }
+    seat.activeCheckId = seat.checks[0].id;
+    c = seat.checks[0];
+  }
+  return c;
+}
+
+// Long press seat swap (simple): first long press selects "move mode" seat; second tap swaps
+let moveMode = { fromId:null, timer:null };
+function seatLongPressStart(id){
+  moveMode.timer = setTimeout(()=>{
+    moveMode.fromId = id;
+    toast("席移動モード：移動先の席をタップ");
+  }, 450);
+}
+function seatLongPressEnd(){
+  if(moveMode.timer) clearTimeout(moveMode.timer);
+  moveMode.timer=null;
+}
+function seatTap(id){
+  // if move mode active
+  if(moveMode.fromId && moveMode.fromId!==id){
+    pushUndo("席入替");
+    const a = state.seats.find(s=>s.id===moveMode.fromId);
+    const b = state.seats.find(s=>s.id===id);
+    if(a && b){
+      // swap "no/name/color/peopleDefault" only? or whole seat?
+      // In actual ops, you'd move the whole status by swapping seat numbers.
+      // We'll swap seat numbers + labels, keeping orders with the "physical table" swap.
+      const tmp = { no:a.no, name:a.name, color:a.color, peopleDefault:a.peopleDefault };
+      a.no=b.no; a.name=b.name; a.color=b.color; a.peopleDefault=b.peopleDefault;
+      b.no=tmp.no; b.name=tmp.name; b.color=tmp.color; b.peopleDefault=tmp.peopleDefault;
+      state.seats.sort(bySeatOrder);
+      save();
+      renderAll();
+      toast("入替しました");
+    }
+    moveMode.fromId=null;
+    return;
+  }
+  if(moveMode.fromId && moveMode.fromId===id){
+    moveMode.fromId=null;
+    toast("席移動モード解除");
+    return;
+  }
+  // normal: if selection mode has items -> toggle selection, else open seat
+  if(state.ui.selectedSeatIds.length>0){
+    selectSeatToggle(id);
+  }else{
+    openSeat(id);
+  }
+}
+
+// Merge selected seats (合算でまとめ)
+function mergeSelected(){
+  const ids = [...state.ui.selectedSeatIds];
+  if(ids.length<2){ toast("2席以上選択してください"); return; }
+
+  // Create a new "virtual merged seat" by moving checks into first seat and marking others as empty (or remove)
+  const base = state.seats.find(s=>s.id===ids[0]);
+  if(!base){ toast("対象がありません"); return; }
+
+  if(!confirm("選択した席を合算（まとめ）しますか？\n※誤操作でも救済（復元）できます")) return;
+  pushUndo("複数席合算");
+
+  const others = ids.slice(1).map(id=>state.seats.find(s=>s.id===id)).filter(Boolean);
+  others.forEach(s=>{
+    // move all checks into base (as separate checks)
+    (s.checks||[]).forEach(ch=>{
+      base.checks.push({ id: uid(), items: JSON.parse(JSON.stringify(ch.items||[])) });
+    });
+    // clear seat
+    s.checks = [{ id: uid(), items: [] }];
+    s.activeCheckId = s.checks[0].id;
+    s.startedAt = nowISO();
+    s.peopleNow = s.peopleDefault ?? null;
+  });
+
+  // set base active to first check
+  if(base.checks.length>0) base.activeCheckId = base.checks[0].id;
+
+  state.ui.selectedSeatIds = [];
+  save();
+  renderAll();
+  toast("合算しました（会計画面で分け直し可能）");
+}
+
+// ---------- Order ----------
+function renderOrder(){
+  const seat = getCurrentSeat();
+  if(!seat){ nav("home"); return; }
+  const dot = `<span class="dot" style="background:${seat.color}"></span>`;
+  document.getElementById("order_title").innerHTML = `${dot}${escapeHtml(seat.no)} <span class="muted" style="font-weight:700">${escapeHtml(seat.name||"")}</span>`;
+  const started = new Date(seat.startedAt);
+  const activeCheck = getActiveCheck(seat);
+  document.getElementById("order_sub").textContent =
+    `着席：${started.toLocaleString("ja-JP")} ／ 会計数：${(seat.checks||[]).length} ／ 現在の会計：${(seat.checks||[]).findIndex(c=>c.id===seat.activeCheckId)+1}`;
+
+  // people
+  const now = seat.peopleNow ?? "";
+  document.getElementById("in_people_now").value = now==="" ? "" : now;
+  const diff = peopleDiffText(seat);
+  document.getElementById("out_people_diff").value = diff;
+
+  // genres in select
+  refreshGenreSelect();
+
+  // list items of active check
+  const list = document.getElementById("order_list");
   list.innerHTML = "";
-  seats.forEach(s => {
+  const items = (activeCheck?.items || []);
+  if(items.length===0){
+    list.innerHTML = `<div class="muted">まだ注文がありません</div>`;
+  }else{
+    items.forEach((it, idx)=>{
+      const el = document.createElement("div");
+      el.className = "item";
+      el.innerHTML = `
+        <div class="left">
+          <div class="title">${escapeHtml(it.name)}</div>
+          <div class="subtxt">${escapeHtml(it.genre||"")} / 税${it.tax||10}% / ${yen(it.price||0)}</div>
+        </div>
+        <div class="right">
+          <div class="qty">
+            <button class="btn small inline ghost" onclick="chgQty(${idx},-1)">－</button>
+            <div style="min-width:26px; text-align:center; font-weight:900">${it.qty||1}</div>
+            <button class="btn small inline ghost" onclick="chgQty(${idx},+1)">＋</button>
+          </div>
+          <button class="btn small inline bad" onclick="delItem(${idx})">削除</button>
+        </div>
+      `;
+      list.appendChild(el);
+    });
+  }
+}
+function peopleDiffText(seat){
+  const d = seat.peopleDefault;
+  const n = seat.peopleNow;
+  if(d==null || d==="" || isNaN(d) || n==null || n==="" || isNaN(n)) return "";
+  const diff = (parseInt(n,10)||0) - (parseInt(d,10)||0);
+  if(diff===0) return "";
+  const sign = diff>0 ? "+" : "";
+  return sign + diff + "名";
+}
+function applyPeople(){
+  const seat = getCurrentSeat();
+  if(!seat) return;
+  pushUndo("人数変更");
+  const raw = safeText(document.getElementById("in_people_now").value).trim();
+  seat.peopleNow = raw==="" ? null : Math.max(0, parseInt(raw,10)||0);
+  save();
+  renderOrder();
+  renderHome();
+  toast("人数を更新しました");
+}
+function addOrderItem(){
+  const seat = getCurrentSeat();
+  if(!seat) return;
+  const check = getActiveCheck(seat);
+  const name = safeText(document.getElementById("in_item_name").value).trim();
+  const price = parseInt(safeText(document.getElementById("in_item_price").value).trim(),10);
+  const tax = parseInt(document.getElementById("in_item_tax").value,10) || 10;
+  const genre = document.getElementById("in_item_genre").value || "";
+  if(!name){ toast("商品名を入れてください"); return; }
+  if(!price || price<=0){ toast("金額を入れてください"); return; }
+
+  pushUndo("注文追加");
+  check.items.push({ id: uid(), name, price, tax, genre, qty: 1 });
+  save();
+  document.getElementById("in_item_name").value="";
+  document.getElementById("in_item_price").value="";
+  renderOrder();
+  renderHome();
+}
+function delItem(idx){
+  const seat = getCurrentSeat();
+  if(!seat) return;
+  const check = getActiveCheck(seat);
+  pushUndo("注文削除");
+  check.items.splice(idx,1);
+  save();
+  renderOrder();
+  renderHome();
+}
+function chgQty(idx, delta){
+  const seat = getCurrentSeat();
+  if(!seat) return;
+  const check = getActiveCheck(seat);
+  const it = check.items[idx];
+  if(!it) return;
+  pushUndo("数量変更");
+  const n = (it.qty||1) + delta;
+  it.qty = Math.max(1, n);
+  save();
+  renderOrder();
+  renderHome();
+}
+
+// ---------- Checkout ----------
+function navCheckout(){
+  nav("checkout");
+}
+function renderCheckout(){
+  const seat = getCurrentSeat();
+  if(!seat){ nav("home"); return; }
+
+  const dot = `<span class="dot" style="background:${seat.color}"></span>`;
+  document.getElementById("checkout_title").innerHTML = `${dot}${escapeHtml(seat.no)} <span class="muted" style="font-weight:700">${escapeHtml(seat.name||"")}</span>`;
+  document.getElementById("checkout_sub").textContent =
+    `会計数：${(seat.checks||[]).length}（タップで切替）／「分ける」は救済用`;
+
+  const totalAll = seatTotalOpen(seat);
+  document.getElementById("checkout_total").textContent = yen(totalAll);
+
+  // list checks
+  const list = document.getElementById("check_list");
+  list.innerHTML = "";
+  (seat.checks||[]).forEach((ch, i)=>{
+    const active = ch.id===seat.activeCheckId;
+    const el = document.createElement("div");
+    el.className = "item";
+    el.style.cursor="pointer";
+    el.onclick = ()=>{ seat.activeCheckId = ch.id; save(); renderCheckout(); renderOrder(); };
+    el.innerHTML = `
+      <div class="left">
+        <div class="title">会計 ${i+1} ${active ? "（選択中）" : ""}</div>
+        <div class="subtxt">明細：${(ch.items||[]).length}件</div>
+      </div>
+      <div class="right">
+        <div style="font-weight:900">${yen(checkTotal(ch))}</div>
+        <button class="btn small inline ghost" onclick="event.stopPropagation(); openSplitEditor('${ch.id}')">明細</button>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+
+  document.getElementById("range_confirm").value = 0;
+}
+
+function openSplitEditor(checkId){
+  // show quick details + move items to another check
+  const seat = getCurrentSeat();
+  if(!seat) return;
+  const ch = (seat.checks||[]).find(x=>x.id===checkId);
+  if(!ch){ toast("会計が見つかりません"); return; }
+
+  // build simple prompt-like modal using confirm? We'll do minimal UI via textarea prompt
+  // Instead, navigate to order and set active check
+  seat.activeCheckId = checkId;
+  save();
+  nav("order");
+  toast("会計を切替えました（注文一覧がこの会計になります）");
+}
+
+function splitCheck(){
+  const seat = getCurrentSeat();
+  if(!seat) return;
+  // create new check and keep current items in current check; allow moving items by switching active check and adding there
+  if(!confirm("会計を分けますか？\n新しい会計（空）を追加します。\n※移したい商品は、会計を切替えて追加/移動します（救済あり）")) return;
+  pushUndo("会計を分ける");
+  const newId = uid();
+  seat.checks.push({ id: newId, items: [] });
+  seat.activeCheckId = newId;
+  save();
+  renderCheckout();
+  toast("新しい会計を作成しました（会計切替で分けます）");
+}
+
+function mergeChecksInSeat(){
+  const seat = getCurrentSeat();
+  if(!seat) return;
+  if((seat.checks||[]).length<=1){ toast("会計が1つなので合算不要"); return; }
+  if(!confirm("この席の会計をすべて合算しますか？\n※誤操作でも救済（復元）できます")) return;
+  pushUndo("会計を合算");
+  const allItems = seat.checks.flatMap(c=> (c.items||[]).map(x=>JSON.parse(JSON.stringify(x))));
+  const mergedId = uid();
+  seat.checks = [{ id: mergedId, items: allItems }];
+  seat.activeCheckId = mergedId;
+  save();
+  renderCheckout();
+  renderOrder();
+  toast("合算しました");
+}
+
+function confirmCheckout(){
+  const seat = getCurrentSeat();
+  if(!seat) return;
+
+  const range = parseInt(document.getElementById("range_confirm").value,10) || 0;
+  if(range < 95){
+    toast("スライドが足りません（右端まで）");
+    return;
+  }
+  const total = seatTotalOpen(seat);
+  if(total<=0){
+    if(!confirm("合計が0円です。会計確定しますか？")) return;
+  }
+
+  pushUndo("会計確定");
+
+  // record sale
+  const itemsAll = seat.checks.flatMap(c=> (c.items||[]).map(it=>({...it})));
+  state.sales.unshift({
+    id: uid(),
+    at: nowISO(),
+    seatNo: seat.no,
+    seatName: seat.name,
+    total,
+    items: itemsAll
+  });
+
+  // clear seat (auto empty)
+  seat.checks = [{ id: uid(), items: [] }];
+  seat.activeCheckId = seat.checks[0].id;
+  seat.startedAt = nowISO();
+  seat.peopleNow = seat.peopleDefault ?? null;
+
+  save();
+  renderAll();
+  nav("home");
+  toast("会計確定しました");
+}
+
+// ---------- Menu ----------
+function refreshGenreSelect(){
+  const sel = document.getElementById("in_item_genre");
+  if(!sel) return;
+  const genres = Array.from(new Set(state.menu.map(m=>m.genre).filter(Boolean)));
+  const fallback = ["料理","ドリンク","お通し","デザート"];
+  const list = (genres.length? genres : fallback);
+  sel.innerHTML = list.map(g=>`<option value="${escapeAttr(g)}">${escapeHtml(g)}</option>`).join("");
+}
+function renderMenu(){
+  const list = document.getElementById("menu_list");
+  list.innerHTML = "";
+  if(state.menu.length===0){
+    list.innerHTML = `<div class="muted">まだ登録がありません</div>`;
+  }else{
+    state.menu.forEach(m=>{
+      const el = document.createElement("div");
+      el.className = "item";
+      el.innerHTML = `
+        <div class="left">
+          <div class="title">${escapeHtml(m.name)}</div>
+          <div class="subtxt">${escapeHtml(m.genre||"")} / 税${m.tax||10}% / ${yen(m.price||0)}</div>
+        </div>
+        <div class="right">
+          <button class="btn small inline ghost" onclick="useMenuItem('${m.id}')">追加</button>
+          <button class="btn small inline bad" onclick="delMenuItem('${m.id}')">削除</button>
+        </div>
+      `;
+      list.appendChild(el);
+    });
+  }
+}
+function addMenuItem(){
+  const name = safeText(document.getElementById("m_name").value).trim();
+  const price = parseInt(safeText(document.getElementById("m_price").value).trim(),10);
+  const tax = parseInt(document.getElementById("m_tax").value,10)||10;
+  const genre = safeText(document.getElementById("m_genre").value).trim() || "料理";
+  if(!name){ toast("商品名を入れてください"); return; }
+  if(!price || price<=0){ toast("価格を入れてください"); return; }
+
+  pushUndo("メニュー登録");
+  state.menu.unshift({ id: uid(), name, price, tax, genre });
+  save();
+  document.getElementById("m_name").value="";
+  document.getElementById("m_price").value="";
+  document.getElementById("m_genre").value="";
+  renderMenu();
+  refreshGenreSelect();
+  toast("メニュー登録しました");
+}
+function delMenuItem(id){
+  const m = state.menu.find(x=>x.id===id);
+  if(!m) return;
+  if(!confirm(`「${m.name}」を削除しますか？`)) return;
+  pushUndo("メニュー削除");
+  state.menu = state.menu.filter(x=>x.id!==id);
+  save();
+  renderMenu();
+  refreshGenreSelect();
+}
+function useMenuItem(id){
+  const seat = getCurrentSeat();
+  if(!seat){
+    toast("先に席を選んでください（席→注文）");
+    return;
+  }
+  const m = state.menu.find(x=>x.id===id);
+  if(!m) return;
+  pushUndo("登録メニュー追加");
+  const ch = getActiveCheck(seat);
+  ch.items.push({ id: uid(), name:m.name, price:m.price, tax:m.tax, genre:m.genre, qty:1 });
+  save();
+  renderOrder();
+  renderHome();
+  toast("追加しました");
+}
+function openMenuPicker(){
+  // shortcut: go to menu, then you can "追加"
+  nav("menu");
+  toast("メニューから「追加」を押すと、現在の席の注文に入ります");
+}
+
+// photo picker (free: just open picker)
+function pickPhoto(){
+  const input = document.getElementById("photo_input");
+  input.onchange = ()=>{
+    if(input.files && input.files[0]){
+      toast("写真を選びました（無料版は手入力補助まで）");
+    }
+  };
+  input.click();
+}
+
+// ---------- Sales ----------
+function isSameDay(a,b){
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+function renderSales(){
+  const today = new Date();
+  const sumToday = state.sales.filter(s=>isSameDay(new Date(s.at), today)).reduce((x,s)=>x+(s.total||0),0);
+  const sumMonth = state.sales.filter(s=>{
+    const d=new Date(s.at); return d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth();
+  }).reduce((x,s)=>x+(s.total||0),0);
+  const sumYear = state.sales.filter(s=>{
+    const d=new Date(s.at); return d.getFullYear()===today.getFullYear();
+  }).reduce((x,s)=>x+(s.total||0),0);
+
+  document.getElementById("sales_today").textContent = yen(sumToday);
+  document.getElementById("sales_month").textContent = yen(sumMonth);
+  document.getElementById("sales_year").textContent = yen(sumYear);
+
+  const list = document.getElementById("sales_list");
+  list.innerHTML = "";
+  if(state.sales.length===0){
+    list.innerHTML = `<div class="muted">まだ会計確定がありません</div>`;
+    return;
+  }
+  state.sales.slice(0,80).forEach(s=>{
+    const d = new Date(s.at);
+    const el = document.createElement("div");
+    el.className = "item";
+    el.innerHTML = `
+      <div class="left">
+        <div class="title">${escapeHtml(s.seatNo)} ${escapeHtml(s.seatName||"")}</div>
+        <div class="subtxt">${d.toLocaleString("ja-JP")} / 明細 ${s.items?.length||0}件</div>
+      </div>
+      <div class="right">
+        <div style="font-weight:900">${yen(s.total||0)}</div>
+        <button class="btn small inline ghost" onclick="showSaleDetail('${s.id}')">詳細</button>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+}
+function showSaleDetail(id){
+  const s = state.sales.find(x=>x.id===id);
+  if(!s) return;
+  const lines = (s.items||[]).map(it=>`${it.name} x${it.qty||1} ${yen((it.price||0)*(it.qty||1))}`).join("\n");
+  alert(`【会計詳細】\n席：${s.seatNo} ${s.seatName||""}\n合計：${yen(s.total||0)}\n\n${lines}`);
+}
+
+// ---------- Home render ----------
+function renderHome(){
+  const grid = document.getElementById("seatGrid");
+  grid.innerHTML = "";
+
+  const seats = [...state.seats].sort(bySeatOrder);
+  seats.forEach(seat=>{
     const div = document.createElement("div");
-    div.className = "seat";
-    div.textContent = s.name + "\n¥" + totalPrice(s);
-    div.onclick = () => openOrder(s.id);
-    list.appendChild(div);
+    div.className = "seatCard";
+    const selected = state.ui.selectedSeatIds.includes(seat.id);
+    if(selected) div.classList.add("selected");
+
+    const peopleDiff = peopleDiffText(seat);
+    const diffHtml = peopleDiff ? `<span style="color:${peopleDiff.startsWith('+')? 'var(--bad)' : 'var(--warn)'}; font-weight:900">${escapeHtml(peopleDiff)}</span>` : "";
+    const peopleNow = (seat.peopleNow==null || seat.peopleNow==="") ? "" : `${seat.peopleNow}名`;
+
+    div.innerHTML = `
+      <div class="no"><span class="dot" style="background:${seat.color}"></span>${escapeHtml(seat.no)}</div>
+      <div class="name">${escapeHtml(seat.name||"")}</div>
+      <div class="meta">
+        <div>${peopleNow} ${diffHtml}</div>
+        <div class="yen">${yen(seatTotalOpen(seat))}</div>
+      </div>
+    `;
+
+    div.onmousedown = ()=>seatLongPressStart(seat.id);
+    div.onmouseup = ()=>seatLongPressEnd();
+    div.ontouchstart = ()=>seatLongPressStart(seat.id);
+    div.ontouchend = ()=>seatLongPressEnd();
+
+    div.onclick = ()=>{
+      // if no selection yet: tap opens; if selection exists: toggles selection
+      if(state.ui.selectedSeatIds.length===0 && !moveMode.fromId){
+        // single tap => open order
+        seatTap(seat.id);
+      }else{
+        // selection toggle OR move mode tap
+        seatTap(seat.id);
+      }
+    };
+
+    // double tap to select quickly
+    div.ondblclick = ()=>{ selectSeatToggle(seat.id); };
+
+    grid.appendChild(div);
+  });
+
+  // KPI
+  const openTotal = state.seats.reduce((sum,s)=>sum+seatTotalOpen(s),0);
+  const openSeats = state.seats.length;
+  const today = new Date();
+  const todaySales = state.sales.filter(s=>isSameDay(new Date(s.at), today)).reduce((x,s)=>x+(s.total||0),0);
+
+  document.getElementById("kpi_open_total").textContent = yen(openTotal);
+  document.getElementById("kpi_today_sales").textContent = yen(todaySales);
+  document.getElementById("kpi_open_seats").textContent = openSeats;
+
+  document.getElementById("pillOffline").classList.add("active");
+}
+
+// ---------- Seat manage ----------
+function renderSeatManage(){
+  const list = document.getElementById("seatManageList");
+  list.innerHTML = "";
+  const seats = [...state.seats].sort(bySeatOrder);
+  if(seats.length===0){
+    list.innerHTML = `<div class="muted">まだ席がありません。席番号を入れて保存してください。</div>`;
+    return;
+  }
+  seats.forEach(seat=>{
+    const el = document.createElement("div");
+    el.className = "item";
+    el.innerHTML = `
+      <div class="left">
+        <div class="title"><span class="dot" style="background:${seat.color}"></span>${escapeHtml(seat.no)} ${escapeHtml(seat.name||"")}</div>
+        <div class="subtxt">人数初期：${seat.peopleDefault==null? "（未設定）" : seat.peopleDefault+"名"} ／ 現在：${seat.peopleNow==null? "（未設定）" : seat.peopleNow+"名"}</div>
+      </div>
+      <div class="right">
+        <button class="btn small inline ghost" onclick="editSeat('${seat.id}')">編集</button>
+        <button class="btn small inline bad" onclick="removeSeat('${seat.id}')">削除</button>
+      </div>
+    `;
+    list.appendChild(el);
   });
 }
+function editSeat(id){
+  const seat = state.seats.find(s=>s.id===id);
+  if(!seat) return;
+  const no = prompt("席番号", seat.no);
+  if(no===null) return;
+  const name = prompt("席名（任意）", seat.name||"");
+  if(name===null) return;
+  const people = prompt("人数（初期/空欄可）", seat.peopleDefault==null? "" : seat.peopleDefault);
+  if(people===null) return;
 
-function openSeatRegister() {
-  show("seatRegisterView");
+  pushUndo("席編集");
+  seat.no = safeText(no).trim() || seat.no;
+  seat.name = safeText(name).trim();
+  const p = safeText(people).trim();
+  seat.peopleDefault = p==="" ? null : Math.max(0, parseInt(p,10)||0);
+  // if peopleNow not set, follow default
+  if(seat.peopleNow==null) seat.peopleNow = seat.peopleDefault;
+  state.seats.sort(bySeatOrder);
+  save();
+  renderAll();
+  toast("席を編集しました");
 }
 
-function addSeat() {
-  const name = document.getElementById("seatInput").value;
-  if (!name) return;
-  seats.push({ id: Date.now(), name, orders: [] });
-  document.getElementById("seatInput").value = "";
-  backToMain();
+// ---------- Backup ----------
+function downloadBackup(){
+  const data = exportState();
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "ONE_backup_" + new Date().toISOString().slice(0,10) + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("ダウンロードしました");
+}
+function restoreFromText(){
+  const txt = safeText(document.getElementById("backup_text").value).trim();
+  if(!txt){ toast("JSONを貼り付けてください"); return; }
+  if(!confirm("復元しますか？今のデータは上書きされます")) return;
+  try{
+    const obj = JSON.parse(txt);
+    importState(obj);
+    save();
+    renderAll();
+    nav("home");
+    toast("復元しました");
+  }catch(e){
+    toast("JSONの形式が正しくありません");
+  }
 }
 
-function openOrder(id) {
-  currentSeat = seats.find(s => s.id === id);
-  document.getElementById("orderTitle").textContent = currentSeat.name;
-  renderOrders();
-  show("orderView");
+// ---------- Reset ----------
+function factoryReset(){
+  if(!confirm("本当に全データを初期化しますか？\n（戻せません）")) return;
+  localStorage.removeItem(LS_KEY);
+  location.reload();
 }
 
-function addItem() {
-  const name = itemName.value;
-  const price = Number(itemPrice.value);
-  if (!name || !price) return;
-  currentSeat.orders.push({ name, price });
-  itemName.value = "";
-  itemPrice.value = "";
-  renderOrders();
+// ---------- Render all ----------
+function renderAll(){
+  refreshGenreSelect();
+  renderHome();
+  renderSeatManage();
+  // order/checkout are rendered when open
+  // sales is rendered when open
+  renderUndoInfo();
 }
-
-function renderOrders() {
-  const ul = document.getElementById("orderList");
-  ul.innerHTML = "";
-  currentSeat.orders.forEach(o => {
-    const li = document.createElement("li");
-    li.textContent = o.name + " ¥" + o.price;
-    ul.appendChild(li);
-  });
+function escapeHtml(s){
+  return safeText(s).replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
+function escapeAttr(s){ return escapeHtml(s); }
 
-function openCheckout() {
-  document.getElementById("total").textContent =
-    "合計 ¥" + totalPrice(currentSeat);
-  show("checkoutView");
-}
-
-function confirmCheckout() {
-  currentSeat.orders = [];
-  backToMain();
-}
-
-function totalPrice(seat) {
-  return seat.orders.reduce((sum, o) => sum + o.price, 0);
-}
-
-function backToMain() {
-  show("mainView");
-  renderSeats();
-}
-
-function show(id) {
-  ["mainView","seatRegisterView","orderView","checkoutView"]
-    .forEach(v => document.getElementById(v).classList.add("hidden"));
-  document.getElementById(id).classList.remove("hidden");
-}
-
-renderSeats();
+// ---------- Start ----------
+load();
+renderAll();
+nav("home");
 </script>
-
 </body>
 </html>
