@@ -1,2239 +1,1124 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <!-- iOS誤ズーム対策 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>ONE</title>
+<!-- =========================
+  ONE 無料版（最新版仕様）- PART 1/6
+  役割：HTML骨組み + CSS（見た目）
+  まだ動き（JS）はPART2以降
+========================= -->
 
-  <style>
-    :root{
-      --bg:#ffffff;
-      --fg:#111111;
-      --muted:#666;
-      --line:#e6e6e6;
-      --card:#ffffff;
-      --soft:#f7f7f7;
-      --accent:#2DBE60;
-      --warn:#d40000;
-      --lift:#fff4c7; /* 繰り上がり色 */
-      --shadow: 0 1px 8px rgba(0,0,0,.06);
-      --r:14px;
-    }
-    html,body{
-      height:100%;
-      background:var(--bg);
-      color:var(--fg);
-      margin:0;
-      font-family:-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
-      -webkit-text-size-adjust: 100%;
-      touch-action: pan-y;
-      overscroll-behavior: contain;
-    }
-    input, select, textarea, button { font-size:16px; }
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#0f1a2e;
+    --card:#111c33;
+    --text:#f8fafc;
+    --sub:#b6c2d6;
+    --line:rgba(148,163,184,.22);
+    --primary:#3b82f6;
+    --ok:#22c55e;
+    --warn:#ef4444;
+    --accent:#f59e0b;
+    --purple:#a78bfa;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    background:linear-gradient(180deg, var(--bg), #060b15);
+    color:var(--text);
+    overscroll-behavior:none;
+    touch-action: manipulation;
+  }
+  a,button,input,select,textarea{ touch-action: manipulation; }
+  .hidden{ display:none !important; }
 
-    .app{
-      min-height:100%;
-      display:flex;
-      flex-direction:column;
-    }
+  /* iOSのズーム防止（user-scalable=no と併用前提） */
+  input,select,textarea{ font-size:16px; }
 
-    .topbar{
-      position:sticky; top:0;
-      z-index:10;
-      background:var(--bg);
-      border-bottom:1px solid var(--line);
-      padding:10px 12px;
-      display:grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap:8px;
-      align-items:center;
-    }
-    .topbar .left{justify-self:start;}
-    .topbar .center{justify-self:center;}
-    .topbar .right{justify-self:end;}
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    background:rgba(6,11,21,.9);
+    border-bottom:1px solid var(--line);
+    backdrop-filter: blur(10px);
+    padding:10px 12px;
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap:8px; align-items:center;
+  }
+  .brand{ font-weight:900; font-size:20px; letter-spacing:.6px; }
+  .top-center-btn{
+    justify-self:center;
+    border:1px solid rgba(59,130,246,.25);
+    background:rgba(59,130,246,.15);
+    color:var(--text);
+    font-weight:900;
+    padding:10px 14px;
+    border-radius:14px;
+    min-width:120px;
+  }
+  .top-right{ justify-self:end; display:flex; gap:8px; }
 
-    .brand{
-      font-weight:800;
-      letter-spacing:.5px;
-      font-size:18px;
-      user-select:none;
-    }
+  .wrap{ padding:12px; max-width:780px; margin:0 auto; }
+  .title{ font-weight:900; font-size:18px; margin:10px 0 6px; }
+  .subtle{ color:var(--sub); font-size:12px; line-height:1.4; }
+  .divider{ height:1px; background:var(--line); margin:12px 0; }
+  .bottom-safe{ height:18px; }
 
-    .btn{
-      border:1px solid var(--line);
-      background:var(--card);
-      color:var(--fg);
-      border-radius:12px;
-      padding:10px 12px;
-      box-shadow: var(--shadow);
-      cursor:pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn:active{ transform: translateY(1px); }
-    .btn.primary{
-      border-color: var(--accent);
-      color:#0c3;
-    }
-    .btn.ghost{
-      border-color: transparent;
-      box-shadow:none;
-      background:transparent;
-      padding:8px 10px;
-    }
-    .btn.danger{
-      border-color:#ffcccc;
-      color:#b30000;
-      background:#fff6f6;
-    }
-    .btn.wide{ width:100%; }
-    .btnRow{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .btnRow > *{ flex:1 1 auto; }
+  .btn{
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.03);
+    color:var(--text);
+    padding:12px 12px;
+    border-radius:16px;
+    font-weight:900;
+    font-size:16px;
+  }
+  .btn.small{ padding:10px 10px; font-size:14px; border-radius:14px; }
+  .btn.full{ width:100%; }
+  .btn.primary{ background:rgba(59,130,246,.18); border-color:rgba(59,130,246,.35); }
+  .btn.ok{ background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.35); }
+  .btn.warn{ background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.35); }
+  .btn.accent{ background:rgba(245,158,11,.16); border-color:rgba(245,158,11,.33); }
 
-    .view{
-      display:none;
-      padding:12px;
-    }
-    .view.active{ display:block; }
+  .btnrow4{ display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin:12px 0 8px; }
+  .btnrow2{ display:grid; grid-template-columns: repeat(2,1fr); gap:10px; margin:10px 0; }
 
-    .sectionTitle{
-      margin: 6px 0 10px;
-      font-weight:700;
-      font-size:16px;
-    }
-    .hint{ color:var(--muted); font-size:13px; line-height:1.4; }
-    .muted{ color:var(--muted); font-size:13px; }
-    .bigMoney{ font-size:24px; font-weight:900; letter-spacing:.3px; }
+  .twoline{ display:flex; flex-direction:column; gap:2px; align-items:center; justify-content:center; line-height:1.05; }
+  .twoline span:first-child{ font-size:12px; opacity:.95; }
+  .twoline span:last-child{ font-size:16px; font-weight:900; }
 
-    .grid3{
-      display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap:10px;
-    }
-    .grid2{
-      display:grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap:10px;
-    }
+  input,select,textarea{
+    width:100%;
+    padding:12px;
+    border-radius:16px;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.03);
+    color:var(--text);
+    outline:none;
+  }
+  textarea{ resize:vertical; }
+  .field{ display:grid; gap:8px; margin:10px 0; }
+  .label{ font-weight:900; font-size:13px; color:#dbeafe; }
+  .note{ color:var(--sub); font-size:12px; white-space:pre-line; margin-top:8px; }
 
-    .card{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius: var(--r);
-      box-shadow: var(--shadow);
-      padding:12px;
-    }
+  /* 席カード */
+  .seats-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:10px;
+    margin-top:12px;
+  }
+  .seat{
+    position:relative;
+    background:rgba(255,255,255,.03);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:10px;
+    min-height:100px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+  }
+  .seat.selected{ outline:3px solid rgba(147,197,253,.45); border-color:rgba(147,197,253,.55); }
+  .seat.merged{ background:rgba(167,139,250,.10); border-color:rgba(167,139,250,.28); }
+  .seat-no{ font-weight:900; font-size:22px; line-height:1.1; white-space:pre-line; }
+  .seat-meta{ color:var(--sub); font-size:12px; white-space:pre-line; margin-top:6px; }
+  .seat-money{ font-weight:900; font-size:15px; margin-top:6px; }
 
-    .seatCard{
-      text-align:center;
-      padding:12px 10px;
-      border-radius: var(--r);
-      border:1px solid var(--line);
-      background:var(--card);
-      box-shadow: var(--shadow);
-      user-select:none;
-      white-space:pre-line;
-    }
-    .seatCard.selected{
-      outline:2px solid var(--accent);
-      border-color: transparent;
-    }
-    .seatNo{ font-size:18px; font-weight:800; }
-    .seatSub{ font-size:13px; color:var(--muted); margin-top:4px; }
-    .seatMoney{ font-size:14px; margin-top:6px; }
-    .seatPeople{ font-size:13px; margin-top:2px; color:#333; }
+  .badge{
+    position:absolute; right:10px; top:10px;
+    font-size:11px; font-weight:900;
+    padding:4px 8px; border-radius:999px;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.04);
+    color:var(--text);
+  }
+  .badge.reserve{ border-color:rgba(251,146,60,.35); background:rgba(251,146,60,.14); color:#ffd8b4; }
+  .badge.merged{ border-color:rgba(167,139,250,.35); background:rgba(167,139,250,.14); color:#ede9fe; }
 
-    .bottomDock{
-      position:sticky;
-      bottom:0;
-      z-index:9;
-      background:linear-gradient(to top, rgba(255,255,255,0.98), rgba(255,255,255,0.9));
-      border-top:1px solid var(--line);
-      padding:10px 12px;
-    }
-    .bottomGrid4{
-      display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap:10px;
-      margin-bottom:10px;
-    }
-    .bottomGrid2{
-      display:grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap:10px;
-    }
-    .safeSpace{ height: 10px; }
+  /* 設定カード */
+  .card-list{ display:grid; grid-template-columns: repeat(2,1fr); gap:12px; margin-top:12px; }
+  .nav-card{
+    background:rgba(255,255,255,.03);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:14px;
+    min-height:90px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+  }
+  .nav-title{ font-weight:900; font-size:16px; }
+  .nav-sub{ color:var(--sub); font-size:12px; margin-top:6px; }
 
-    .list{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .row{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:space-between;
-    }
-    .rowLeft{ display:flex; flex-direction:column; gap:3px; }
-    .divider{ height:1px; background:var(--line); margin:10px 0; }
+  /* 注文UI */
+  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px; }
+  .pill{
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.03);
+    color:var(--text);
+    padding:10px 12px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:14px;
+  }
+  .pill.active{ background:rgba(59,130,246,.18); border-color:rgba(59,130,246,.35); }
 
-    .overlay{
-      position:fixed; inset:0;
-      background: rgba(0,0,0,.42);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding:16px;
-      z-index:100;
-    }
-    .overlay.show{ display:flex; }
-    .modal{
-      width:min(520px, 100%);
-      background:var(--card);
-      border-radius:16px;
-      box-shadow: 0 12px 50px rgba(0,0,0,.25);
-      border:1px solid rgba(255,255,255,.2);
-      overflow:hidden;
-    }
-    .modalHead{
-      padding:14px 14px 10px;
-      border-bottom:1px solid var(--line);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .modalTitle{ font-weight:800; }
-    .modalBody{ padding:14px; }
-    .modalFoot{
-      padding:14px;
-      border-top:1px solid var(--line);
-      display:flex;
-      gap:12px;
-    }
-    .modalFoot .btn{ flex:1; }
+  .menu-grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; }
+  .item{
+    background:rgba(255,255,255,.03);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:12px;
+    min-height:74px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+  }
+  .item-name{ font-weight:900; font-size:16px; }
+  .item-sub{ color:var(--sub); font-size:12px; margin-top:6px; }
 
-    .field{ display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
-    .label{ font-size:13px; color:var(--muted); }
-    .input, .select, .textarea{
-      border:1px solid var(--line);
-      border-radius:12px;
-      padding:12px;
-      outline:none;
-      background:#fff;
-    }
-    .textarea{ min-height:90px; resize:vertical; }
+  .panel{
+    background:rgba(255,255,255,.03);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:10px;
+    margin-top:12px;
+  }
+  .order-row{
+    display:grid;
+    grid-template-columns: 1fr auto;
+    gap:10px;
+    padding:12px 8px;
+    border-bottom:1px dashed rgba(226,232,240,.25);
+    align-items:center;
+  }
+  .order-row:last-child{ border-bottom:none; }
+  .order-name{ font-weight:900; font-size:16px; }
+  .order-sub{ color:var(--sub); font-size:12px; margin-top:2px; }
 
-    .orderHead{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:10px;
-    }
-    .orderSeat{ font-weight:900; font-size:18px; }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      border:1px solid var(--line);
-      padding:8px 10px;
-      border-radius:999px;
-      background:var(--soft);
-      font-size:13px;
-    }
+  /* モーダル（中央表示） */
+  .overlay{
+    position:fixed; inset:0; z-index:80;
+    background:rgba(0,0,0,.55);
+    display:flex; align-items:center; justify-content:center;
+    padding:16px;
+  }
+  .modal{
+    width:100%; max-width:540px;
+    background:linear-gradient(180deg, rgba(17,28,51,.98), rgba(10,16,30,.98));
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:14px;
+    box-shadow:0 18px 40px rgba(0,0,0,.35);
+  }
+  .modal-title{ font-weight:900; font-size:18px; margin-bottom:8px; }
+  .modal-sub{ color:var(--sub); font-size:13px; margin-bottom:12px; white-space:pre-line; }
+  .modal-body{ margin:10px 0 14px; }
+  .modal-actions{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
 
-    .qtyPanel{
-      padding:12px;
-      border:1px solid var(--line);
-      border-radius: var(--r);
-      background:var(--soft);
-    }
-    .qtyName{ font-weight:900; font-size:16px; }
-    .qtyPrice{ color:var(--muted); font-size:13px; margin-top:4px;}
-    .qtyRow{
-      margin-top:10px;
-      display:grid;
-      grid-template-columns: 1fr 1.2fr 1fr;
-      gap:12px;
-      align-items:center;
-    }
-    .triBtn{
-      padding:14px 0;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:#fff;
-      box-shadow: var(--shadow);
-      font-size:20px;
-      font-weight:900;
-    }
-    .qtyNum{
-      text-align:center;
-      font-size:22px;
-      font-weight:900;
-      padding:12px 0;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:#fff;
-    }
-    .qtyActions{
-      margin-top:14px;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:14px; /* 誤タップ防止余白 */
-    }
+  /* キッチン */
+  .kitchen-list{ margin-top:12px; display:grid; gap:10px; }
+  .ticket{
+    background:rgba(255,255,255,.03);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:12px;
+    display:grid;
+    grid-template-columns: 1fr auto;
+    gap:12px;
+    align-items:center;
+  }
+  .ticket-name{ font-weight:900; font-size:20px; line-height:1.15; }
+  .ticket-name.overdue{ color:var(--warn); }
+  .ticket-sub{ margin-top:6px; color:var(--sub); font-size:12px; white-space:pre-line; }
 
-    /* Kitchen */
-    .kRow{
-      border:1px solid var(--line);
-      border-radius: var(--r);
-      background:#fff;
-      box-shadow: var(--shadow);
-      padding:12px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .kTop{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:flex-start;
-    }
-    .kDish{
-      font-size:18px; /* 料理名大きめ */
-      font-weight:900;
-      line-height:1.2;
-    }
-    .kQty{
-      font-size:18px; /* 個数大きめ */
-      font-weight:900;
-      margin-left:8px;
-    }
-    .kMeta{
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.3;
-      margin-top:4px;
-    }
-    .kDish.warn{ color: var(--warn); }
-    .kLift{ background: var(--lift); }
-    .kSlideWrap{
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-    .kSlideLabel{
-      font-size:13px;
-      color:var(--muted);
-      min-width: 88px;
-    }
-    input[type="range"]{
-      width:100%;
-      accent-color: var(--accent);
-    }
+  /* 短く太いスライドバー（文字なし） */
+  input[type="range"].slider{
+    width:140px; height:30px;
+    -webkit-appearance:none; appearance:none;
+    background:rgba(226,232,240,.18);
+    border-radius:999px;
+    outline:none;
+    border:1px solid rgba(203,213,225,.25);
+  }
+  input[type="range"].slider::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:34px; height:34px;
+    border-radius:50%;
+    background:rgba(34,197,94,.95);
+    border:2px solid rgba(255,255,255,.8);
+    box-shadow:0 10px 22px rgba(0,0,0,.35);
+  }
+</style>
 
-    @media (max-width: 360px){
-      .grid3{ grid-template-columns: repeat(2,1fr); }
-      .bottomGrid4{ grid-template-columns: repeat(2,1fr); }
-    }
-  </style>
-</head>
+<!-- 画面 -->
+<div id="appRoot">
 
-<body>
-<div class="app">
-
-  <!-- TOP BAR -->
-  <div class="topbar">
-    <div class="left brand">ONE</div>
-    <div class="center">
-      <button class="btn" onclick="openKitchen()">キッチン</button>
-    </div>
-    <div class="right">
-      <button class="btn" onclick="openBackup()">バックアップ</button>
+  <!-- Topbar MAIN -->
+  <div id="topbarMain" class="topbar">
+    <div class="brand">ONE</div>
+    <button class="top-center-btn" id="btnKitchen">キッチン</button>
+    <div class="top-right">
+      <button class="btn small primary" id="btnBackupTop">バックアップ</button>
     </div>
   </div>
 
-  <!-- MAIN -->
-  <div id="viewMain" class="view active">
-    <div class="sectionTitle">席</div>
-    <div id="seatGrid" class="grid3"></div>
-
-    <div class="safeSpace"></div>
-
-    <div class="hint">
-      席をタップして選択 → 下の「決定」で注文へ。複数席選択も可能。<br>
-      誤操作防止のため、重要操作は余白を広めにしています。
-    </div>
-
-    <div class="safeSpace"></div>
-
-    <div class="bottomDock">
-      <div class="bottomGrid4">
-        <button class="btn" onclick="openBanquet()">宴会</button>
-        <button class="btn" onclick="openSeatMove()">席移動</button>
-        <button class="btn" onclick="openMerge()">会計合算</button>
-        <button class="btn" onclick="openSplit()">会計分割</button>
-      </div>
-      <div class="bottomGrid2">
-        <button class="btn" onclick="openSales()">本日の売上</button>
-        <button class="btn" onclick="openSettings()">設定</button>
-      </div>
-      <div class="safeSpace"></div>
-      <div class="btnRow">
-        <button class="btn primary" id="decideBtn" onclick="decideSeatSelection()">決定</button>
-        <button class="btn" onclick="openSeatRegister()">席登録</button>
-      </div>
+  <!-- Topbar SUB -->
+  <div id="topbarSub" class="topbar hidden">
+    <div class="brand">ONE</div>
+    <button class="top-center-btn" id="btnMainTop">メイン</button>
+    <div class="top-right">
+      <button class="btn small primary" id="btnMainTopR">メイン</button>
     </div>
   </div>
 
-  <!-- SETTINGS -->
-  <div id="viewSettings" class="view">
-    <div class="row">
-      <div style="font-weight:900;">設定</div>
-      <button class="btn" onclick="goMain()">メイン</button>
-    </div>
+  <div class="wrap">
 
-    <div class="safeSpace"></div>
+    <!-- MAIN -->
+    <section id="viewMain">
+      <div class="title">席</div>
+      <div class="subtle">席をタップして選択 → 「決定」で注文へ（空席は来店/予約）。合算/分割は専用ボタンのみ。</div>
 
-    <div class="grid2">
-      <button class="btn" onclick="openSeatRegister()">席登録</button>
-      <button class="btn" onclick="openMenuRegister()">メニュー登録</button>
-      <button class="btn" onclick="openSales()">売上</button>
-      <button class="btn" onclick="openStoreInfo()">店舗情報</button>
-      <button class="btn" onclick="openContact()">お問合せ</button>
-      <button class="btn" onclick="openBackup()">バックアップ</button>
-    </div>
+      <div id="seatGrid" class="seats-grid"></div>
 
-    <div class="safeSpace"></div>
-    <div class="hint">※料理提案は有料版に含めるため、無料版には表示しません。</div>
-  </div>
+      <div class="btnrow4">
+        <button class="btn full" id="btnSeatMove">席移動</button>
+        <button class="btn full primary" id="btnMerge"><div class="twoline"><span>合計</span><span>合算</span></div></button>
+        <button class="btn full accent" id="btnSplit"><div class="twoline"><span>合計</span><span>分割</span></div></button>
+        <button class="btn full ok" id="btnDecide">決定</button>
+      </div>
 
-  <!-- SEAT REGISTER -->
-  <div id="viewSeatRegister" class="view">
-    <div class="row">
-      <div style="font-weight:900;">席登録</div>
-      <button class="btn" onclick="goMain()">メイン</button>
-    </div>
+      <div class="btnrow2">
+        <button class="btn full" id="btnSalesToday">本日の売上</button>
+        <button class="btn full" id="btnSettings">設定</button>
+      </div>
 
-    <div class="safeSpace"></div>
+      <div class="bottom-safe"></div>
+    </section>
 
-    <div class="card">
+    <!-- SETTINGS -->
+    <section id="viewSettings" class="hidden">
+      <div class="title">設定</div>
+      <div class="subtle">無料版（最新版仕様）</div>
+
+      <div class="card-list">
+        <div class="nav-card" id="navSeatRegister">
+          <div class="nav-title">席登録</div>
+          <div class="nav-sub">作成 / 編集 / 削除（売上データ保持）</div>
+        </div>
+        <div class="nav-card" id="navMenuRegister">
+          <div class="nav-title">メニュー登録</div>
+          <div class="nav-sub">カメラOCR / カテゴリー（料理・ドリンク）</div>
+        </div>
+        <div class="nav-card" id="navSales">
+          <div class="nav-title">売上</div>
+          <div class="nav-sub">月 / 年 / 管理</div>
+        </div>
+        <div class="nav-card" id="navStoreInfo">
+          <div class="nav-title">店舗情報</div>
+          <div class="nav-sub">無料版は簡易メモ</div>
+        </div>
+        <div class="nav-card" id="navSuggest">
+          <div class="nav-title">料理提案</div>
+          <div class="nav-sub">無料版はプレースホルダ</div>
+        </div>
+        <div class="nav-card" id="navContact">
+          <div class="nav-title">お問合せ</div>
+          <div class="nav-sub">メモ</div>
+        </div>
+      </div>
+
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full" id="btnMainFromSettings">メイン</button>
+        <button class="btn full primary" id="btnBackupFromSettings">バックアップ</button>
+      </div>
+
+      <div class="bottom-safe"></div>
+    </section>
+
+    <!-- SEAT REGISTER -->
+    <section id="viewSeatRegister" class="hidden">
+      <div class="title">席登録</div>
+      <div class="subtle">席の名称 → 総席(卓)数 → 席番号 → 最大着席人数。重複席番号は確認。</div>
+
       <div class="field">
         <div class="label">席の名称</div>
-        <select id="seatType" class="select" onchange="onSeatTypeChange()">
-          <option value="カウンター">カウンター</option>
-          <option value="立ち">立ち</option>
-          <option value="テーブル">テーブル</option>
-          <option value="座敷">座敷</option>
-          <option value="個室">個室</option>
-          <option value="その他">その他</option>
+        <select id="srType">
+          <option value="counter">カウンター</option>
+          <option value="stand">立ち</option>
+          <option value="table">テーブル</option>
+          <option value="zashiki">座敷</option>
+          <option value="private">個室</option>
+          <option value="other">その他</option>
         </select>
       </div>
 
-      <div class="field" id="otherNameField" style="display:none;">
-        <div class="label">名称（その他）</div>
-        <input id="otherName" class="input" placeholder="名称" />
-        <div class="hint">入力すると次回から名称一覧に追加されます</div>
+      <div id="srOtherWrap" class="field hidden">
+        <div class="label">その他の名称（次回から一覧に追加）</div>
+        <input id="srOtherName" placeholder="例：テラス" />
+        <button class="btn small primary" id="btnSaveOtherName">名称を保存</button>
       </div>
 
       <div class="field">
-        <div class="label" id="countLabel">総席数</div>
-        <input id="seatCount" type="number" inputmode="numeric" class="input" placeholder="例：10" />
-      </div>
-
-      <div class="btnRow">
-        <button class="btn primary" onclick="startSeatNumberWizard()">決定</button>
-        <button class="btn danger" onclick="confirmResetSeats()">席を全削除</button>
-      </div>
-    </div>
-
-    <div class="safeSpace"></div>
-
-    <div class="card" id="wizardCard" style="display:none;">
-      <div class="sectionTitle" style="margin-top:0;">席番号と最大着席人数</div>
-      <div class="hint">総席（卓）数分だけ、席番号と最大着席人数を入力して決定すると次へ進みます。</div>
-
-      <div class="divider"></div>
-
-      <div class="field">
-        <div class="label">席番号</div>
-        <div class="row">
-          <button class="btn" onclick="stepSeatName(-1)">◀</button>
-          <input id="wizardSeatName" class="input" style="text-align:center; font-weight:900;" placeholder="例：1 / A / C1" />
-          <button class="btn" onclick="stepSeatName(1)">▶</button>
-        </div>
-        <div class="hint">数字・アルファベットは大きめ表示。アルファベットは大文字。</div>
+        <div class="label" id="srCountLabel">総席数</div>
+        <input id="srTotal" type="number" min="1" placeholder="例：10" />
       </div>
 
       <div class="field">
-        <div class="label">最大着席人数</div>
-        <div class="row">
-          <button class="btn" onclick="stepMaxPeople(-1)">◀</button>
-          <div id="wizardMaxPeople" class="qtyNum" style="flex:1;">1</div>
-          <button class="btn" onclick="stepMaxPeople(1)">▶</button>
-        </div>
-        <div class="hint" id="maxDefaultHint"></div>
+        <div class="label">席(卓)番号（1つ目）</div>
+        <input id="srLabel" placeholder="例：1 / A / C1" />
+        <div class="note">入力後、次の席(卓)候補が自動で入ります（例：1→2 / A→B / C1→C2）</div>
       </div>
 
-      <div class="btnRow" style="gap:14px;">
-        <button class="btn primary" onclick="saveWizardSeat()">決定</button>
-        <button class="btn" onclick="cancelSeatWizard()">中止</button>
+      <div class="field">
+        <div class="label">最大着席人数（デフォルト）</div>
+        <input id="srCapDefault" type="number" min="1" placeholder="カウンター/立ちは1、他は4" />
+      </div>
+
+      <div class="btnrow2">
+        <button class="btn full ok" id="btnCreateSeats">決定</button>
+        <button class="btn full" id="btnResetSeatReg">削除（入力を初期化）</button>
       </div>
 
       <div class="divider"></div>
-      <div class="hint" id="wizardProgress">0 / 0</div>
-    </div>
-  </div>
+      <div class="title">作成済の席（タップで編集）</div>
+      <div id="srCreatedSeatGrid" class="seats-grid"></div>
 
-  <!-- MENU REGISTER -->
-  <div id="viewMenuRegister" class="view">
-    <div class="row">
-      <div style="font-weight:900;">メニュー登録</div>
-      <button class="btn" onclick="goMain()">メイン</button>
-    </div>
-
-    <div class="safeSpace"></div>
-
-    <div class="card">
-      <div class="hint">
-        無料版では、カメラで撮影 → 画面で確認しながら登録します。<br>
-        ※自動文字起こしは行いません（誤登録防止）。
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full" id="btnMainFromSeatReg">メイン</button>
+        <button class="btn full primary" id="btnSettingsFromSeatReg">設定</button>
       </div>
-      <div class="safeSpace"></div>
+      <div class="bottom-safe"></div>
+    </section>
 
-      <div class="btnRow" style="gap:14px;">
-        <button class="btn" onclick="document.getElementById('menuPhoto').click()">カメラ</button>
-        <button class="btn" onclick="openMenuManualAdd()">手動追加</button>
+    <!-- MENU REGISTER -->
+    <section id="viewMenuRegister" class="hidden">
+      <div class="title">メニュー登録</div>
+      <div class="subtle">無料版でもカメラOCR（自動文字起こし）を使えます。写真は「写真を消す」で破棄。</div>
+
+      <div class="field">
+        <div class="label">カテゴリー</div>
+        <select id="mrCategory">
+          <option value="food">料理</option>
+          <option value="drink">ドリンク</option>
+        </select>
       </div>
 
-      <input id="menuPhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="onMenuPhotoPicked(event)" />
-
-      <div id="menuPhotoPreviewWrap" style="display:none; margin-top:12px;">
-        <div class="label">写真プレビュー</div>
-        <img id="menuPhotoPreview" alt="menu" style="width:100%; border-radius:12px; border:1px solid var(--line);" />
-        <div class="hint">写真は確認用です。登録しなかったデータは画面を離れると破棄されます。</div>
+      <div class="field">
+        <div class="label">ジャンル</div>
+        <input id="mrGenre" placeholder="例：揚げ物 / ビール" />
       </div>
-    </div>
 
-    <div class="safeSpace"></div>
-
-    <div class="sectionTitle">登録済みメニュー</div>
-    <div id="menuList" class="list"></div>
-  </div>
-
-  <!-- ORDER -->
-  <div id="viewOrder" class="view">
-    <div class="orderHead">
-      <div>
-        <div class="orderSeat" id="orderSeatTitle">席</div>
-        <div class="pill" id="orderPill">人数 0 / 合計 ¥0</div>
+      <div class="field">
+        <div class="label">商品名</div>
+        <input id="mrName" placeholder="例：唐揚げ" />
       </div>
-      <div class="btnRow" style="gap:12px;">
-        <button class="btn" onclick="openCheckoutFromOrder()">会計</button>
-        <button class="btn" onclick="goMain()">メイン</button>
+
+      <div class="field">
+        <div class="label">価格</div>
+        <input id="mrPrice" type="number" min="0" placeholder="例：600" />
       </div>
-    </div>
 
-    <div class="sectionTitle">ジャンル</div>
-    <div id="genreGrid" class="grid2"></div>
-
-    <div class="safeSpace"></div>
-
-    <div class="sectionTitle">商品</div>
-    <div id="itemGrid" class="grid2"></div>
-
-    <div class="safeSpace"></div>
-
-    <div id="qtyPanelWrap" style="display:none;">
-      <div class="qtyPanel">
-        <div class="qtyName" id="qtyName">商品</div>
-        <div class="qtyPrice" id="qtyPrice">¥0</div>
-
-        <div class="qtyRow">
-          <button class="triBtn" onclick="changeQty(-1)">◀</button>
-          <div class="qtyNum" id="qtyNum">1</div>
-          <button class="triBtn" onclick="changeQty(1)">▶</button>
-        </div>
-
-        <div class="qtyActions">
-          <button class="btn" onclick="closeQtyPanel()">戻る</button>
-          <button class="btn primary" onclick="confirmQty()">決定</button>
-        </div>
+      <div class="btnrow2">
+        <button class="btn full ok" id="btnAddMenu">登録</button>
+        <button class="btn full" id="btnClearMenuInputs">入力クリア</button>
       </div>
-    </div>
 
-    <div class="safeSpace"></div>
-
-    <div class="sectionTitle">注文履歴</div>
-    <div id="orderList" class="list"></div>
-  </div>
-
-  <!-- CHECKOUT -->
-  <div id="viewCheckout" class="view">
-    <div class="row">
-      <div style="font-weight:900;">会計</div>
-      <button class="btn" onclick="goMain()">メイン</button>
-    </div>
-
-    <div class="safeSpace"></div>
-
-    <div class="card">
-      <div class="row" style="align-items:flex-end;">
-        <div class="rowLeft">
-          <div id="coSeat" style="font-weight:900;">席</div>
-          <div class="muted" id="coPeople">人数 0</div>
+      <div class="divider"></div>
+      <div class="title">カメラで登録（OCR）</div>
+      <input id="mrPhoto" type="file" accept="image/*" capture="environment" />
+      <div class="btnrow2" style="margin-top:10px;">
+        <button class="btn full primary" id="btnOcr">写真から文字起こし</button>
+        <button class="btn full warn" id="btnPhotoClear">写真を消す</button>
+      </div>
+      <div class="panel">
+        <div class="subtle">OCR結果（必要なら修正して登録）</div>
+        <textarea id="mrOcrText" rows="6" placeholder="ここにOCR結果が表示されます"></textarea>
+        <div class="btnrow2" style="margin-top:10px;">
+          <button class="btn full ok" id="btnOcrToFields">OCRを入力欄へ反映</button>
+          <button class="btn full" id="btnOcrClear">OCR結果クリア</button>
         </div>
       </div>
 
       <div class="divider"></div>
+      <div class="title">登録済メニュー</div>
+      <div id="mrMenuList" class="panel"></div>
 
-      <div class="label">合計金額</div>
-      <div class="bigMoney" id="coTotal">¥0</div>
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full" id="btnMainFromMenuReg">メイン</button>
+        <button class="btn full primary" id="btnSettingsFromMenuReg">設定</button>
+      </div>
+      <div class="bottom-safe"></div>
+    </section>
 
-      <div class="divider"></div>
+    <!-- ORDER -->
+    <section id="viewOrder" class="hidden">
+      <div class="title" id="orderTitle">注文</div>
+      <div class="subtle">ジャンルを選ぶ → 商品を選ぶ → 数量を中央で入力。履歴は下に表示。</div>
 
-      <div class="field">
+      <div class="pill-row" id="genreRow"></div>
+      <div class="menu-grid" id="menuGrid"></div>
+
+      <div class="panel">
+        <div class="title" style="margin:6px 0;">注文履歴</div>
+        <div id="orderList"></div>
+      </div>
+
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full primary" id="btnToCheckout">会計</button>
+        <button class="btn full" id="btnMainFromOrder">メイン</button>
+      </div>
+      <div class="bottom-safe"></div>
+    </section>
+
+    <!-- CHECKOUT -->
+    <section id="viewCheckout" class="hidden">
+      <div class="title">会計</div>
+      <div class="subtle">会計確定 → 電子レシートの要否を確認します。</div>
+
+      <div class="panel">
+        <div class="title" id="coSeatLabel" style="margin:6px 0;">席</div>
+        <div id="coPeople" class="subtle"></div>
+        <div id="coTotal" style="font-weight:900; font-size:26px; margin-top:8px;">合計 ¥0</div>
+      </div>
+
+      <div class="panel">
         <div class="label">支払い方法</div>
-        <select id="payMethod" class="select">
-          <option value="現金">現金</option>
-          <option value="カード">カード</option>
-          <option value="QR">QR</option>
-          <option value="その他">その他</option>
+        <select id="coPayMethod">
+          <option value="cash">現金</option>
+          <option value="card">カード</option>
+          <option value="qr">QR</option>
+          <option value="other">その他</option>
         </select>
+
+        <div class="btnrow2" style="margin-top:12px;">
+          <button class="btn full" id="btnSplitBill">割り勘</button>
+          <button class="btn full ok" id="btnCheckoutConfirm">会計確定</button>
+        </div>
       </div>
 
-      <div class="safeSpace"></div>
-
-      <div class="btnRow" style="gap:14px;">
-        <button class="btn" onclick="openWarikan()">割り勘</button>
-        <button class="btn primary" onclick="checkoutConfirm()">会計確定</button>
+      <div class="panel">
+        <div class="title" style="margin:6px 0;">注文一覧（修正）</div>
+        <div id="coOrderList"></div>
       </div>
 
-      <div class="safeSpace"></div>
-
-      <div class="divider"></div>
-
-      <div class="sectionTitle">注文一覧</div>
-      <div id="coOrders" class="list"></div>
-    </div>
-  </div>
-
-  <!-- SALES HUB -->
-  <div id="viewSales" class="view">
-    <div class="row">
-      <div style="font-weight:900;">売上</div>
-      <button class="btn" onclick="goMain()">メイン</button>
-    </div>
-
-    <div class="safeSpace"></div>
-
-    <div class="card">
-      <div style="font-weight:900;">本日の売上</div>
-      <div class="bigMoney" id="todaySales">¥0</div>
-      <div class="hint">売上は会計確定したデータのみ集計されます。</div>
-    </div>
-
-    <div class="safeSpace"></div>
-
-    <div class="grid2">
-      <button class="btn" onclick="openSalesMonth()">月売上</button>
-      <button class="btn" onclick="openSalesYear()">年売上</button>
-      <button class="btn" onclick="openSalesManage()">売上管理</button>
-    </div>
-  </div>
-
-  <!-- SALES MONTH -->
-  <div id="viewSalesMonth" class="view">
-    <div class="row">
-      <div style="font-weight:900;">月売上</div>
-      <button class="btn" onclick="goMain()">メイン</button>
-    </div>
-    <div class="safeSpace"></div>
-    <div class="btnRow">
-      <button class="btn" onclick="openSalesYear()">年売上</button>
-      <button class="btn" onclick="openSalesManage()">売上管理</button>
-    </div>
-    <div class="safeSpace"></div>
-    <div class="card">
-      <div class="hint" id="monthSalesText"></div>
-    </div>
-  </div>
-
-  <!-- SALES YEAR -->
-  <div id="viewSalesYear" class="view">
-    <div class="row">
-      <div style="font-weight:900;">年売上</div>
-      <button class="btn" onclick="goMain()">メイン</button>
-    </div>
-    <div class="safeSpace"></div>
-    <div class="btnRow">
-      <button class="btn" onclick="openSalesMonth()">月売上</button>
-      <button class="btn" onclick="openSalesManage()">売上管理</button>
-    </div>
-    <div class="safeSpace"></div>
-    <div class="card">
-      <div class="hint" id="yearSalesText"></div>
-    </div>
-  </div>
-
-  <!-- SALES MANAGE -->
-  <div id="viewSalesManage" class="view">
-    <div class="row">
-      <div style="font-weight:900;">売上管理</div>
-      <button class="btn" onclick="goMain()">メイン</button>
-    </div>
-    <div class="safeSpace"></div>
-    <div class="btnRow">
-      <button class="btn" onclick="openSalesMonth()">月売上</button>
-      <button class="btn" onclick="openSalesYear()">年売上</button>
-    </div>
-    <div class="safeSpace"></div>
-    <div id="txList" class="list"></div>
-  </div>
-
-  <!-- STORE INFO -->
-  <div id="viewStoreInfo" class="view">
-    <div class="row">
-      <div style="font-weight:900;">店舗情報</div>
-      <button class="btn" onclick="openSettings()">戻る</button>
-    </div>
-    <div class="safeSpace"></div>
-
-    <div class="card">
-      <div class="field">
-        <div class="label">店舗名</div>
-        <input id="storeName" class="input" placeholder="店舗名" />
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full" id="btnBackToOrder">戻る</button>
+        <button class="btn full primary" id="btnMainFromCheckout">メイン</button>
       </div>
-      <div class="field">
-        <div class="label">電話</div>
-        <input id="storeTel" class="input" placeholder="電話番号" inputmode="tel" />
+      <div class="bottom-safe"></div>
+    </section>
+
+    <!-- KITCHEN -->
+    <section id="viewKitchen" class="hidden">
+      <div class="title">ホール</div>
+      <div class="subtle">注文順に表示。15分超で赤。完了はスライド。</div>
+
+      <div class="btnrow2">
+        <button class="btn full primary" id="btnKitchenRefresh">更新</button>
+        <button class="btn full" id="btnKitchenHall">ホール</button>
       </div>
-      <div class="field">
-        <div class="label">住所</div>
-        <input id="storeAddr" class="input" placeholder="住所" />
+
+      <div class="btnrow2">
+        <button class="btn full" id="btnKitchenFood">料理</button>
+        <button class="btn full" id="btnKitchenDrink">ドリンク</button>
       </div>
-      <div class="btnRow">
-        <button class="btn primary" onclick="saveStoreInfo()">保存</button>
-        <button class="btn" onclick="openSettings()">戻る</button>
+
+      <div id="kitchenList" class="kitchen-list"></div>
+
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full" id="btnMainFromKitchen">メイン</button>
+        <button class="btn full primary" id="btnMenuFromKitchen">メニュー登録</button>
       </div>
-    </div>
-  </div>
+      <div class="bottom-safe"></div>
+    </section>
 
-  <!-- CONTACT -->
-  <div id="viewContact" class="view">
-    <div class="row">
-      <div style="font-weight:900;">お問合せ</div>
-      <button class="btn" onclick="openSettings()">戻る</button>
-    </div>
-    <div class="safeSpace"></div>
+    <!-- SALES -->
+    <section id="viewSales" class="hidden">
+      <div class="title">売上</div>
+      <div class="subtle">月売上 / 年売上 / 売上管理</div>
 
-    <div class="card">
-      <div class="field">
-        <div class="label">内容</div>
-        <textarea id="contactBody" class="textarea" placeholder="困っていることを書いてください"></textarea>
+      <div class="btnrow2">
+        <button class="btn full" id="btnSalesMonth">月売上</button>
+        <button class="btn full" id="btnSalesYear">年売上</button>
       </div>
-      <div class="btnRow">
-        <button class="btn primary" onclick="copyContact()">コピー</button>
-        <button class="btn" onclick="openSettings()">戻る</button>
+      <div class="btnrow2">
+        <button class="btn full" id="btnSalesManage">売上管理</button>
+        <button class="btn full primary" id="btnMainFromSales">メイン</button>
       </div>
-      <div class="hint">無料版（Web）は送信機能ではなく、コピーして送る形です。</div>
-    </div>
-  </div>
 
-  <!-- BANQUET (simple stub) -->
-  <div id="viewBanquet" class="view">
-    <div class="row">
-      <div style="font-weight:900;">宴会</div>
-      <button class="btn" onclick="goMain()">メイン</button>
-    </div>
-    <div class="safeSpace"></div>
-    <div class="card">
-      <div class="hint">宴会は無料版に含めます。ここはまず「席グループで一括会計」を基本として動作します（段階的拡張）。</div>
-      <div class="safeSpace"></div>
-      <button class="btn" onclick="goMain()">戻る</button>
-    </div>
-  </div>
+      <div class="bottom-safe"></div>
+    </section>
 
-  <!-- SEAT MOVE (info) -->
-  <div id="viewSeatMove" class="view">
-    <div class="row">
-      <div style="font-weight:900;">席移動</div>
-      <button class="btn" onclick="goMain()">メイン</button>
-    </div>
-    <div class="safeSpace"></div>
-    <div class="card">
-      <div class="hint">
-        メインで「移動元の席」と「移動先の空席」を選択 → 下の「席移動」ボタンで移動します。<br>
-        ※無料版はまず“説明＋動作”を優先し、細かな演出は後で追加します。
+    <section id="viewSalesMonth" class="hidden">
+      <div class="title">月売上</div>
+      <div class="btnrow2">
+        <button class="btn full" id="btnToSalesYearFromMonth">年売上</button>
+        <button class="btn full" id="btnToSalesManageFromMonth">売上管理</button>
       </div>
-      <div class="safeSpace"></div>
-      <button class="btn primary" onclick="doSeatMove()">いま選択で席移動</button>
-    </div>
-  </div>
+      <div id="salesMonthBody" class="panel"></div>
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full primary" id="btnMainFromSalesMonth">メイン</button>
+        <button class="btn full" id="btnBackSalesFromMonth">売上</button>
+      </div>
+      <div class="bottom-safe"></div>
+    </section>
 
-  <!-- KITCHEN -->
-  <div id="viewKitchen" class="view">
-    <div class="row">
-      <button class="btn" onclick="refreshKitchen()">更新</button>
-      <button class="btn" onclick="goMain()">ホール</button>
-      <button class="btn" onclick="openMenuRegister()">メニュー</button>
-    </div>
-    <div class="safeSpace"></div>
-    <div id="kitchenList" class="list"></div>
-  </div>
+    <section id="viewSalesYear" class="hidden">
+      <div class="title">年売上</div>
+      <div class="btnrow2">
+        <button class="btn full" id="btnToSalesMonthFromYear">月売上</button>
+        <button class="btn full" id="btnToSalesManageFromYear">売上管理</button>
+      </div>
+      <div id="salesYearBody" class="panel"></div>
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full primary" id="btnMainFromSalesYear">メイン</button>
+        <button class="btn full" id="btnBackSalesFromYear">売上</button>
+      </div>
+      <div class="bottom-safe"></div>
+    </section>
 
-</div>
+    <section id="viewSalesManage" class="hidden">
+      <div class="title">売上管理</div>
+      <div class="btnrow2">
+        <button class="btn full" id="btnToSalesMonthFromManage">月売上</button>
+        <button class="btn full" id="btnToSalesYearFromManage">年売上</button>
+      </div>
+      <div id="salesManageBody" class="panel"></div>
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full primary" id="btnMainFromSalesManage">メイン</button>
+        <button class="btn full" id="btnBackSalesFromManage">売上</button>
+      </div>
+      <div class="bottom-safe"></div>
+    </section>
 
-<!-- MODAL -->
-<div id="overlay" class="overlay" onclick="overlayCloseIfBackdrop(event)">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modalHead">
-      <div class="modalTitle" id="modalTitle">確認</div>
-      <button class="btn ghost" onclick="closeModal()">閉じる</button>
-    </div>
-    <div class="modalBody" id="modalBody"></div>
-    <div class="modalFoot" id="modalFoot" style="display:none;"></div>
-  </div>
-</div>
+    <!-- BACKUP -->
+    <section id="viewBackup" class="hidden">
+      <div class="title">バックアップ</div>
+      <div class="subtle">JSONで書き出し / 読み込み（無料版）</div>
+
+      <div class="btnrow2">
+        <button class="btn full ok" id="btnExport">書き出し</button>
+        <button class="btn full" id="btnImport">読み込み</button>
+      </div>
+
+      <div class="panel">
+        <div class="subtle">バックアップJSON</div>
+        <textarea id="backupText" rows="10" placeholder="ここにJSONが表示されます / ここに貼って読み込みます"></textarea>
+      </div>
+
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full primary" id="btnMainFromBackup">メイン</button>
+        <button class="btn full" id="btnSettingsFromBackup">設定</button>
+      </div>
+      <div class="bottom-safe"></div>
+    </section>
+
+    <!-- STORE INFO -->
+    <section id="viewStoreInfo" class="hidden">
+      <div class="title">店舗情報</div>
+      <div class="panel">
+        <textarea id="storeInfoText" rows="10" placeholder="無料版：メモ（店舗情報）"></textarea>
+      </div>
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full primary" id="btnMainFromStoreInfo">メイン</button>
+        <button class="btn full" id="btnSettingsFromStoreInfo">設定</button>
+      </div>
+      <div class="bottom-safe"></div>
+    </section>
+
+    <!-- SUGGEST (placeholder) -->
+    <section id="viewSuggest" class="hidden">
+      <div class="title">料理提案</div>
+      <div class="panel">
+        <div class="subtle">無料版：プレースホルダ（将来：店舗材料・季節から提案）</div>
+      </div>
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full primary" id="btnMainFromSuggest">メイン</button>
+        <button class="btn full" id="btnSettingsFromSuggest">設定</button>
+      </div>
+      <div class="bottom-safe"></div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="viewContact" class="hidden">
+      <div class="title">お問合せ</div>
+      <div class="panel">
+        <textarea id="contactText" rows="10" placeholder="メモ（問い合わせ内容・要望など）"></textarea>
+      </div>
+      <div class="btnrow2" style="margin-top:14px;">
+        <button class="btn full primary" id="btnMainFromContact">メイン</button>
+        <button class="btn full" id="btnSettingsFromContact">設定</button>
+      </div>
+      <div class="bottom-safe"></div>
+    </section>
+
+  </div><!-- /wrap -->
+</div><!-- /appRoot -->
+
+<!-- モーダル領域（JSで生成） -->
+<div id="modalRoot" class="hidden"></div>
+<!-- =========================
+  ONE 無料版（最新版仕様）- PART 2/6
+  役割：JS土台（state / save-load / util / modal / view切替）
+  ※ まだ席登録・注文などの本体ロジックはPART3以降
+========================= -->
 
 <script>
-/* =========================
-   Local Storage
-========================= */
+/* ========= 基本 ========= */
 const LS_KEY = "ONE_FREE_V1";
 
-const state = {
-  seatsMaster: [],      // {id,name,typeLabel,maxPeople}
-  menus: [],            // {id,genre,name,price,taxRate}
-  accounts: {},         // accountId -> {id, seatIds:[], peopleTotal, orders:[{id,menuId,name,price,qty,createdAt}], createdAt, mergedFrom?}
-  seatToAccount: {},    // seatId -> accountId
-  kitchen: [],          // {id, dishName, qty, seatLabel, createdAt, done:false}
-  tx: [],               // {id, accountId, seatLabel, peopleTotal, total, payMethod, createdAt, items:[...], emailed?, email?}
-  store: { name:"", tel:"", addr:"", otherTypes: [] },
+/* ========= state =========
+  seats: [
+    { id, label, areaType, areaName, cap, status:'empty'|'active'|'reserve', party:{people,name,phone}, openedAt, orders:[...], mergedInto:null|seatId, updatedAt }
+  ]
+  menus: [
+    { id, category:'food'|'drink', genre, name, price }
+  ]
+  sales: [
+    { id, at, seatLabel, seatId, total, payMethod, items:[{name,qty,price}], emailReceipt?:{to, note} }
+  ]
+  seatHistory: [
+    { id, at, type:'delete'|'rename', fromLabel, toLabel, seatId, reason }
+  ]
+*/
+let state = {
+  seats: [],
+  menus: [],
+  sales: [],
+  seatHistory: [],
+  otherSeatNames: [],   // 「その他」で保存した名称
   ui: {
+    view: "viewMain",
     selectedSeatIds: [],
-    currentAccountId: null,
-    currentGenre: null,
-    qty: { menuId:null, name:"", price:0, qty:1, mode:"add", orderItemId:null },
+    orderBaseSeatId: null, // 注文している“代表”席（合算後の基準）
+    activeGenre: null,
+    kitchenFilter: "all", // all | food | drink
+    kitchenDone: {},      // orderItemId:true（完了済み）
   }
 };
 
-function nowMs(){ return Date.now(); }
+/* ========= ユーティリティ ========= */
+function nowTs(){ return Date.now(); }
+
 function pad2(n){ return String(n).padStart(2,"0"); }
-function fmtYen(n){ return "¥" + (Number(n)||0).toLocaleString("ja-JP"); }
-function fmtTime(ms){
-  const d = new Date(ms);
-  return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+function formatHM(ts){
+  const d = new Date(ts);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
-function fmtDate(ms){
-  const d = new Date(ms);
-  return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
+function yen(n){
+  const x = Number(n||0);
+  return "¥" + x.toLocaleString("ja-JP");
 }
-function todayKey(ms){
-  const d = new Date(ms);
-  return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
+function uid(prefix="id"){
+  return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now();
 }
-function monthKey(ms){
-  const d = new Date(ms);
-  return d.getFullYear()+"-"+pad2(d.getMonth()+1);
-}
-function yearKey(ms){
-  const d = new Date(ms);
-  return String(d.getFullYear());
+
+function deepClone(obj){
+  return JSON.parse(JSON.stringify(obj));
 }
 
 function save(){
-  localStorage.setItem(LS_KEY, JSON.stringify(state));
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+  }catch(e){
+    console.warn("save failed", e);
+  }
 }
 function load(){
-  const raw = localStorage.getItem(LS_KEY);
-  if(!raw) return;
   try{
-    const obj = JSON.parse(raw);
-    // merge
-    for(const k of Object.keys(state)){
-      if(obj[k] !== undefined) state[k] = obj[k];
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      // 安全に最低限マージ
+      state = Object.assign(deepClone(state), parsed);
+      state.ui = Object.assign(deepClone(state.ui), parsed.ui||{});
     }
-  }catch(e){}
+  }catch(e){
+    console.warn("load failed", e);
+  }
 }
-load();
 
-/* =========================
-   View Navigation
-========================= */
-const views = [
-  "viewMain","viewSettings","viewSeatRegister","viewMenuRegister",
-  "viewOrder","viewCheckout",
-  "viewSales","viewSalesMonth","viewSalesYear","viewSalesManage",
-  "viewStoreInfo","viewContact",
-  "viewBanquet","viewSeatMove","viewKitchen"
+/* ========= 画面切替 ========= */
+const VIEW_IDS = [
+  "viewMain",
+  "viewSettings",
+  "viewSeatRegister",
+  "viewMenuRegister",
+  "viewOrder",
+  "viewCheckout",
+  "viewKitchen",
+  "viewSales",
+  "viewSalesMonth",
+  "viewSalesYear",
+  "viewSalesManage",
+  "viewBackup",
+  "viewStoreInfo",
+  "viewSuggest",
+  "viewContact"
 ];
+
 function showView(id){
-  for(const v of views) document.getElementById(v).classList.remove("active");
-  document.getElementById(id).classList.add("active");
+  VIEW_IDS.forEach(v=>{
+    const el = document.getElementById(v);
+    if(el) el.classList.toggle("hidden", v!==id);
+  });
+  state.ui.view = id;
+
+  // topbar切替（メインのみ main / それ以外は sub）
+  const isMain = id === "viewMain";
+  document.getElementById("topbarMain").classList.toggle("hidden", !isMain);
+  document.getElementById("topbarSub").classList.toggle("hidden", isMain);
+
+  save();
 }
+
 function goMain(){
   state.ui.selectedSeatIds = [];
-  state.ui.currentAccountId = null;
-  state.ui.currentGenre = null;
-  save();
-  renderAll();
   showView("viewMain");
+  renderSeats();
 }
-function openSettings(){ showView("viewSettings"); }
-function openSeatRegister(){ resetSeatRegisterUI(); showView("viewSeatRegister"); }
-function openMenuRegister(){ renderMenuList(); showView("viewMenuRegister"); }
-function openSales(){ renderSales(); showView("viewSales"); }
-function openSalesMonth(){ renderSalesMonth(); showView("viewSalesMonth"); }
-function openSalesYear(){ renderSalesYear(); showView("viewSalesYear"); }
-function openSalesManage(){ renderSalesManage(); showView("viewSalesManage"); }
-function openStoreInfo(){
-  document.getElementById("storeName").value = state.store?.name || "";
-  document.getElementById("storeTel").value  = state.store?.tel || "";
-  document.getElementById("storeAddr").value = state.store?.addr || "";
-  showView("viewStoreInfo");
-}
-function openContact(){
-  document.getElementById("contactBody").value = "";
-  showView("viewContact");
-}
-function openBanquet(){ showView("viewBanquet"); }
-function openSeatMove(){ showView("viewSeatMove"); }
-function openKitchen(){ refreshKitchen(); showView("viewKitchen"); }
 
-/* =========================
-   Modal
-========================= */
-function overlayCloseIfBackdrop(e){
-  if(e.target.id === "overlay") closeModal();
+function openSettings(){
+  showView("viewSettings");
 }
-function openModal(title, bodyNode, footNode){
-  document.getElementById("modalTitle").textContent = title || "確認";
-  const body = document.getElementById("modalBody");
-  body.innerHTML = "";
-  if(bodyNode instanceof Node) body.appendChild(bodyNode);
-  else body.textContent = String(bodyNode ?? "");
 
-  const foot = document.getElementById("modalFoot");
-  foot.innerHTML = "";
-  if(footNode){
-    foot.style.display = "flex";
-    foot.appendChild(footNode);
-  }else{
-    foot.style.display = "none";
-  }
-  document.getElementById("overlay").classList.add("show");
+/* ========= モーダル ========= */
+function openModal({title="確認", sub="", bodyHtml="", yesText="OK", noText="戻る", onYes=null, onNo=null}){
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = `
+    <div class="overlay">
+      <div class="modal">
+        <div class="modal-title">${escapeHtml(title)}</div>
+        ${sub ? `<div class="modal-sub">${escapeHtml(sub)}</div>` : ""}
+        ${bodyHtml ? `<div class="modal-body">${bodyHtml}</div>` : ""}
+        <div class="modal-actions">
+          <button class="btn full ok" id="modalYes">${escapeHtml(yesText)}</button>
+          <button class="btn full" id="modalNo">${escapeHtml(noText)}</button>
+        </div>
+      </div>
+    </div>
+  `;
+  root.classList.remove("hidden");
+
+  document.getElementById("modalYes").onclick = ()=>{
+    closeModal();
+    try{ if(onYes) onYes(); }catch(e){ console.warn(e); }
+  };
+  document.getElementById("modalNo").onclick = ()=>{
+    closeModal();
+    try{ if(onNo) onNo(); }catch(e){ console.warn(e); }
+  };
 }
 function closeModal(){
-  document.getElementById("overlay").classList.remove("show");
+  const root = document.getElementById("modalRoot");
+  root.classList.add("hidden");
+  root.innerHTML = "";
 }
-function openYesNo(title, message, onYes, onNo, yesLabel="○", noLabel="✖"){
-  const body = document.createElement("div");
-  body.innerHTML = `<div style="font-weight:900; margin-bottom:6px;">${escapeHtml(message)}</div>`;
-  const foot = document.createElement("div");
-  foot.className = "modalFoot";
-  foot.style.display = "flex";
 
-  const no = document.createElement("button");
-  no.className = "btn";
-  no.textContent = noLabel;
-  no.onclick = ()=>{ closeModal(); onNo && onNo(); };
-
-  const yes = document.createElement("button");
-  yes.className = "btn primary";
-  yes.textContent = yesLabel;
-  yes.onclick = ()=>{ closeModal(); onYes && onYes(); };
-
-  foot.appendChild(no);
-  foot.appendChild(yes);
-  openModal(title, body, foot);
-}
-function openNumberPrompt(title, defaultValue, onOk){
-  const wrap = document.createElement("div");
-  const f = document.createElement("div");
-  f.className = "field";
-  f.innerHTML = `<div class="label">${escapeHtml(title)}</div>`;
-  const input = document.createElement("input");
-  input.className = "input";
-  input.type = "number";
-  input.inputMode = "numeric";
-  input.value = String(defaultValue ?? 1);
-  f.appendChild(input);
-  wrap.appendChild(f);
-
-  const foot = document.createElement("div");
-  foot.className = "modalFoot";
-  foot.style.display = "flex";
-
-  const back = document.createElement("button");
-  back.className = "btn";
-  back.textContent = "戻る";
-  back.onclick = ()=> closeModal();
-
-  const ok = document.createElement("button");
-  ok.className = "btn primary";
-  ok.textContent = "決定";
-  ok.onclick = ()=>{
-    const n = Number(input.value || 0);
-    closeModal();
-    onOk && onOk(n);
-  };
-
-  foot.appendChild(back);
-  foot.appendChild(ok);
-  openModal(title, wrap, foot);
-}
-function escapeHtml(str){
-  return String(str ?? "")
+function escapeHtml(s){
+  return String(s)
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
     .replaceAll(">","&gt;")
     .replaceAll('"',"&quot;")
-    .replaceAll("'","&#39;");
+    .replaceAll("'","&#039;");
 }
 
-/* =========================
-   Backup
-========================= */
-function openBackup(){
-  const body = document.createElement("div");
-  const p = document.createElement("div");
-  p.className = "hint";
-  p.textContent = "端末内のデータを保存・復元します。";
-  body.appendChild(p);
+/* ========= データ検索 ========= */
+function getSeat(id){ return state.seats.find(s=>s.id===id) || null; }
+function getMenu(id){ return state.menus.find(m=>m.id===id) || null; }
 
-  const expBtn = document.createElement("button");
-  expBtn.className = "btn wide";
-  expBtn.style.marginTop = "10px";
-  expBtn.textContent = "バックアップを書き出す";
-  expBtn.onclick = exportBackup;
-  body.appendChild(expBtn);
-
-  const impLabel = document.createElement("div");
-  impLabel.className = "label";
-  impLabel.style.marginTop = "12px";
-  impLabel.textContent = "復元（jsonを選択）";
-  body.appendChild(impLabel);
-
-  const imp = document.createElement("input");
-  imp.type = "file";
-  imp.accept = "application/json";
-  imp.style.width = "100%";
-  imp.onchange = importBackup;
-  body.appendChild(imp);
-
-  openModal("バックアップ", body);
+function seatDisplayLabel(seat){
+  // 予約は「予約」表示、団体は廃止（仕様反映）
+  return seat.label;
 }
-function exportBackup(){
-  save();
-  const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "ONE_backup_"+fmtDate(nowMs())+".json";
-  a.click();
-  URL.revokeObjectURL(url);
+
+/* ========= 合算（代表席） =========
+  mergedInto が null の席が“代表”。
+  mergedInto が入っている席は代表席に合算されている扱い。
+*/
+function getMergeBaseId(seatId){
+  let cur = getSeat(seatId);
+  let guard = 0;
+  while(cur && cur.mergedInto && guard<20){
+    cur = getSeat(cur.mergedInto);
+    guard++;
+  }
+  return cur ? cur.id : seatId;
 }
-function importBackup(e){
-  const file = e.target.files?.[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try{
-      const obj = JSON.parse(reader.result);
-      for(const k of Object.keys(state)){
-        if(obj[k] !== undefined) state[k] = obj[k];
-      }
-      save();
-      closeModal();
-      renderAll();
-      openModal("復元", document.createTextNode("復元しました。"));
-    }catch(err){
-      openModal("復元", document.createTextNode("読み込みに失敗しました。"));
+
+function isMergedChild(seat){
+  return !!seat.mergedInto;
+}
+
+/* ========= 金額計算 ========= */
+function sumOrders(orders){
+  return (orders||[]).reduce((acc,o)=> acc + (Number(o.price||0) * Number(o.qty||1)), 0);
+}
+
+function seatTotal(seatId){
+  const baseId = getMergeBaseId(seatId);
+  const base = getSeat(baseId);
+  if(!base) return 0;
+
+  let total = sumOrders(base.orders);
+
+  // baseに合算されている子席の注文も合計
+  state.seats.forEach(s=>{
+    if(s.mergedInto === baseId){
+      total += sumOrders(s.orders);
     }
-  };
-  reader.readAsText(file);
+  });
+  return total;
 }
 
-/* =========================
-   Seats / Accounts
-========================= */
-function ensureDemoMenuIfEmpty(){
-  if(state.menus && state.menus.length>0) return;
-  state.menus = [
-    {id:"m1", genre:"ドリンク", name:"生ビール", price:700, taxRate:10},
-    {id:"m2", genre:"料理", name:"焼き鳥", price:200, taxRate:10},
-    {id:"m3", genre:"料理", name:"漬物", price:300, taxRate:10},
-    {id:"m4", genre:"料理", name:"酢豚", price:900, taxRate:10},
-    {id:"m5", genre:"料理", name:"麻婆豆腐", price:850, taxRate:10},
-  ];
-  save();
+/* ========= 表示（席） ========= */
+function seatStatusBadge(seat){
+  if(seat.status==="reserve") return `<span class="badge reserve">予約</span>`;
+  if(seat.mergedInto) return `<span class="badge merged">合算</span>`;
+  return "";
 }
-function seatsSorted(){
-  const list = [...(state.seatsMaster||[])];
-  const key = (s)=>{
-    const m = String(s.name).match(/^([A-Z]+)?(\d+)?$/);
-    if(m){
-      const a = m[1] || "";
-      const n = m[2] ? parseInt(m[2],10) : 0;
-      return a.padEnd(8,"_") + String(n).padStart(6,"0");
-    }
-    return String(s.name);
-  };
-  list.sort((a,b)=> key(a).localeCompare(key(b)));
-  return list;
+
+function seatMetaText(seat){
+  if(seat.status==="reserve"){
+    const p = seat.party?.people || "";
+    const nm = seat.party?.name ? `\n${seat.party.name}` : "";
+    const ph = seat.party?.phone ? `\n${seat.party.phone}` : "";
+    return `${p}名${nm}${ph}`;
+  }
+  if(seat.status==="active"){
+    const p = seat.party?.people || "";
+    const nm = seat.party?.name ? `\n${seat.party.name}` : "";
+    const hm = seat.openedAt ? `\n${formatHM(seat.openedAt)}` : "";
+    return `${p}名${nm}${hm}`;
+  }
+  return "空席";
 }
-function seatLabelById(id){
-  const s = (state.seatsMaster||[]).find(x=>x.id===id);
-  return s ? s.name : "";
-}
-function isSeatOccupied(seatId){
-  return !!state.seatToAccount?.[seatId];
-}
-function accountTotal(accountId){
-  const a = state.accounts?.[accountId];
-  if(!a) return 0;
-  return (a.orders||[]).reduce((sum,o)=> sum + (o.price*o.qty), 0);
-}
-function accountSeatLabel(accountId){
-  const a = state.accounts?.[accountId];
-  if(!a) return "";
-  const labels = (a.seatIds||[]).map(seatLabelById).filter(Boolean);
-  return labels.join(",");
-}
-function toggleSeatSelect(seatId){
-  const arr = state.ui.selectedSeatIds || [];
-  const idx = arr.indexOf(seatId);
-  if(idx>=0) arr.splice(idx,1);
-  else arr.push(seatId);
-  state.ui.selectedSeatIds = arr;
-  save();
-  renderSeatGrid();
-}
-function renderSeatGrid(){
+
+function renderSeats(){
   const grid = document.getElementById("seatGrid");
+  if(!grid) return;
+
+  // 席ラベル順：英字→数字（簡易ソート）
+  const sorted = [...state.seats].sort((a,b)=>{
+    const la = a.label||"", lb = b.label||"";
+    return la.localeCompare(lb, "ja");
+  });
+
   grid.innerHTML = "";
-  const list = seatsSorted();
-  if(list.length===0){
-    grid.innerHTML = `<div class="card"><div class="hint">席が未登録です。「席登録」から作成してください。</div></div>`;
-    document.getElementById("decideBtn").style.display = "none";
-    return;
-  }
-  document.getElementById("decideBtn").style.display = "inline-block";
+  sorted.forEach(seat=>{
+    const isSel = state.ui.selectedSeatIds.includes(seat.id);
+    const cls = ["seat"];
+    if(isSel) cls.push("selected");
+    if(seat.mergedInto) cls.push("merged");
 
-  const sel = state.ui.selectedSeatIds || [];
-  for(const s of list){
-    const div = document.createElement("div");
-    div.className = "seatCard" + (sel.includes(s.id) ? " selected" : "");
-    const accId = state.seatToAccount?.[s.id];
-    const occupied = !!accId;
-    const money = occupied ? fmtYen(accountTotal(accId)) : "空席";
-    const people = occupied ? (state.accounts[accId]?.peopleTotal || 0) : 0;
+    const baseId = getMergeBaseId(seat.id);
+    const baseSeat = getSeat(baseId);
+    const total = baseSeat ? seatTotal(baseId) : 0;
 
-    div.innerHTML =
-      `<div class="seatNo">${escapeHtml(s.name)}</div>` +
-      `<div class="seatSub">${escapeHtml(s.typeLabel || "")}</div>` +
-      `<div class="seatMoney">${occupied ? money : "空席"}</div>` +
-      `<div class="seatPeople">${occupied ? ("人数 "+people) : ""}</div>`;
-
-    div.onclick = ()=> toggleSeatSelect(s.id);
-    grid.appendChild(div);
-  }
-}
-function renderAll(){
-  ensureDemoMenuIfEmpty();
-  renderSeatGrid();
-  renderMenuList();
-  renderSales();
-}
-
-/* --- Decide seat selection & create accounts --- */
-function decideSeatSelection(){
-  const sel = state.ui.selectedSeatIds || [];
-  if(sel.length===0){
-    openModal("確認", document.createTextNode("席を選択してください。"));
-    return;
-  }
-  const occupied = sel.filter(isSeatOccupied);
-  const empty = sel.filter(sid=>!isSeatOccupied(sid));
-
-  if(sel.length===1 && occupied.length===1){
-    const accId = state.seatToAccount[occupied[0]];
-    openOrderByAccount(accId);
-    return;
-  }
-
-  if(occupied.length===sel.length){
-    openYesNo("まとめますか？", "○でまとめる / ✖でまとめない",
-      ()=>{
-        mergeSelectedOccupiedSeats(sel);
-        const accId = state.seatToAccount[sel[0]];
-        openOrderByAccount(accId);
-      },
-      ()=> openModal("確認", document.createTextNode("まとめませんでした。"))
-    );
-    return;
-  }
-
-  if(occupied.length>0 && empty.length>0){
-    openYesNo("まとめますか？", "選択中の空席を既存会計にまとめますか？",
-      ()=>{
-        const baseAccId = state.seatToAccount[occupied[0]];
-        attachSeatsToAccount(baseAccId, empty);
-        openOrderByAccount(baseAccId);
-      },
-      ()=> openModal("確認", document.createTextNode("まとめませんでした。"))
-    );
-    return;
-  }
-
-  // all empty
-  openYesNo("まとめますか？", "○でまとめる / ✖でまとめない",
-    ()=>{
-      createNewAccountForSeats(sel, true);
-    },
-    ()=>{
-      createNewAccountForSeats(sel, false);
-    }
-  );
-}
-function createNewAccountForSeats(seatIds, merge){
-  const firstSeat = (state.seatsMaster||[]).find(s=>s.id===seatIds[0]);
-  const typeLabel = firstSeat?.typeLabel || "カウンター";
-  const defaultPeople = (typeLabel==="カウンター" || typeLabel==="立ち") ? seatIds.length : 4;
-
-  openNumberPrompt("人数", defaultPeople, (peopleTotal)=>{
-    const pTotal = Math.max(1, Number(peopleTotal)||1);
-    if(merge){
-      const accId = "a"+nowMs();
-      state.accounts[accId] = {id:accId, seatIds:[...seatIds], peopleTotal:pTotal, orders:[], createdAt:nowMs()};
-      for(const sid of seatIds) state.seatToAccount[sid] = accId;
-      state.ui.selectedSeatIds = [];
-      save();
-      renderSeatGrid();
-      openOrderByAccount(accId);
+    // 金額表示ルール（仕様）：合算後は“若い方（代表）”に金額、子には「合算」表示＋色
+    let moneyHtml = "";
+    if(seat.mergedInto){
+      moneyHtml = `<div class="seat-money" style="color:#ede9fe;">合算</div>`;
     }else{
-      for(const sid of seatIds){
-        const accId = "a"+nowMs()+Math.random().toString(16).slice(2,6);
-        const per = (typeLabel==="カウンター"||typeLabel==="立ち") ? 1 : Math.max(1, Math.floor(pTotal/seatIds.length) || 1);
-        state.accounts[accId] = {id:accId, seatIds:[sid], peopleTotal:per, orders:[], createdAt:nowMs()};
-        state.seatToAccount[sid] = accId;
-      }
-      state.ui.selectedSeatIds = [];
-      save();
-      renderSeatGrid();
-      const accId0 = state.seatToAccount[seatIds[0]];
-      openOrderByAccount(accId0);
+      moneyHtml = `<div class="seat-money">${yen(total)}</div>`;
     }
-  });
-}
-function attachSeatsToAccount(accId, seatIds){
-  const a = state.accounts[accId];
-  if(!a) return;
-  for(const sid of seatIds){
-    if(state.seatToAccount[sid]) continue;
-    a.seatIds.push(sid);
-    state.seatToAccount[sid] = accId;
-  }
-  save();
-}
-function mergeSelectedOccupiedSeats(seatIds){
-  const accIds = [...new Set(seatIds.map(sid=>state.seatToAccount[sid]).filter(Boolean))];
-  if(accIds.length<=1) return;
 
-  const baseId = accIds[0];
-  const base = state.accounts[baseId];
-  if(!base) return;
-
-  const snapshot = JSON.parse(JSON.stringify({
-    accounts: accIds.reduce((m,id)=>{ m[id]=state.accounts[id]; return m; }, {}),
-    seatToAccount: seatIds.reduce((m,sid)=>{ m[sid]=state.seatToAccount[sid]; return m; }, {})
-  }));
-
-  for(let i=1;i<accIds.length;i++){
-    const id = accIds[i];
-    const a = state.accounts[id];
-    if(!a) continue;
-    base.orders.push(...(a.orders||[]));
-    base.seatIds.push(...(a.seatIds||[]));
-    base.peopleTotal += Number(a.peopleTotal||0);
-  }
-  base.seatIds = [...new Set(base.seatIds)];
-  base.mergedFrom = snapshot;
-
-  for(const sid of base.seatIds){
-    state.seatToAccount[sid] = baseId;
-  }
-  for(let i=1;i<accIds.length;i++){
-    delete state.accounts[accIds[i]];
-  }
-  save();
-}
-function restoreMergedSnapshot(baseAccId){
-  const base = state.accounts[baseAccId];
-  if(!base || !base.mergedFrom) return;
-  const snap = base.mergedFrom;
-
-  const seats = [...(base.seatIds||[])];
-  delete state.accounts[baseAccId];
-
-  for(const id of Object.keys(snap.accounts)){
-    state.accounts[id] = snap.accounts[id];
-  }
-  for(const sid of Object.keys(snap.seatToAccount)){
-    state.seatToAccount[sid] = snap.seatToAccount[sid];
-  }
-  for(const sid of seats){
-    if(!snap.seatToAccount[sid]){
-      delete state.seatToAccount[sid];
-    }
-  }
-  save();
-}
-function openMerge(){
-  const sel = state.ui.selectedSeatIds || [];
-  if(sel.length<2){
-    openModal("会計合算", document.createTextNode("メインで複数席を選択してください。"));
-    return;
-  }
-  const occupied = sel.filter(isSeatOccupied);
-  if(occupied.length<2){
-    openModal("会計合算", document.createTextNode("合算するには、着席済みの席を2つ以上選択してください。"));
-    return;
-  }
-  openYesNo("まとめますか？","○でまとめる / ✖でまとめない",
-    ()=>{
-      mergeSelectedOccupiedSeats(sel);
-      state.ui.selectedSeatIds = [];
-      save();
-      renderAll();
-      openModal("会計合算", document.createTextNode("まとめました。"));
-    },
-    ()=> openModal("会計合算", document.createTextNode("まとめませんでした。"))
-  );
-}
-function openSplit(){
-  const sel = state.ui.selectedSeatIds || [];
-  if(sel.length===0){
-    openModal("会計分割", document.createTextNode("メインで対象の席（合算後の席）を選択してください。"));
-    return;
-  }
-  const accId = state.seatToAccount[sel[0]];
-  const a = state.accounts?.[accId];
-  if(!a || !a.mergedFrom){
-    openModal("会計分割", document.createTextNode("分割できる合算履歴がありません。"));
-    return;
-  }
-  openYesNo("会計を分けますか？","救済処置として、合算前の状態に戻します。",
-    ()=>{
-      restoreMergedSnapshot(accId);
-      state.ui.selectedSeatIds = [];
-      save();
-      renderAll();
-      openModal("会計分割", document.createTextNode("分割しました。"));
-    },
-    ()=> openModal("会計分割", document.createTextNode("分割しませんでした。"))
-  );
-}
-
-/* =========================
-   Seat move (simple)
-========================= */
-function doSeatMove(){
-  const sel = state.ui.selectedSeatIds || [];
-  if(sel.length !== 2){
-    openModal("席移動", document.createTextNode("メインで「移動元」と「移動先（空席）」の2席を選択してください。"));
-    return;
-  }
-  const from = sel[0];
-  const to = sel[1];
-  if(!isSeatOccupied(from)){
-    openModal("席移動", document.createTextNode("移動元が空席です。"));
-    return;
-  }
-  if(isSeatOccupied(to)){
-    openModal("席移動", document.createTextNode("移動先が空席ではありません。"));
-    return;
-  }
-  const accId = state.seatToAccount[from];
-  const a = state.accounts[accId];
-  if(!a) return;
-
-  // replace seatId in account seatIds
-  a.seatIds = a.seatIds.map(sid => sid===from ? to : sid);
-  // move mapping
-  delete state.seatToAccount[from];
-  state.seatToAccount[to] = accId;
-
-  state.ui.selectedSeatIds = [];
-  save();
-  renderAll();
-  openModal("席移動", document.createTextNode("移動しました。"));
-}
-
-/* =========================
-   Seat Register Wizard
-========================= */
-function resetSeatRegisterUI(){
-  const seatType = document.getElementById("seatType");
-  const types = getSeatTypeOptions();
-  seatType.innerHTML = "";
-  for(const t of types){
-    const opt = document.createElement("option");
-    opt.value = t; opt.textContent = t;
-    seatType.appendChild(opt);
-  }
-  seatType.value = types.includes("カウンター") ? "カウンター" : types[0];
-  document.getElementById("seatCount").value = "";
-  document.getElementById("otherName").value = "";
-  document.getElementById("wizardCard").style.display = "none";
-  onSeatTypeChange();
-}
-function getSeatTypeOptions(){
-  const base = ["カウンター","立ち","テーブル","座敷","個室","その他"];
-  const extra = (state.store?.otherTypes || []).filter(Boolean);
-  // baseの「その他」を末尾に
-  return [...new Set([...base.slice(0,5), ...extra, "その他"])];
-}
-function onSeatTypeChange(){
-  const t = document.getElementById("seatType").value;
-  const other = (t==="その他");
-  document.getElementById("otherNameField").style.display = other ? "block" : "none";
-  const label = document.getElementById("countLabel");
-  label.textContent = (t==="カウンター"||t==="立ち") ? "総席数" : "総卓数";
-}
-let wizard = null;
-function startSeatNumberWizard(){
-  const t = document.getElementById("seatType").value;
-  let typeLabel = t;
-  if(t==="その他"){
-    const name = (document.getElementById("otherName").value||"").trim();
-    if(!name){ openModal("確認", document.createTextNode("名称を入力してください。")); return; }
-    typeLabel = name;
-    state.store.otherTypes = state.store.otherTypes || [];
-    if(!state.store.otherTypes.includes(name)) state.store.otherTypes.push(name);
-  }
-  const count = Number(document.getElementById("seatCount").value||0);
-  if(!count || count<=0){ openModal("確認", document.createTextNode("総席（卓）数を入力してください。")); return; }
-
-  const defaultMax = (typeLabel==="カウンター"||typeLabel==="立ち") ? 1 : 4;
-  wizard = { typeLabel, total: count, index: 0, defaultMax };
-
-  document.getElementById("wizardSeatName").value = "1";
-  document.getElementById("wizardMaxPeople").textContent = String(defaultMax);
-  document.getElementById("maxDefaultHint").textContent =
-    (defaultMax===1 ? "カウンター・立ちはデフォルト1名" : "テーブル等はデフォルト4名");
-  document.getElementById("wizardCard").style.display = "block";
-  updateWizardProgress();
-  save();
-}
-function updateWizardProgress(){
-  document.getElementById("wizardProgress").textContent = (wizard ? wizard.index : 0) + " / " + (wizard ? wizard.total : 0);
-}
-function stepSeatString(v, dir){
-  v = (v||"").trim().toUpperCase();
-  const m1 = v.match(/^(\d+)$/);
-  if(m1){
-    const n = Math.max(1, parseInt(m1[1],10) + dir);
-    return String(n);
-  }
-  const m2 = v.match(/^([A-Z])$/);
-  if(m2){
-    let code = m2[1].charCodeAt(0) + dir;
-    if(code<65) code=65;
-    if(code>90) code=90;
-    return String.fromCharCode(code);
-  }
-  const m3 = v.match(/^([A-Z]+)(\d+)$/);
-  if(m3){
-    const prefix = m3[1];
-    const n = Math.max(1, parseInt(m3[2],10) + dir);
-    return prefix + String(n);
-  }
-  return v;
-}
-function stepSeatName(dir){
-  const input = document.getElementById("wizardSeatName");
-  input.value = stepSeatString(input.value, dir);
-}
-function stepMaxPeople(dir){
-  const el = document.getElementById("wizardMaxPeople");
-  let n = Number(el.textContent || "1");
-  n += dir;
-  if(n<1) n=1;
-  if(n>30) n=30;
-  el.textContent = String(n);
-}
-function saveWizardSeat(){
-  if(!wizard) return;
-  const name = (document.getElementById("wizardSeatName").value || "").trim().toUpperCase();
-  if(!name){ openModal("確認", document.createTextNode("席番号を入力してください。")); return; }
-  const maxPeople = Number(document.getElementById("wizardMaxPeople").textContent || "1");
-
-  const seat = {
-    id: "s"+nowMs()+Math.random().toString(16).slice(2,6),
-    name,
-    typeLabel: wizard.typeLabel,
-    maxPeople
-  };
-  state.seatsMaster = state.seatsMaster || [];
-  state.seatsMaster.push(seat);
-
-  wizard.index += 1;
-  updateWizardProgress();
-
-  if(wizard.index >= wizard.total){
-    wizard = null;
-    document.getElementById("wizardCard").style.display = "none";
-    save();
-    renderSeatGrid();
-    openModal("席登録", document.createTextNode("登録しました。"));
-    return;
-  }
-
-  const next = stepSeatString(name, 1);
-  document.getElementById("wizardSeatName").value = next;
-  const nextDefault = (wizard?.typeLabel==="カウンター"||wizard?.typeLabel==="立ち") ? 1 : 4;
-  document.getElementById("wizardMaxPeople").textContent = String(nextDefault);
-  save();
-}
-function cancelSeatWizard(){
-  wizard = null;
-  document.getElementById("wizardCard").style.display = "none";
-  save();
-  openModal("確認", document.createTextNode("中止しました。"));
-}
-function confirmResetSeats(){
-  openYesNo("確認","席・会計データを全削除しますか？",
-    ()=>{
-      state.seatsMaster = [];
-      state.accounts = {};
-      state.seatToAccount = {};
-      state.ui.selectedSeatIds = [];
-      save();
-      renderAll();
-      openModal("削除", document.createTextNode("削除しました。"));
-    },
-    ()=>{}
-  );
-}
-
-/* =========================
-   Menu Register
-========================= */
-function onMenuPhotoPicked(event){
-  const file = event.target.files?.[0];
-  if(!file) return;
-  const url = URL.createObjectURL(file);
-  document.getElementById("menuPhotoPreviewWrap").style.display = "block";
-  document.getElementById("menuPhotoPreview").src = url;
-  openModal("写真を確認", document.createTextNode("写真を見ながら「手動追加」で登録してください。"));
-}
-function getGenres(){
-  const set = new Set();
-  for(const m of (state.menus||[])){
-    if(m.genre) set.add(m.genre);
-  }
-  if(set.size===0){
-    set.add("ドリンク"); set.add("料理");
-  }
-  return [...set];
-}
-function openMenuManualAdd(){
-  const wrap = document.createElement("div");
-
-  const genres = getGenres();
-  const fieldGenre = document.createElement("div");
-  fieldGenre.className = "field";
-  fieldGenre.innerHTML = `<div class="label">ジャンル</div>`;
-  const sel = document.createElement("select");
-  sel.className = "select";
-  for(const g of genres){
-    const opt = document.createElement("option");
-    opt.value = g; opt.textContent = g;
-    sel.appendChild(opt);
-  }
-  const optNew = document.createElement("option");
-  optNew.value = "__new__";
-  optNew.textContent = "新規ジャンル";
-  sel.appendChild(optNew);
-  fieldGenre.appendChild(sel);
-
-  const newGenreField = document.createElement("div");
-  newGenreField.className = "field";
-  newGenreField.style.display = "none";
-  newGenreField.innerHTML = `<div class="label">新規ジャンル名</div>`;
-  const newGenre = document.createElement("input");
-  newGenre.className = "input";
-  newGenre.placeholder = "ジャンル名";
-  newGenreField.appendChild(newGenre);
-
-  sel.onchange = ()=>{ newGenreField.style.display = (sel.value==="__new__") ? "block" : "none"; };
-
-  const fName = document.createElement("div");
-  fName.className = "field";
-  fName.innerHTML = `<div class="label">商品名</div>`;
-  const inName = document.createElement("input");
-  inName.className = "input";
-  inName.placeholder = "商品名";
-  fName.appendChild(inName);
-
-  const fPrice = document.createElement("div");
-  fPrice.className = "field";
-  fPrice.innerHTML = `<div class="label">価格</div>`;
-  const inPrice = document.createElement("input");
-  inPrice.className = "input";
-  inPrice.type = "number";
-  inPrice.inputMode = "numeric";
-  inPrice.placeholder = "例：700";
-  fPrice.appendChild(inPrice);
-
-  const fTax = document.createElement("div");
-  fTax.className = "field";
-  fTax.innerHTML = `<div class="label">税率</div>`;
-  const taxSel = document.createElement("select");
-  taxSel.className = "select";
-  taxSel.innerHTML = `<option value="10">10%</option><option value="8">8%</option>`;
-  fTax.appendChild(taxSel);
-
-  wrap.appendChild(fieldGenre);
-  wrap.appendChild(newGenreField);
-  wrap.appendChild(fName);
-  wrap.appendChild(fPrice);
-  wrap.appendChild(fTax);
-
-  const foot = document.createElement("div");
-  foot.className = "modalFoot";
-  foot.style.display = "flex";
-
-  const cancel = document.createElement("button");
-  cancel.className = "btn";
-  cancel.textContent = "戻る";
-  cancel.onclick = closeModal;
-
-  const ok = document.createElement("button");
-  ok.className = "btn primary";
-  ok.textContent = "登録";
-  ok.onclick = ()=>{
-    let genre = sel.value;
-    if(genre==="__new__"){
-      genre = (newGenre.value||"").trim();
-      if(!genre){ openModal("確認", document.createTextNode("新規ジャンル名を入力してください。")); return; }
-    }
-    const name = (inName.value||"").trim();
-    const price = Number(inPrice.value||0);
-    const taxRate = Number(taxSel.value||10);
-    if(!name || !price){
-      openModal("確認", document.createTextNode("商品名と価格を入力してください。"));
-      return;
-    }
-    state.menus = state.menus || [];
-    state.menus.push({id:"m"+nowMs()+Math.random().toString(16).slice(2,6), genre, name, price, taxRate});
-    save();
-    closeModal();
-    renderMenuList();
-    renderOrderGenresAndItems();
-  };
-
-  foot.appendChild(cancel);
-  foot.appendChild(ok);
-
-  openModal("手動追加", wrap, foot);
-}
-function deleteMenu(id){
-  state.menus = (state.menus||[]).filter(m=>m.id!==id);
-  save();
-  renderMenuList();
-  renderOrderGenresAndItems();
-}
-function renderMenuList(){
-  const list = document.getElementById("menuList");
-  list.innerHTML = "";
-  const menus = state.menus || [];
-  if(menus.length===0){
-    list.innerHTML = `<div class="card"><div class="hint">メニューがありません。「手動追加」または「カメラ」から登録してください。</div></div>`;
-    return;
-  }
-  for(const m of menus){
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = `
-      <div class="row">
-        <div class="rowLeft">
-          <div style="font-weight:900;">${escapeHtml(m.genre)}｜${escapeHtml(m.name)}</div>
-          <div class="muted">${fmtYen(m.price)}｜税 ${m.taxRate}%</div>
+    const html = `
+      <div class="${cls.join(" ")}" data-seat="${seat.id}">
+        ${seatStatusBadge(seat)}
+        <div>
+          <div class="seat-no">${escapeHtml(seatDisplayLabel(seat))}</div>
+          <div class="seat-meta">${escapeHtml(seatMetaText(seat))}</div>
         </div>
-        <button class="btn danger" onclick="deleteMenu('${m.id}')">削除</button>
+        ${moneyHtml}
       </div>
     `;
-    list.appendChild(div);
-  }
-}
+    grid.insertAdjacentHTML("beforeend", html);
+  });
 
-/* =========================
-   Order
-========================= */
-function openOrderByAccount(accId){
-  state.ui.currentAccountId = accId;
-  state.ui.currentGenre = null;
-  state.ui.qty = { menuId:null, name:"", price:0, qty:1, mode:"add", orderItemId:null };
-  save();
-  renderOrder();
-  showView("viewOrder");
-}
-function openCheckoutFromOrder(){
-  if(!state.ui.currentAccountId) return;
-  renderCheckout(state.ui.currentAccountId);
-  showView("viewCheckout");
-}
-function renderOrder(){
-  const accId = state.ui.currentAccountId;
-  const a = state.accounts?.[accId];
-  if(!a){
-    openModal("確認", document.createTextNode("会計データが見つかりません。"));
-    goMain();
-    return;
-  }
-  const seatLabel = accountSeatLabel(accId);
-  document.getElementById("orderSeatTitle").textContent = "席 " + seatLabel;
-  document.getElementById("orderPill").textContent = "人数 " + (a.peopleTotal||0) + " / 合計 " + fmtYen(accountTotal(accId));
-
-  renderOrderGenresAndItems();
-  renderOrderList();
-}
-function renderOrderGenresAndItems(){
-  const gGrid = document.getElementById("genreGrid");
-  gGrid.innerHTML = "";
-
-  const genres = getGenres();
-  for(const g of genres){
-    const b = document.createElement("button");
-    b.className = "btn";
-    b.textContent = g;
-    b.onclick = ()=>{
-      state.ui.currentGenre = g;
-      save();
-      renderOrderItems();
+  // クリック
+  grid.querySelectorAll(".seat").forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.getAttribute("data-seat");
+      toggleSelectSeat(id);
     };
-    gGrid.appendChild(b);
-  }
-  renderOrderItems();
+  });
 }
-function renderOrderItems(){
-  const iGrid = document.getElementById("itemGrid");
-  iGrid.innerHTML = "";
 
-  const g = state.ui.currentGenre;
-  const items = (state.menus||[]).filter(m => !g || m.genre===g);
+function toggleSelectSeat(seatId){
+  const id = String(seatId);
+  const idx = state.ui.selectedSeatIds.indexOf(id);
+  if(idx>=0){
+    state.ui.selectedSeatIds.splice(idx,1);
+  }else{
+    state.ui.selectedSeatIds.push(id);
+  }
+  save();
+  renderSeats();
+}
 
-  const back = document.createElement("button");
-  back.className = "btn";
-  back.textContent = "戻る";
-  back.onclick = ()=>{
-    state.ui.currentGenre = null;
+/* ========= イベント：トップとナビ ========= */
+function bindNav(){
+  // Top
+  document.getElementById("btnKitchen").onclick = ()=> goKitchen();
+  document.getElementById("btnBackupTop").onclick = ()=> openBackup();
+
+  document.getElementById("btnMainTop").onclick = ()=> goMain();
+  document.getElementById("btnMainTopR").onclick = ()=> goMain();
+
+  // Main buttons
+  document.getElementById("btnSettings").onclick = ()=> openSettings();
+  document.getElementById("btnSalesToday").onclick = ()=> openSalesToday();
+  document.getElementById("btnSeatMove").onclick = ()=> openSeatMove();
+  document.getElementById("btnMerge").onclick = ()=> mergeSelected();
+  document.getElementById("btnSplit").onclick = ()=> splitSelected();
+  document.getElementById("btnDecide").onclick = ()=> decideMain();
+
+  // Settings cards
+  document.getElementById("navSeatRegister").onclick = ()=> openSeatRegister();
+  document.getElementById("navMenuRegister").onclick = ()=> openMenuRegister();
+  document.getElementById("navSales").onclick = ()=> openSales();
+  document.getElementById("navStoreInfo").onclick = ()=> openStoreInfo();
+  document.getElementById("navSuggest").onclick = ()=> openSuggest();
+  document.getElementById("navContact").onclick = ()=> openContact();
+
+  document.getElementById("btnMainFromSettings").onclick = ()=> goMain();
+  document.getElementById("btnBackupFromSettings").onclick = ()=> openBackup();
+
+  // Seat register nav
+  document.getElementById("btnMainFromSeatReg").onclick = ()=> goMain();
+  document.getElementById("btnSettingsFromSeatReg").onclick = ()=> openSettings();
+
+  // Menu register nav
+  document.getElementById("btnMainFromMenuReg").onclick = ()=> goMain();
+  document.getElementById("btnSettingsFromMenuReg").onclick = ()=> openSettings();
+
+  // Order nav
+  document.getElementById("btnMainFromOrder").onclick = ()=> goMain();
+  document.getElementById("btnToCheckout").onclick = ()=> openCheckout();
+
+  // Checkout nav
+  document.getElementById("btnMainFromCheckout").onclick = ()=> goMain();
+  document.getElementById("btnBackToOrder").onclick = ()=> backToOrder();
+
+  // Kitchen nav
+  document.getElementById("btnMainFromKitchen").onclick = ()=> goMain();
+  document.getElementById("btnMenuFromKitchen").onclick = ()=> openMenuRegister();
+  document.getElementById("btnKitchenRefresh").onclick = ()=> renderKitchen(true);
+  document.getElementById("btnKitchenHall").onclick = ()=> goMain();
+  document.getElementById("btnKitchenFood").onclick = ()=> setKitchenFilter("food");
+  document.getElementById("btnKitchenDrink").onclick = ()=> setKitchenFilter("drink");
+
+  // Sales nav
+  document.getElementById("btnSalesMonth").onclick = ()=> openSalesMonth();
+  document.getElementById("btnSalesYear").onclick = ()=> openSalesYear();
+  document.getElementById("btnSalesManage").onclick = ()=> openSalesManage();
+  document.getElementById("btnMainFromSales").onclick = ()=> goMain();
+
+  document.getElementById("btnMainFromSalesMonth").onclick = ()=> goMain();
+  document.getElementById("btnBackSalesFromMonth").onclick = ()=> openSales();
+  document.getElementById("btnToSalesYearFromMonth").onclick = ()=> openSalesYear();
+  document.getElementById("btnToSalesManageFromMonth").onclick = ()=> openSalesManage();
+
+  document.getElementById("btnMainFromSalesYear").onclick = ()=> goMain();
+  document.getElementById("btnBackSalesFromYear").onclick = ()=> openSales();
+  document.getElementById("btnToSalesMonthFromYear").onclick = ()=> openSalesMonth();
+  document.getElementById("btnToSalesManageFromYear").onclick = ()=> openSalesManage();
+
+  document.getElementById("btnMainFromSalesManage").onclick = ()=> goMain();
+  document.getElementById("btnBackSalesFromManage").onclick = ()=> openSales();
+  document.getElementById("btnToSalesMonthFromManage").onclick = ()=> openSalesMonth();
+  document.getElementById("btnToSalesYearFromManage").onclick = ()=> openSalesYear();
+
+  // Backup nav
+  document.getElementById("btnMainFromBackup").onclick = ()=> goMain();
+  document.getElementById("btnSettingsFromBackup").onclick = ()=> openSettings();
+  document.getElementById("btnExport").onclick = ()=> exportBackup();
+  document.getElementById("btnImport").onclick = ()=> importBackup();
+
+  // Store info / suggest / contact
+  document.getElementById("btnMainFromStoreInfo").onclick = ()=> goMain();
+  document.getElementById("btnSettingsFromStoreInfo").onclick = ()=> openSettings();
+
+  document.getElementById("btnMainFromSuggest").onclick = ()=> goMain();
+  document.getElementById("btnSettingsFromSuggest").onclick = ()=> openSettings();
+
+  document.getElementById("btnMainFromContact").onclick = ()=> goMain();
+  document.getElementById("btnSettingsFromContact").onclick = ()=> openSettings();
+}
+
+/* ========= 未実装（PART3以降で実体化） =========
+  ここでは“関数の箱”だけ用意しておく（エラー防止）
+*/
+function openSeatRegister(){ showView("viewSeatRegister"); }
+function openMenuRegister(){ showView("viewMenuRegister"); }
+function openSales(){ showView("viewSales"); }
+function openSalesMonth(){ showView("viewSalesMonth"); }
+function openSalesYear(){ showView("viewSalesYear"); }
+function openSalesManage(){ showView("viewSalesManage"); }
+function openStoreInfo(){ showView("viewStoreInfo"); }
+function openSuggest(){ showView("viewSuggest"); }
+function openContact(){ showView("viewContact"); }
+function openBackup(){ showView("viewBackup"); }
+
+function openSeatMove(){ openModal({title:"席移動", sub:"（PART3で実装します）"}); }
+function mergeSelected(){ openModal({title:"合計合算", sub:"（PART3で実装します）"}); }
+function splitSelected(){ openModal({title:"合計分割", sub:"（PART3で実装します）"}); }
+function decideMain(){ openModal({title:"決定", sub:"（PART3で実装します）"}); }
+
+function openOrder(){ showView("viewOrder"); }
+function openCheckout(){ showView("viewCheckout"); }
+function backToOrder(){ showView("viewOrder"); }
+
+function goKitchen(){ showView("viewKitchen"); }
+function openSalesToday(){ openSales(); }
+
+function setKitchenFilter(f){ state.ui.kitchenFilter=f; save(); renderKitchen(true); }
+function renderKitchen(){ /* PART5で実装 */ }
+
+function exportBackup(){
+  document.getElementById("backupText").value = JSON.stringify(state, null, 2);
+}
+function importBackup(){
+  const txt = document.getElementById("backupText").value.trim();
+  if(!txt) return;
+  try{
+    const parsed = JSON.parse(txt);
+    state = Object.assign(deepClone(state), parsed);
+    state.ui = Object.assign(deepClone(state.ui), parsed.ui||{});
     save();
-    renderOrderItems();
-  };
-  iGrid.appendChild(back);
-
-  for(const m of items){
-    const b = document.createElement("button");
-    b.className = "btn";
-    b.textContent = m.name + " " + fmtYen(m.price);
-    b.onclick = ()=> openQtyPanelAdd(m);
-    iGrid.appendChild(b);
+    openModal({title:"読み込み完了", sub:"メインへ戻って確認してください", yesText:"メイン", noText:"閉じる", onYes:()=>goMain()});
+  }catch(e){
+    openModal({title:"読み込みエラー", sub:"JSONの形式を確認してください"});
   }
 }
-function openQtyPanelAdd(menu){
-  state.ui.qty = { menuId:menu.id, name:menu.name, price:menu.price, qty:1, mode:"add", orderItemId:null };
-  document.getElementById("qtyName").textContent = menu.name;
-  document.getElementById("qtyPrice").textContent = fmtYen(menu.price);
-  document.getElementById("qtyNum").textContent = "1";
-  document.getElementById("qtyPanelWrap").style.display = "block";
-  save();
-}
-function openQtyPanelEdit(orderItem){
-  state.ui.qty = { menuId:orderItem.menuId, name:orderItem.name, price:orderItem.price, qty:orderItem.qty, mode:"edit", orderItemId:orderItem.id };
-  document.getElementById("qtyName").textContent = orderItem.name;
-  document.getElementById("qtyPrice").textContent = fmtYen(orderItem.price);
-  document.getElementById("qtyNum").textContent = String(orderItem.qty);
-  document.getElementById("qtyPanelWrap").style.display = "block";
-  save();
-}
-function changeQty(delta){
-  let n = Number(document.getElementById("qtyNum").textContent || "1");
-  n += delta;
-  if(n<0) n=0;
-  if(n>99) n=99;
-  document.getElementById("qtyNum").textContent = String(n);
-}
-function closeQtyPanel(){
-  document.getElementById("qtyPanelWrap").style.display = "none";
-}
-function confirmQty(){
-  const accId = state.ui.currentAccountId;
-  const a = state.accounts?.[accId];
-  if(!a) return;
 
-  const qty = Number(document.getElementById("qtyNum").textContent || "1");
-  const q = state.ui.qty;
-
-  if(q.mode==="add"){
-    if(qty<=0){ closeQtyPanel(); return; }
-    const id = "oi"+nowMs()+Math.random().toString(16).slice(2,6);
-    a.orders.push({id, menuId:q.menuId, name:q.name, price:q.price, qty, createdAt:nowMs()});
-    pushKitchenTicket(q.name, qty, accountSeatLabel(accId));
-  }else{
-    const item = a.orders.find(x=>x.id===q.orderItemId);
-    if(item){
-      if(qty<=0){
-        a.orders = a.orders.filter(x=>x.id!==q.orderItemId);
-      }else{
-        item.qty = qty;
-      }
-    }
+/* ========= 起動 ========= */
+function boot(){
+  load();
+  bindNav();
+  showView(state.ui.view || "viewMain");
+  renderSeats();
+  // テキスト保存（店舗情報/問い合わせ）
+  const si = document.getElementById("storeInfoText");
+  const ct = document.getElementById("contactText");
+  if(si){
+    si.value = state.storeInfoText || "";
+    si.oninput = ()=>{ state.storeInfoText = si.value; save(); };
   }
-  save();
-  closeQtyPanel();
-  renderOrder();
-}
-function renderOrderList(){
-  const accId = state.ui.currentAccountId;
-  const a = state.accounts?.[accId];
-  const list = document.getElementById("orderList");
-  list.innerHTML = "";
-
-  if(!a || (a.orders||[]).length===0){
-    list.innerHTML = `<div class="card"><div class="hint">注文がありません。</div></div>`;
-    return;
-  }
-  for(const o of a.orders){
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = `
-      <div class="row">
-        <div class="rowLeft">
-          <div style="font-weight:900;">${escapeHtml(o.name)} × ${o.qty}</div>
-          <div class="muted">${fmtYen(o.price)} / 個</div>
-        </div>
-        <button class="btn" onclick="editOrderItem('${o.id}')">修正</button>
-      </div>
-    `;
-    list.appendChild(div);
+  if(ct){
+    ct.value = state.contactText || "";
+    ct.oninput = ()=>{ state.contactText = ct.value; save(); };
   }
 }
-function editOrderItem(orderItemId){
-  const accId = state.ui.currentAccountId;
-  const a = state.accounts?.[accId];
-  if(!a) return;
-  const item = a.orders.find(x=>x.id===orderItemId);
-  if(!item) return;
-  openQtyPanelEdit(item);
-}
+document.addEventListener("DOMContentLoaded", boot);
 
 /* =========================
-   Checkout / Receipt
+  PART 2 END
 ========================= */
-function renderCheckout(accId){
-  const a = state.accounts?.[accId];
-  if(!a){ goMain(); return; }
-
-  const seatLabel = accountSeatLabel(accId);
-  document.getElementById("coSeat").textContent = "席 " + seatLabel;
-  document.getElementById("coPeople").textContent = "人数 " + (a.peopleTotal||0);
-  document.getElementById("coTotal").textContent = fmtYen(accountTotal(accId));
-
-  const list = document.getElementById("coOrders");
-  list.innerHTML = "";
-  if((a.orders||[]).length===0){
-    list.innerHTML = `<div class="card"><div class="hint">注文がありません。</div></div>`;
-  }else{
-    for(const o of a.orders){
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = `
-        <div class="row">
-          <div class="rowLeft">
-            <div style="font-weight:900;">${escapeHtml(o.name)} × ${o.qty}</div>
-            <div class="muted">${fmtYen(o.price)} / 個</div>
-          </div>
-          <button class="btn" onclick="editFromCheckout('${o.id}')">注文修正</button>
-        </div>
-      `;
-      list.appendChild(div);
-    }
-  }
-}
-function editFromCheckout(orderItemId){
-  showView("viewOrder");
-  renderOrder();
-  setTimeout(()=> editOrderItem(orderItemId), 30);
-}
-function openWarikan(){
-  const accId = state.ui.currentAccountId;
-  const a = state.accounts?.[accId];
-  if(!a) return;
-  const total = accountTotal(accId);
-  openNumberPrompt("割り勘（人数）", a.peopleTotal||1, (n)=>{
-    const people = Math.max(1, Number(n)||1);
-    const per = Math.floor(total / people);
-    const body = document.createElement("div");
-    body.innerHTML = `<div style="font-weight:900; font-size:18px;">1人あたり ${fmtYen(per)}</div><div class="hint">端数は調整してください。</div>`;
-    openModal("割り勘", body);
-  });
-}
-function checkoutConfirm(){
-  openYesNo("電子レシートはいりますか？", "○でレシート送信 / ✖で会計終了",
-    ()=> openReceiptEmailForm(),
-    ()=> finalizeCheckout(false, null),
-    "○", "✖"
-  );
-}
-function openReceiptEmailForm(){
-  const wrap = document.createElement("div");
-  const f = document.createElement("div");
-  f.className = "field";
-  f.innerHTML = `<div class="label">メールアドレス</div>`;
-  const input = document.createElement("input");
-  input.className = "input";
-  input.placeholder = "example@example.com";
-  input.inputMode = "email";
-  f.appendChild(input);
-
-  const note = document.createElement("div");
-  note.className = "hint";
-  note.textContent = "無料版（Web）では送信は行わず、コピーした文面をメールに貼り付けて送ります。";
-
-  wrap.appendChild(f);
-  wrap.appendChild(note);
-
-  const foot = document.createElement("div");
-  foot.className = "modalFoot";
-  foot.style.display = "flex";
-
-  const back = document.createElement("button");
-  back.className = "btn";
-  back.textContent = "戻る";
-  back.onclick = closeModal;
-
-  const ok = document.createElement("button");
-  ok.className = "btn primary";
-  ok.textContent = "レシート作成";
-  ok.onclick = ()=>{
-    const email = (input.value||"").trim();
-    if(!email){ openModal("確認", document.createTextNode("メールアドレスを入力してください。")); return; }
-
-    const receipt = buildReceiptText(email);
-
-    // copy to clipboard
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(receipt).then(()=>{
-        finalizeCheckout(true, email);
-        closeModal();
-        openModal("レシート", document.createTextNode("レシート文面をコピーしました。メールに貼り付けて送ってください。"));
-      }).catch(()=>{
-        closeModal();
-        showReceiptTextFallback(receipt, email);
-      });
-    }else{
-      closeModal();
-      showReceiptTextFallback(receipt, email);
-    }
-  };
-
-  foot.appendChild(back);
-  foot.appendChild(ok);
-
-  openModal("レシート送信", wrap, foot);
-}
-function showReceiptTextFallback(receipt, email){
-  const t = document.createElement("textarea");
-  t.className = "textarea";
-  t.value = receipt;
-  openModal("レシート（コピーして送信）", t);
-  finalizeCheckout(true, email);
-}
-function buildReceiptText(email){
-  const accId = state.ui.currentAccountId;
-  const a = state.accounts?.[accId];
-  const seatLabel = accountSeatLabel(accId);
-  const total = accountTotal(accId);
-  const pay = document.getElementById("payMethod").value;
-
-  const lines = [];
-  lines.push("ONE 電子レシート");
-  lines.push("宛先: " + email);
-  lines.push("席: " + seatLabel);
-  lines.push("人数: " + (a?.peopleTotal||0));
-  lines.push("支払い方法: " + pay);
-  lines.push("日時: " + fmtDate(nowMs()) + " " + fmtTime(nowMs()));
-  lines.push("");
-  lines.push("明細");
-  for(const o of (a?.orders||[])){
-    lines.push(o.name + " × " + o.qty + "  " + fmtYen(o.price*o.qty));
-  }
-  lines.push("");
-  lines.push("合計 " + fmtYen(total));
-  return lines.join("\n");
-}
-function finalizeCheckout(emailed, email){
-  const accId = state.ui.currentAccountId;
-  const a = state.accounts?.[accId];
-  if(!a){ goMain(); return; }
-
-  const total = accountTotal(accId);
-  const payMethod = document.getElementById("payMethod").value;
-
-  const tx = {
-    id:"t"+nowMs(),
-    accountId: accId,
-    seatLabel: accountSeatLabel(accId),
-    peopleTotal: a.peopleTotal||0,
-    total,
-    payMethod,
-    createdAt: nowMs(),
-    items: JSON.parse(JSON.stringify(a.orders||[])),
-    emailed: !!emailed,
-    email: email || ""
-  };
-  state.tx = state.tx || [];
-  state.tx.push(tx);
-
-  // clear seats and remove account
-  for(const sid of (a.seatIds||[])){
-    delete state.seatToAccount[sid];
-  }
-  delete state.accounts[accId];
-
-  state.ui.currentAccountId = null;
-  state.ui.selectedSeatIds = [];
-  save();
-  renderAll();
-  goMain();
-}
-
-/* =========================
-   Kitchen
-========================= */
-function pushKitchenTicket(dishName, qty, seatLabel){
-  state.kitchen = state.kitchen || [];
-  state.kitchen.push({
-    id: "k"+nowMs()+Math.random().toString(16).slice(2,6),
-    dishName,
-    qty,
-    seatLabel,
-    createdAt: nowMs(),
-    done:false
-  });
-  save();
-}
-function refreshKitchen(){
-  renderKitchen();
-}
-function renderKitchen(){
-  const list = document.getElementById("kitchenList");
-  list.innerHTML = "";
-
-  const pending = (state.kitchen||[]).filter(k=>!k.done);
-  if(pending.length===0){
-    list.innerHTML = `<div class="card"><div class="hint">注文がありません。</div></div>`;
-    return;
-  }
-
-  // 基本は時間順（古い→新しい）
-  pending.sort((a,b)=> a.createdAt - b.createdAt);
-
-  // 料理名だけで束ね表示（繰り上がりは色付け、繰り上がった方のみ）
-  const display = [];
-  const lifted = new Set();
-  const firstIndexByDish = new Map();
-
-  for(const k of pending){
-    if(!firstIndexByDish.has(k.dishName)){
-      firstIndexByDish.set(k.dishName, display.length);
-      display.push(k);
-    }else{
-      // その料理ブロックの最後に差し込み
-      let pos = firstIndexByDish.get(k.dishName);
-      while(pos+1 < display.length && display[pos+1].dishName === k.dishName){
-        pos++;
-      }
-      display.splice(pos+1, 0, k);
-      lifted.add(k.id);
-    }
-  }
-
-  const now = nowMs();
-
-  for(const k of display){
-    const row = document.createElement("div");
-    row.className = "kRow" + (lifted.has(k.id) ? " kLift" : "");
-
-    const left = document.createElement("div");
-
-    const dish = document.createElement("div");
-    dish.className = "kDish";
-    if(now - k.createdAt >= 15*60*1000){
-      dish.classList.add("warn"); // 15分で赤
-    }
-    dish.textContent = k.dishName;
-
-    const qty = document.createElement("span");
-    qty.className = "kQty";
-    qty.textContent = " " + k.qty + "個";
-    dish.appendChild(qty);
-
-    const meta = document.createElement("div");
-    meta.className = "kMeta";
-    meta.textContent = "席 " + k.seatLabel + "  " + fmtTime(k.createdAt);
-
-    left.appendChild(dish);
-    left.appendChild(meta);
-
-    row.appendChild(left);
-
-    const sWrap = document.createElement("div");
-    sWrap.className = "kSlideWrap";
-
-    const lbl = document.createElement("div");
-    lbl.className = "kSlideLabel";
-    lbl.textContent = "スライド完了";
-
-    const range = document.createElement("input");
-    range.type = "range";
-    range.min = "0";
-    range.max = "100";
-    range.value = "0";
-    range.oninput = ()=>{
-      if(Number(range.value) >= 98){
-        markKitchenDone(k.id);
-      }
-    };
-
-    sWrap.appendChild(lbl);
-    sWrap.appendChild(range);
-    row.appendChild(sWrap);
-
-    list.appendChild(row);
-  }
-
-  // 自動更新（赤表示更新）10秒
-  clearTimeout(window.__kTimer);
-  window.__kTimer = setTimeout(()=> renderKitchen(), 10000);
-}
-function markKitchenDone(id){
-  const item = (state.kitchen||[]).find(x=>x.id===id);
-  if(!item) return;
-  item.done = true;
-  save();
-  renderKitchen(); // 完了後は時間順に戻る仕様に沿って再描画
-}
-
-/* =========================
-   Sales
-========================= */
-function renderSales(){
-  const t = sumByDateKey(todayKey(nowMs()));
-  document.getElementById("todaySales").textContent = fmtYen(t);
-}
-function sumByDateKey(key){
-  let sum = 0;
-  for(const tx of (state.tx||[])){
-    if(todayKey(tx.createdAt) === key) sum += Number(tx.total||0);
-  }
-  return sum;
-}
-function sumByMonthKey(key){
-  let sum = 0;
-  for(const tx of (state.tx||[])){
-    if(monthKey(tx.createdAt) === key) sum += Number(tx.total||0);
-  }
-  return sum;
-}
-function sumByYearKey(key){
-  let sum = 0;
-  for(const tx of (state.tx||[])){
-    if(yearKey(tx.createdAt) === key) sum += Number(tx.total||0);
-  }
-  return sum;
-}
-function renderSalesMonth(){
-  const k = monthKey(nowMs());
-  const s = sumByMonthKey(k);
-  document.getElementById("monthSalesText").textContent = `${k} の売上： ${fmtYen(s)}`;
-}
-function renderSalesYear(){
-  const k = yearKey(nowMs());
-  const s = sumByYearKey(k);
-  document.getElementById("yearSalesText").textContent = `${k} 年の売上： ${fmtYen(s)}`;
-}
-function renderSalesManage(){
-  const list = document.getElementById("txList");
-  list.innerHTML = "";
-  const txs = [...(state.tx||[])].sort((a,b)=> b.createdAt - a.createdAt);
-
-  if(txs.length===0){
-    list.innerHTML = `<div class="card"><div class="hint">会計データがありません。</div></div>`;
-    return;
-  }
-
-  for(const t of txs){
-    const div = document.createElement("div");
-    div.className = "card";
-    const head = `${fmtDate(t.createdAt)} ${fmtTime(t.createdAt)}｜席 ${escapeHtml(t.seatLabel)}｜${escapeHtml(t.payMethod)}`;
-    const sub = `人数 ${t.peopleTotal}｜合計 ${fmtYen(t.total)}${t.emailed ? "｜レシート作成済" : ""}`;
-    div.innerHTML = `
-      <div style="font-weight:900;">${head}</div>
-      <div class="muted">${sub}</div>
-      <div class="divider"></div>
-      <div class="hint">${escapeHtml((t.items||[]).map(i=>`${i.name}×${i.qty}`).join(" / "))}</div>
-    `;
-    list.appendChild(div);
-  }
-}
-
-/* =========================
-   Store / Contact
-========================= */
-function saveStoreInfo(){
-  state.store.name = (document.getElementById("storeName").value||"").trim();
-  state.store.tel  = (document.getElementById("storeTel").value||"").trim();
-  state.store.addr = (document.getElementById("storeAddr").value||"").trim();
-  save();
-  openModal("保存", document.createTextNode("保存しました。"));
-}
-function copyContact(){
-  const text = (document.getElementById("contactBody").value||"").trim();
-  if(!text){ openModal("確認", document.createTextNode("内容を入力してください。")); return; }
-  const full = `【ONE お問合せ】\n${text}\n\n（店舗名）${state.store?.name||""}\n（電話）${state.store?.tel||""}\n（住所）${state.store?.addr||""}`;
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(full).then(()=>{
-      openModal("コピー", document.createTextNode("コピーしました。メッセージやメールに貼り付けて送ってください。"));
-    }).catch(()=>{
-      const t = document.createElement("textarea");
-      t.className = "textarea";
-      t.value = full;
-      openModal("コピーできない場合は手動でコピー", t);
-    });
-  }else{
-    const t = document.createElement("textarea");
-    t.className = "textarea";
-    t.value = full;
-    openModal("手動でコピー", t);
-  }
-}
-
-/* =========================
-   Boot
-========================= */
-renderAll();
 </script>
-</body>
-</html>
+<!-- =========================
+  PART 1 END
+========================= -->
