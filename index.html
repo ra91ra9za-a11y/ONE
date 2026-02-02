@@ -248,7 +248,38 @@
     background:rgba(34,197,94,.95);
     border:2px solid rgba(255,255,255,.8);
     box-shadow:0 10px 22px rgba(0,0,0,.35);
-  }
+  }/* ===== スマホ実機向け 強制スケール調整 ===== */
+html {
+  font-size: 18px;
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* ボタン */
+button {
+  font-size: 1.1rem;
+  padding: 14px 16px;
+}
+
+/* メイン操作ボタン */
+.nav button,
+.main-actions button {
+  font-size: 1.15rem;
+  min-height: 52px;
+}
+
+/* 席カード */
+.seat {
+  font-size: 1.05rem;
+}
+
+/* 見出し */
+h1, h2, h3 {
+  font-size: 1.2rem;
+}
 </style>
 
 <!-- 画面 -->
