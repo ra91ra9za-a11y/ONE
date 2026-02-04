@@ -315,4 +315,1714 @@ if(goManage) goManage.onclick = ()=> openModal({title:"未実装", sub:"この�
 </body>
 </html>
 
+<script>
+/* =========================
+  保存データ（ローカル）
+========================= */
+const KEY = "ONE_FREE_V1";
+const nowTs = ()=> Date.now();
+const pad2 = (n)=> String(n).padStart(2,"0");
+const fmtTime = (ts)=>{
+  const d = new Date(ts);
+  if(!isFinite(d.getTime())) return "??:??";
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+const yen = (n)=> `¥${(n||0).toLocaleString("ja-JP")}`;
+const jaSort = (a,b)=> (a||"").localeCompare((b||""), "ja", { sensitivity:"base" });
+
+/* 2-2：表示は“そのまま”／比較や集計は別キーで正規化 */
+function normalizeKey(s){
+  return String(s||"").trim().normalize("NFKC").toUpperCase();
+}
+
+const defaultState = {
+  seats: [],
+  menu: [],     // {id,category, genre, name, price, tax}
+  genres: { food: [], drink: [] }, // 6: ジャンル一覧（選択＋追加）
+  sales: [],
+  store: { name:"", phone:"", addr:"" },
+  ui: {
+    view:"main",
+    selectedSeatIds: [],
+    opSelected: null,
+    orderSeatId: null,
+    orderGenre: null,
+    kitchenTab: "food",
+    pay: "cash",
+    menuViewGenre: "" // 6: 閲覧ジャンル
+  },
+  kitchenDone: {}
+};
+
+let state = load();
+
+/* ========================= Load/Save ========================= */
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return structuredClone(defaultState);
+    const s = JSON.parse(raw);
+
+    const merged = {
+      ...structuredClone(defaultState),
+      ...s,
+      ui: { ...structuredClone(defaultState.ui), ...(s.ui||{}) },
+      store: { ...structuredClone(defaultState.store), ...(s.store||{}) },
+      kitchenDone: s.kitchenDone || {},
+      genres: { ...structuredClone(defaultState.genres), ...(s.genres||{}) }
+    };
+
+    // 6: 旧データからジャンル自動移行（menuのgenreから抽出）
+    if((!merged.genres.food.length && !merged.genres.drink.length) && Array.isArray(merged.menu)){
+      const gf = new Set(), gd = new Set();
+      merged.menu.forEach(m=>{
+        const g = (m.genre||"").trim();
+        if(!g) return;
+        if(m.category==="drink") gd.add(g);
+        else gf.add(g);
+      });
+      merged.genres.food = Array.from(gf).sort(jaSort);
+      merged.genres.drink = Array.from(gd).sort(jaSort);
+    }
+
+    return merged;
+  }catch(e){
+    return structuredClone(defaultState);
+  }
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+/* ========================= Views ========================= */
+const views = {
+  main: document.getElementById("viewMain"),
+  settings: document.getElementById("viewSettings"),
+  seatRegister: document.getElementById("viewSeatRegister"),
+  menuRegister: document.getElementById("viewMenuRegister"),
+  order: document.getElementById("viewOrder"),
+  checkout: document.getElementById("viewCheckout"),
+  kitchen: document.getElementById("viewKitchen"),
+  sales: document.getElementById("viewSales"),
+  month: document.getElementById("viewMonthSales"),
+  year: document.getElementById("viewYearSales"),
+  manage: document.getElementById("viewSalesManage"),
+  storeInfo: document.getElementById("viewStoreInfo"),
+  contact: document.getElementById("viewContact"),
+  recipe: document.getElementById("viewRecipe"),
+};
+
+const bottomDock = document.getElementById("bottomDock");
+const kitchenBtn = document.getElementById("kitchenBtn");
+
+/* 共通UI：トップバー右の「メイン」ボタン（メイン画面では非表示） */
+const topMainBtn = document.getElementById("topMainBtn");
+function syncTopMainBtn(){
+  const isMain = state.ui.view==="main";
+  topMainBtn.style.display = isMain ? "none" : "inline-flex";
+}
+topMainBtn.onclick = ()=> go("main");
+
+/* 1: bottomDockはメインのみ */
+function syncDock(){
+  const isMain = state.ui.view==="main";
+  bottomDock.classList.toggle("show", isMain);
+}
+
+/* 2-1: topbar中央ボタンは、キッチン画面では「ホール」 */
+function syncTopCenter(){
+  if(state.ui.view==="kitchen"){
+    kitchenBtn.textContent = "ホール";
+  }else{
+    kitchenBtn.textContent = "キッチン";
+  }
+}
+
+/* 3-追加: オンライン状態 */
+const netIcon = document.getElementById("netIcon");
+function syncNetIcon(){
+  const on = navigator.onLine;
+  netIcon.textContent = on ? "📶" : "📶❌";
+  netIcon.title = on ? "オンライン" : "オフライン";
+}
+window.addEventListener("online", syncNetIcon);
+window.addEventListener("offline", syncNetIcon);
+
+function go(viewKey){
+  Object.values(views).forEach(v=> v.classList.remove("show"));
+  views[viewKey].classList.add("show");
+  state.ui.view = viewKey;
+  save();
+
+  syncDock();
+  syncTopCenter();
+  syncTopMainBtn();
+
+  if(viewKey==="main") renderMain();
+  if(viewKey==="settings") renderSettings();
+  if(viewKey==="seatRegister") renderSeatRegisterPreview();
+  if(viewKey==="menuRegister"){ renderMenuRegister(); }
+  if(viewKey==="order") renderOrder();
+  if(viewKey==="checkout") renderCheckout();
+  if(viewKey==="kitchen") renderKitchen();
+  if(viewKey==="sales") renderSales();
+  if(viewKey==="month") renderMonthSales();
+  if(viewKey==="year") renderYearSales();
+  if(viewKey==="manage") renderSalesManage();
+  if(viewKey==="storeInfo") renderStoreInfo();
+}
+
+/* ========================= Modal ========================= */
+const modalRoot = document.getElementById("modalRoot");
+const mTitle = document.getElementById("mTitle");
+const mSub = document.getElementById("mSub");
+const mBody = document.getElementById("mBody");
+const mFoot = document.getElementById("mFoot");
+
+function lockBg(lock){
+  if(lock){
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+  }else{
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+  }
+}
+function openModal({title, sub="", bodyHtml="", yesText="OK", noText="", onYes=null, onNo=null, yesClass="btnPrimary", noClass=""}){
+  mTitle.textContent = title || "";
+  mSub.textContent = sub || "";
+  mBody.innerHTML = bodyHtml || "";
+  mFoot.innerHTML = "";
+
+  if(noText){
+    const bNo = document.createElement("button");
+    bNo.textContent = noText;
+    bNo.className = noClass || "";
+    bNo.onclick = ()=>{
+      closeModal();
+      if(onNo) onNo();
+    };
+    mFoot.appendChild(bNo);
+  }
+
+  const bYes = document.createElement("button");
+  bYes.textContent = yesText;
+  bYes.className = yesClass || "";
+  bYes.onclick = ()=>{
+    if(onYes) onYes();
+    else closeModal();
+  };
+  mFoot.appendChild(bYes);
+
+  modalRoot.classList.add("show");
+  lockBg(true);
+}
+function closeModal(){
+  modalRoot.classList.remove("show");
+  lockBg(false);
+}
+
+/* ========================= Main: Seats ========================= */
+const seatGrid = document.getElementById("seatGrid");
+
+function seatTotal(seat){
+  const ids = [seat.id, ...state.seats.filter(s=> s.mergedInto===seat.id).map(s=> s.id)];
+  let sum = 0;
+  for(const sid of ids){
+    const s = state.seats.find(x=> x.id===sid);
+    if(!s) continue;
+    for(const o of (s.orders||[])) sum += (o.price||0) * (o.qty||1);
+  }
+  return sum;
+}
+function renderMain(){
+  state.ui.selectedSeatIds = state.ui.selectedSeatIds.filter(id=> state.seats.some(s=> s.id===id));
+  save();
+
+  seatGrid.innerHTML = "";
+  const sorted = [...state.seats].sort((a,b)=> {
+    return (a.label||"").localeCompare((b.label||""), "ja", { numeric:true, sensitivity:"base" });
+  });
+
+  for(const seat of sorted){
+    const card = document.createElement("div");
+    card.className = "seatCard";
+    const isSelected = state.ui.selectedSeatIds.includes(seat.id);
+    if(isSelected) card.classList.add("active");
+    if(seat.status==="reserve") card.classList.add("reserve");
+    if(seat.mergedInto) card.classList.add("merged");
+
+    const label = seat.label || "";
+    const statusTxt = seat.mergedInto
+      ? `合算 → ${state.seats.find(s=> s.id===seat.mergedInto)?.label || ""}`
+      : seat.status==="empty" ? "空席"
+      : seat.status==="reserve" ? "予約"
+      : "着席";
+
+    const people = seat.party?.people ? `${seat.party.people}名` : "";
+    const opened = seat.openedAt ? fmtTime(seat.openedAt) : "";
+    const name = seat.party?.name ? seat.party.name : "";
+    const total = seat.mergedInto ? 0 : seatTotal(seat);
+
+    const metaParts = [];
+    if(people) metaParts.push(people);
+    if(name) metaParts.push(name);
+    if(opened) metaParts.push(opened);
+
+    const mergedTag = seat.mergedInto ? `<span class="tagMini">合算</span>` : "";
+
+    card.innerHTML = `
+      <div class="seatTop">
+        <div class="seatLabel" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
+        <div class="seatStatus">${escapeHtml(statusTxt)}</div>
+      </div>
+      <div class="seatMeta">${metaParts.map(x=>`<span>${escapeHtml(x)}</span>`).join("")}</div>
+      <div class="seatMoney">
+        <div class="yen">${yen(total)}</div>
+        ${mergedTag}
+      </div>
+    `;
+
+    card.onclick = ()=>{
+      if(state.ui.opSelected){
+        toggleSeatSelect(seat.id);
+        return;
+      }
+      if(seat.mergedInto){
+        openModal({ title:"合算中の席です", sub:"合算の元の席を操作してください", yesText:"OK" });
+        return;
+      }
+      onSeatTap(seat);
+    };
+
+    seatGrid.appendChild(card);
+  }
+
+  renderOpsButtons();
+}
+function toggleSeatSelect(id){
+  const idx = state.ui.selectedSeatIds.indexOf(id);
+  if(idx>=0) state.ui.selectedSeatIds.splice(idx,1);
+  else state.ui.selectedSeatIds.push(id);
+  save();
+  renderMain();
+}
+
+/* ========================= Seat tap flow ========================= */
+function onSeatTap(seat){
+  if(seat.status==="empty") openChooseArriveReserve(seat);
+  else if(seat.status==="reserve") openReserveAction(seat);
+  else openOrderForSeat(seat.id);
+}
+function openChooseArriveReserve(seat){
+  openModal({
+    title:`席（${seat.label}）`,
+    sub:"空席です。どれを選びますか？",
+    bodyHtml: `
+      <div class="btnRow">
+        <button class="btnPrimary" id="chooseArrive">来店</button>
+        <button class="btnPrimary" id="chooseReserve">予約</button>
+      </div>
+    `,
+    yesText:"閉じる",
+    onYes: ()=> closeModal()
+  });
+
+  setTimeout(()=>{
+    document.getElementById("chooseArrive").onclick = ()=> { closeModal(); openPartyInput(seat, "arrive"); };
+    document.getElementById("chooseReserve").onclick = ()=> { closeModal(); openPartyInput(seat, "reserve"); };
+  },0);
+}
+function openPartyInput(seat, mode){
+  const title = mode==="arrive" ? "来店入力" : "予約入力";
+  const sub = mode==="arrive" ? "決定で注文ページへ移動します" : "決定でメインへ戻り、席が予約表示になります";
+
+  const bodyHtml = `
+    <div class="muted2">人数</div>
+    <div class="stepper">
+      <button class="stepBtn" id="piDec">◀︎</button>
+      <div class="stepNum" id="piNum">1</div>
+      <button class="stepBtn" id="piInc">▶︎</button>
+    </div>
+
+    <div class="muted2">名前（任意）</div>
+    <input id="piName" type="text" placeholder="例：田中" />
+
+    ${mode==="reserve" ? `
+      <div class="muted2">電話番号（任意）</div>
+      <input id="piPhone" type="text" placeholder="例：090-xxxx-xxxx" />
+    ` : ``}
+  `;
+
+  openModal({
+    title:`${title}（${seat.label}）`,
+    sub,
+    bodyHtml,
+    yesText:"決定",
+    noText:"戻る",
+    onYes: ()=>{
+      const people = parseInt(document.getElementById("piNum").textContent||"0",10);
+      const name = (document.getElementById("piName").value||"").trim();
+      const phone = mode==="reserve" ? (document.getElementById("piPhone").value||"").trim() : "";
+
+      if(!people){
+        openModal({ title:"人数を入力してください", sub:"", yesText:"OK" });
+        return;
+      }
+
+      if(mode==="arrive"){
+        seat.status="active";
+        seat.party = { people, name, phone:"" };
+        seat.openedAt = nowTs();
+        seat.orders = seat.orders || [];
+        seat.mergedInto = null;
+        save();
+        closeModal();
+        openOrderForSeat(seat.id);
+      }else{
+        seat.status="reserve";
+        seat.party = { people, name, phone };
+        seat.openedAt = nowTs();
+        seat.orders = seat.orders || [];
+        seat.mergedInto = null;
+        save();
+        closeModal();
+        renderMain();
+        go("main");
+      }
+    }
+  });
+
+  setTimeout(()=>{
+    let n = 1;
+    const render = ()=> document.getElementById("piNum").textContent = String(n);
+    render();
+    document.getElementById("piDec").onclick = ()=> { n = Math.max(1, n-1); render(); };
+    document.getElementById("piInc").onclick = ()=> { n = Math.min(99, n+1); render(); };
+  },0);
+}
+function openReserveAction(seat){
+  openModal({
+    title:`予約（${seat.label}）`,
+    sub:"どれを選びますか？",
+    bodyHtml: `
+      <div class="btnRow">
+        <button class="btnPrimary" id="rvArrive">来店</button>
+        <button class="btnDanger" id="rvCancel">キャンセル</button>
+      </div>
+    `,
+    yesText:"戻る",
+    onYes: ()=> closeModal()
+  });
+
+  setTimeout(()=>{
+    document.getElementById("rvArrive").onclick = ()=>{ closeModal(); openPartyInput(seat, "arrive"); };
+    document.getElementById("rvCancel").onclick = ()=>{
+      seat.status="empty"; seat.party=null; seat.openedAt=null; seat.orders=[]; seat.mergedInto=null;
+      save(); closeModal(); renderMain();
+    };
+  },0);
+}
+
+/* ========================= Ops ========================= */
+const opButtons = Array.from(document.querySelectorAll(".opsBtn.same"));
+const opDecide = document.getElementById("opDecide");
+
+function renderOpsButtons(){
+  const selected = state.ui.opSelected;
+  opButtons.forEach(b=> b.classList.toggle("selected", selected===b.dataset.op));
+}
+opButtons.forEach(b=>{
+  b.onclick = ()=>{
+    const op = b.dataset.op;
+    state.ui.opSelected = (state.ui.opSelected===op) ? null : op;
+    if(!state.ui.opSelected) state.ui.selectedSeatIds = [];
+    save();
+    renderMain();
+  };
+});
+opDecide.onclick = ()=>{
+  const op = state.ui.opSelected;
+  if(!op){
+    openModal({ title:"操作を選んでください", sub:"席移動 / 合計合算 / 合計分割 のどれかを選択します", yesText:"OK" });
+    return;
+  }
+  const ids = state.ui.selectedSeatIds;
+  if(ids.length===0){
+    openModal({ title:"席を選択してください", sub:"操作したい席をタップして選びます（再タップで解除）", yesText:"OK" });
+    return;
+  }
+
+  if(op==="merge"){
+    if(ids.length<2){
+      openModal({ title:"合計合算", sub:"2席以上を選択してください", yesText:"OK" });
+      return;
+    }
+    const seats = ids.map(id=> state.seats.find(s=> s.id===id)).filter(Boolean);
+    seats.sort((a,b)=> (a.label||"").localeCompare((b.label||""), "ja", { numeric:true, sensitivity:"base" }));
+    const base = seats[0];
+    const others = seats.slice(1);
+
+    openModal({
+      title:"合計合算しますか？",
+      sub:`「${base.label}」に合算します（他の席は「合算」表示になります）`,
+      yesText:"決定",
+      noText:"戻る",
+      onYes: ()=>{
+        for(const s of others){ s.mergedInto = base.id; }
+        save();
+        closeModal();
+        state.ui.opSelected = null;
+        state.ui.selectedSeatIds = [];
+        save();
+        renderMain();
+      }
+    });
+
+  }else if(op==="split"){
+    const seats = ids.map(id=> state.seats.find(s=> s.id===id)).filter(Boolean);
+    openModal({
+      title:"合計分割しますか？",
+      sub:"誤操作の救済用です（合算状態を解除します）",
+      yesText:"決定",
+      noText:"戻る",
+      onYes: ()=>{
+        const selectedSet = new Set(ids);
+        for(const s of seats){ if(s.mergedInto) s.mergedInto = null; }
+        for(const s of seats){
+          const baseId = s.id;
+          if(selectedSet.has(baseId)){
+            state.seats.forEach(x=>{ if(x.mergedInto===baseId) x.mergedInto = null; });
+          }
+        }
+        save();
+        closeModal();
+        state.ui.opSelected = null;
+        state.ui.selectedSeatIds = [];
+        save();
+        renderMain();
+      }
+    });
+
+  }else if(op==="move"){
+    if(ids.length!==2){
+      openModal({ title:"席移動", sub:"移動元と移動先の2席を選択してください", yesText:"OK" });
+      return;
+    }
+    const a = state.seats.find(s=> s.id===ids[0]);
+    const b = state.seats.find(s=> s.id===ids[1]);
+    if(!a || !b) return;
+
+    openModal({
+      title:"席移動しますか？",
+      sub:`「${a.label}」→「${b.label}」へ移動します`,
+      yesText:"決定",
+      noText:"戻る",
+      onYes: ()=>{
+        const tmp = { status:a.status, party:a.party, openedAt:a.openedAt, orders:(a.orders||[]), mergedInto:a.mergedInto };
+        a.status="empty"; a.party=null; a.openedAt=null; a.orders=[]; a.mergedInto=null;
+
+        b.status = tmp.status;
+        b.party = tmp.party;
+        b.openedAt = tmp.openedAt;
+        b.orders = (b.orders||[]).concat(tmp.orders||[]);
+        b.mergedInto = null;
+        save();
+        closeModal();
+        state.ui.opSelected = null;
+        state.ui.selectedSeatIds = [];
+        save();
+        renderMain();
+      }
+    });
+  }
+};
+
+/* ========================= Navigation ========================= */
+document.getElementById("settingsBtn").onclick = ()=> go("settings");
+document.getElementById("todaySalesBtn").onclick = ()=> go("sales");
+document.getElementById("backupBtn").onclick = ()=>{
+  openModal({
+    title:"バックアップ（無料版）",
+    sub:"無料版は簡易バックアップです（端末内保存）。有料版で複数端末共有/メール送信を強化予定。",
+    yesText:"OK"
+  });
+};
+document.getElementById("brandBtn").onclick = ()=>{
+  openModal({
+    title:"ONE（無料/有料）",
+    sub:"現在、有料版は準備中です。無料版をお使いください。",
+    yesText:"OK"
+  });
+};
+kitchenBtn.onclick = ()=>{
+  if(state.ui.view==="kitchen") go("main"); // 2-1: ホール
+  else go("kitchen");
+};
+
+document.querySelectorAll(".menuCard").forEach(el=>{
+  el.addEventListener("click", ()=>{
+    const goKey = el.getAttribute("data-go");
+    if(goKey==="recipe") go("recipe");
+    else go(goKey);
+  });
+});
+function renderSettings(){ /* view only */ }
+
+/* ========================= Seat Register logic ========================= */
+const otherNameWrap = document.getElementById("otherNameWrap");
+const otherName = document.getElementById("otherName");
+const countNum = document.getElementById("countNum");
+const countLabel = document.getElementById("countLabel");
+const seatInputs = document.getElementById("seatInputs");
+const capInputs = document.getElementById("capInputs");
+const resetSeatReg = document.getElementById("resetSeatReg");
+const saveSeatsBtn = document.getElementById("saveSeats");
+
+let sr = { type: null, typeName: "", count: 0, labels: [], caps: [], otherNameHistory: [] };
+
+function typeToName(t){
+  const map = { counter:"カウンター", stand:"立ち", table:"テーブル", zashiki:"座敷", room:"個室", other:"その他" };
+  return map[t] || "";
+}
+
+/* 4-1: 名称ボタン押せない対策（click＋touchend両対応） */
+document.querySelectorAll("[data-seatType]").forEach(btn=>{
+  const handler = ()=>{
+    sr.type = btn.dataset.seatType;
+    let name = typeToName(sr.type);
+    if(sr.type==="other"){
+      otherNameWrap.style.display = "block";
+      name = (otherName.value||"").trim() || "その他";
+    }else{
+      otherNameWrap.style.display = "none";
+    }
+    sr.typeName = name;
+    sr.defaultCap = (sr.type==="counter" || sr.type==="stand") ? 1 : 4;
+
+    countLabel.textContent = (sr.type==="counter" || sr.type==="stand") ? "総席数" : "総卓数";
+    renderSeatInputs();
+    renderCapInputs();
+  };
+  btn.addEventListener("click", handler);
+  btn.addEventListener("touchend", (e)=>{ e.preventDefault(); handler(); }, {passive:false});
+});
+
+otherName.addEventListener("input", ()=>{
+  if(sr.type==="other") sr.typeName = (otherName.value||"").trim() || "その他";
+});
+
+document.getElementById("countDec").onclick = ()=> {
+  sr.count = Math.max(0, sr.count-1);
+  countNum.textContent = String(sr.count);
+  renderSeatInputs();
+  renderCapInputs();
+};
+document.getElementById("countInc").onclick = ()=> {
+  sr.count = Math.min(99, sr.count+1);
+  countNum.textContent = String(sr.count);
+  renderSeatInputs();
+  renderCapInputs();
+};
+
+resetSeatReg.onclick = ()=>{
+  sr.type = null; sr.typeName = ""; sr.count = 0; sr.labels = []; sr.caps = [];
+  otherName.value = ""; otherNameWrap.style.display = "none";
+  countNum.textContent = "0"; countLabel.textContent = "総席数 / 総卓数";
+  renderSeatInputs(); renderCapInputs();
+  openModal({ title:"初期化しました", sub:"この画面の入力を初期状態に戻しました", yesText:"OK" });
+};
+
+function guessNextLabel(prev){
+  if(!prev) return "";
+  prev = String(prev).trim();
+  if(!prev) return "";
+  prev = prev.toUpperCase();
+
+  const m = prev.match(/^(.*?)(\d+)$/);
+  if(m){
+    const head = m[1];
+    const num = parseInt(m[2],10);
+    return head + String(num+1);
+  }
+  if(prev.length===1 && prev>="A" && prev<="Z"){
+    const c = prev.charCodeAt(0);
+    if(c<90) return String.fromCharCode(c+1);
+    return "A";
+  }
+  const last = prev.slice(-1);
+  if(last>="A" && last<="Z"){
+    const c = last.charCodeAt(0);
+    const next = (c<90) ? String.fromCharCode(c+1) : "A";
+    return prev.slice(0,-1)+next;
+  }
+  return prev + "_2";
+}
+
+function renderSeatInputs(){
+  seatInputs.innerHTML = "";
+  const count = sr.count || 0;
+  while(sr.labels.length < count) sr.labels.push("");
+  sr.labels = sr.labels.slice(0,count);
+
+  for(let i=0;i<count;i++){
+    const wrap = document.createElement("div");
+    wrap.style.marginBottom = "10px";
+
+    if(!sr.labels[i] && i>0){
+      const auto = guessNextLabel(sr.labels[i-1]);
+      if(auto) sr.labels[i] = auto;
+    }
+
+    const nextHint = (i>0) ? guessNextLabel(sr.labels[i-1] || sr.labels[i] || "") : "";
+
+    wrap.innerHTML = `
+      <div class="muted2" style="margin-bottom:6px; font-weight:900;">${i+1}席（卓）目</div>
+      <input type="text" value="${escapeHtml(sr.labels[i]||"")}" data-idx="${i}"
+        placeholder="${i===0 ? "例：1 / A / C1" : (nextHint ? `例：${escapeHtml(nextHint)}` : "例：2")}" />
+    `;
+    const input = wrap.querySelector("input");
+    input.oninput = (e)=>{
+      let v = (e.target.value||"").toUpperCase().trim();
+      sr.labels[i] = v;
+
+      if(i<count-1 && !sr.labels[i+1]){
+        const auto = guessNextLabel(v);
+        if(auto){
+          sr.labels[i+1] = auto;
+          renderSeatInputs();
+        }
+      }
+    };
+    seatInputs.appendChild(wrap);
+  }
+}
+function renderCapInputs(){
+  capInputs.innerHTML = "";
+  const count = sr.count || 0;
+  while(sr.caps.length < count) sr.caps.push(sr.defaultCap || 4);
+  sr.caps = sr.caps.slice(0,count);
+
+  for(let i=0;i<count;i++){
+    const row = document.createElement("div");
+    row.style.marginBottom = "10px";
+    row.innerHTML = `
+      <div class="muted2" style="margin-bottom:6px; font-weight:900;">${escapeHtml(sr.labels[i]||`${i+1}`)} の最大人数</div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="stepBtn" data-dec="${i}">◀︎</button>
+        <div class="stepNum" id="capNum_${i}">${sr.caps[i]||1}</div>
+        <button class="stepBtn" data-inc="${i}">▶︎</button>
+      </div>
+    `;
+    capInputs.appendChild(row);
+
+    row.querySelector(`[data-dec="${i}"]`).onclick = ()=>{
+      sr.caps[i] = Math.max(1, (sr.caps[i]||1)-1);
+      document.getElementById(`capNum_${i}`).textContent = String(sr.caps[i]);
+    };
+    row.querySelector(`[data-inc="${i}"]`).onclick = ()=>{
+      sr.caps[i] = Math.min(99, (sr.caps[i]||1)+1);
+      document.getElementById(`capNum_${i}`).textContent = String(sr.caps[i]);
+    };
+  }
+}
+
+saveSeatsBtn.onclick = ()=>{
+  if(!sr.type){
+    openModal({ title:"名称を選んでください", sub:"カウンター / 立ち / テーブル / 座敷 / 個室 / その他", yesText:"OK" });
+    return;
+  }
+  if(sr.type==="other"){
+    const nm = (otherName.value||"").trim();
+    if(!nm){
+      openModal({ title:"その他の名称を入力してください", sub:"例：中庭テラス", yesText:"OK" });
+      return;
+    }
+    sr.typeName = nm;
+  }
+  if(!sr.count){
+    openModal({ title:"総席数 / 総卓数を入力してください", sub:"◀︎ / ▶︎ で数を調整できます", yesText:"OK" });
+    return;
+  }
+
+  const labels = sr.labels.map(x=> (x||"").toUpperCase().trim());
+  for(let i=0;i<labels.length;i++){
+    if(!labels[i]){
+      openModal({ title:"席番号を入力してください", sub:`${i+1}席（卓）目が空です`, yesText:"OK" });
+      return;
+    }
+  }
+
+  const existingLabels = new Set(state.seats.map(s=> (s.label||"").toUpperCase()));
+  const dup = labels.find(l => existingLabels.has(l));
+  if(dup){
+    openModal({
+      title:"同じ席（卓）番号がありますが登録しますか？",
+      sub:`「${dup}」が既に存在します`,
+      yesText:"○（登録する）",
+      noText:"✖︎（戻る）",
+      onYes: ()=>{ closeModal(); doSaveSeats(labels); }
+    });
+    return;
+  }
+
+  doSaveSeats(labels);
+};
+
+function doSaveSeats(labels){
+  for(let i=0;i<labels.length;i++){
+    state.seats.push({
+      id: "S"+nowTs()+ "_" + i + "_" + Math.random().toString(16).slice(2),
+      label: labels[i],
+      type: sr.type,
+      typeName: sr.typeName,
+      cap: sr.caps[i] || (sr.defaultCap||4),
+      status: "empty",
+      party: null,
+      openedAt: null,
+      orders: [],
+      mergedInto: null
+    });
+  }
+  save();
+  openModal({ title:"保存しました", sub:"メインに反映しました", yesText:"OK", onYes: ()=>{ closeModal(); go("main"); }});
+}
+
+document.getElementById("backMainFromSeatReg").onclick = ()=> go("settings");
+
+/* 4-3: 名称ごとにまとめて表示 */
+function renderSeatRegisterPreview(){
+  const host = document.getElementById("seatPreviewGrouped");
+  host.innerHTML = "";
+
+  const sorted = [...state.seats].sort((a,b)=> (a.label||"").localeCompare((b.label||""), "ja", { numeric:true, sensitivity:"base" }));
+  const byTypeName = {};
+  for(const s of sorted){
+    const key = (s.typeName||"未分類").trim() || "未分類";
+    byTypeName[key] = byTypeName[key] || [];
+    byTypeName[key].push(s);
+  }
+  const keys = Object.keys(byTypeName).sort(jaSort);
+
+  keys.forEach(k=>{
+    const section = document.createElement("div");
+    section.style.marginBottom = "12px";
+    section.innerHTML = `<div class="muted" style="font-weight:950; margin: 6px 0 8px;">${escapeHtml(k)}</div>`;
+    const grid = document.createElement("div");
+    grid.className = "gridSeats";
+
+    byTypeName[k].forEach(s=>{
+      const card = document.createElement("div");
+      card.className="seatCard";
+      const meta = `${s.typeName||""} / 最大${s.cap||0}名`;
+      card.innerHTML = `
+        <div class="seatTop">
+          <div class="seatLabel">${escapeHtml(s.label||"")}</div>
+          <div class="seatStatus">${s.status==="empty" ? "空席" : (s.status==="reserve"?"予約":"着席")}</div>
+        </div>
+        <div class="seatMeta"><span>${escapeHtml(meta)}</span></div>
+        <div class="seatMoney"><div class="tagMini">タップで簡易確認</div></div>
+      `;
+      card.onclick = ()=>{
+        const hasUnpaid = (s.orders||[]).length>0;
+        const sub = hasUnpaid
+          ? "未会計の注文があるため、無料版ではここから削除できません（会計後に削除してください）"
+          : "未会計の注文がないため、この席を削除できます";
+
+        openModal({
+          title:`席（${s.label}）`,
+          sub,
+          bodyHtml: `
+            <div class="muted2">名称：${escapeHtml(s.typeName||"")}</div>
+            <div class="muted2">最大人数：${escapeHtml(String(s.cap||0))}</div>
+            <div class="hr"></div>
+            ${hasUnpaid ? `<div class="warnText">未会計の注文があります</div>` : `<div class="muted2">削除できます</div>`}
+          `,
+          yesText: hasUnpaid ? "OK" : "削除",
+          noText: "戻る",
+          yesClass: hasUnpaid ? "btnPrimary" : "btnDanger",
+          onYes: ()=>{
+            if(hasUnpaid){ closeModal(); return; }
+            state.seats = state.seats.filter(x=> x.id!==s.id);
+            state.seats.forEach(x=>{ if(x.mergedInto===s.id) x.mergedInto = null; });
+            save();
+            closeModal();
+            renderSeatRegisterPreview();
+            renderMain();
+          }
+        });
+      };
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    host.appendChild(section);
+  });
+}
+
+/* ========================= Menu Register (6) ========================= */
+const photoInput = document.getElementById("photoInput");
+document.getElementById("photoBtn").onclick = ()=> photoInput.click();
+document.getElementById("photoClearBtn").onclick = ()=>{ photoInput.value = ""; openModal({ title:"写真を消しました", yesText:"OK" }); };
+photoInput.addEventListener("change", ()=>{
+  if(!photoInput.files || !photoInput.files[0]) return;
+  openModal({
+    title:"写真を受け取りました",
+    sub:"無料版は誤認識が起きやすいです（改善中）",
+    bodyHtml:`<div class="warnText">誤認識前提になります（無料版）</div>
+             <div class="muted2">今は「手動登録」で確実に登録してください。</div>`,
+    yesText:"OK"
+  });
+});
+
+function getGenreList(category){
+  return category==="drink" ? (state.genres.drink||[]) : (state.genres.food||[]);
+}
+function setGenreList(category, list){
+  if(category==="drink") state.genres.drink = list;
+  else state.genres.food = list;
+}
+
+function renderMenuRegister(){
+  // セレクターを再構築
+  const cat = document.getElementById("mCategory").value;
+  rebuildGenreSelectors(cat);
+
+  document.getElementById("mCategory").onchange = ()=>{
+    rebuildGenreSelectors(document.getElementById("mCategory").value);
+  };
+
+  document.getElementById("addGenreBtn").onclick = ()=>{
+    const category = document.getElementById("mCategory").value;
+    openModal({
+      title:"ジャンル追加",
+      sub: category==="drink" ? "ドリンクのジャンルを追加します" : "料理のジャンルを追加します",
+      bodyHtml:`<input id="newGenre" type="text" placeholder="例：揚げ物 / 日本酒 / サワー" />`,
+      yesText:"追加",
+      noText:"戻る",
+      onYes: ()=>{
+        const g = (document.getElementById("newGenre").value||"").trim();
+        if(!g){
+          openModal({ title:"ジャンルを入力してください", yesText:"OK" });
+          return;
+        }
+        const list = getGenreList(category);
+        if(list.some(x=> x===g)){
+          closeModal();
+          openModal({ title:"すでに存在します", sub:`「${g}」は登録済みです`, yesText:"OK" });
+          return;
+        }
+        list.push(g);
+        list.sort(jaSort);
+        setGenreList(category, list);
+        save();
+        closeModal();
+        rebuildGenreSelectors(category, g);
+      }
+    });
+  };
+
+  document.getElementById("mAdd").onclick = ()=>{
+    const category = document.getElementById("mCategory").value;
+    const sel = document.getElementById("mGenreSel").value;
+    const genre = (sel||"").trim() || "未分類"; // 未選択→未分類
+    const name = (document.getElementById("mName").value||"").trim();
+    const price = parseInt(document.getElementById("mPrice").value||"0",10);
+    const tax = parseInt(document.getElementById("mTax").value||"10",10);
+
+    if(!name || !price){
+      openModal({ title:"未入力があります", sub:"商品名・金額を入力してください", yesText:"OK" });
+      return;
+    }
+
+    // 22: 同名は金額違っても登録不可（カテゴリを問わず）
+    const dup = state.menu.find(m=> (m.name||"").trim()===name);
+    if(dup){
+      openModal({
+        title:"同じ料理（ドリンク）があります",
+        sub:"名前を変えるか、既存の料理（ドリンク）を編集してください。",
+        yesText:"OK"
+      });
+      return;
+    }
+
+    state.menu.push({
+      id: "M"+nowTs()+"_"+Math.random().toString(16).slice(2),
+      category,
+      genre,
+      name,
+      price,
+      tax
+    });
+    save();
+    document.getElementById("mName").value = "";
+    document.getElementById("mPrice").value = "";
+    renderMenuListBySelectedGenre();
+  };
+
+  // 閲覧セレクター
+  const vSel = document.getElementById("viewGenreSel");
+  const vDec = document.getElementById("viewGenreDecide");
+  vSel.onchange = ()=>{ state.ui.menuViewGenre = vSel.value; save(); };
+  vDec.onclick = ()=>{ renderMenuListBySelectedGenre(); };
+
+  // 初期ジャンル
+  if(!state.ui.menuViewGenre) state.ui.menuViewGenre = "未分類";
+  save();
+  rebuildViewGenreSel();
+  renderMenuListBySelectedGenre();
+}
+
+function rebuildGenreSelectors(category, pick=""){
+  const sel = document.getElementById("mGenreSel");
+  sel.innerHTML = `<option value="">（未選択→未分類）</option>`;
+  const list = getGenreList(category).slice().sort(jaSort);
+  list.forEach(g=>{
+    const opt = document.createElement("option");
+    opt.value = g;
+    opt.textContent = g;
+    sel.appendChild(opt);
+  });
+  if(pick) sel.value = pick;
+  rebuildViewGenreSel();
+}
+
+function rebuildViewGenreSel(){
+  const vSel = document.getElementById("viewGenreSel");
+  const genresAll = new Set(["未分類"]);
+  state.menu.forEach(m=> genresAll.add((m.genre||"未分類").trim()||"未分類"));
+  const arr = Array.from(genresAll).sort(jaSort);
+
+  vSel.innerHTML = "";
+  arr.forEach(g=>{
+    const opt = document.createElement("option");
+    opt.value = g;
+    opt.textContent = g;
+    vSel.appendChild(opt);
+  });
+  if(state.ui.menuViewGenre && arr.includes(state.ui.menuViewGenre)) vSel.value = state.ui.menuViewGenre;
+  else vSel.value = "未分類";
+  state.ui.menuViewGenre = vSel.value;
+  save();
+}
+
+function renderMenuListBySelectedGenre(){
+  const box = document.getElementById("menuList");
+  box.innerHTML = "";
+
+  const g = (state.ui.menuViewGenre||"未分類").trim() || "未分類";
+  const items = state.menu
+    .filter(m=> ((m.genre||"未分類").trim()||"未分類")===g)
+    .sort((a,b)=> jaSort(a.name,b.name)); // 23
+
+  const wrap = document.createElement("div");
+  wrap.className = "listBox";
+  wrap.innerHTML = `<div class="listHead">
+    <span>${escapeHtml(g)}</span>
+    <span class="muted2">${items.length}件</span>
+  </div>`;
+  const body = document.createElement("div");
+
+  items.forEach(m=>{
+    const row = document.createElement("div");
+    row.className = "listRow";
+    row.innerHTML = `
+      <div class="listName">${escapeHtml(m.name)}</div>
+      <div class="listMeta">${yen(m.price)} / ${m.tax}%</div>
+      <div class="btnRow" style="gap:6px;">
+        <button class="listBtn btnSmall" data-act="edit">修正</button>
+        <button class="listBtn btnDanger" data-act="del">削除</button>
+      </div>
+    `;
+    row.querySelector('[data-act="edit"]').onclick = ()=> openEditMenuModal(m);
+    row.querySelector('[data-act="del"]').onclick = ()=> {
+      openModal({
+        title:"削除しますか？",
+        sub:`「${m.name}」を削除します`,
+        yesText:"削除",
+        noText:"戻る",
+        yesClass:"btnDanger",
+        onYes: ()=>{
+          state.menu = state.menu.filter(x=> x.id!==m.id);
+          save();
+          closeModal();
+          rebuildViewGenreSel();
+          renderMenuListBySelectedGenre();
+        }
+      });
+    };
+    body.appendChild(row);
+  });
+
+  wrap.appendChild(body);
+  box.appendChild(wrap);
+}
+
+function openEditMenuModal(m){
+  const genresAll = new Set(["未分類"]);
+  state.menu.forEach(x=> genresAll.add((x.genre||"未分類").trim()||"未分類"));
+  const gArr = Array.from(genresAll).sort(jaSort);
+
+  openModal({
+    title:"メニュー修正",
+    sub:"ジャンル・商品名・金額・税率を変更できます",
+    bodyHtml: `
+      <div class="muted2">ジャンル</div>
+      <select id="emGenre">
+        ${gArr.map(g=> `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join("")}
+      </select>
+
+      <div class="muted2">商品名</div>
+      <input id="emName" type="text" value="${escapeHtml(m.name)}" />
+
+      <div class="muted2">金額</div>
+      <input id="emPrice" class="numField" type="number" inputmode="numeric" value="${escapeHtml(String(m.price||0))}" />
+
+      <div class="muted2">税率</div>
+      <select id="emTax">
+        <option value="10">10%</option>
+        <option value="8">8%</option>
+      </select>
+    `,
+    yesText:"登録",
+    noText:"戻る",
+    onYes: ()=>{
+      const newGenre = (document.getElementById("emGenre").value||"未分類").trim() || "未分類";
+      const newName = (document.getElementById("emName").value||"").trim();
+      const newPrice = parseInt(document.getElementById("emPrice").value||"0",10);
+      const newTax = parseInt(document.getElementById("emTax").value||"10",10);
+
+      if(!newName || !newPrice){
+        openModal({ title:"未入力があります", sub:"商品名・金額を入力してください", yesText:"OK" });
+        return;
+      }
+
+      // 22: 同名重複チェック（自分以外）
+      const dup = state.menu.find(x=> x.id!==m.id && (x.name||"").trim()===newName);
+      if(dup){
+        openModal({
+          title:"同じ料理（ドリンク）があります",
+          sub:"名前を変えるか、既存の料理（ドリンク）を編集してください。",
+          yesText:"OK"
+        });
+        return;
+      }
+
+      m.genre = newGenre;
+      m.name = newName;
+      m.price = newPrice;
+      m.tax = newTax;
+
+      save();
+      closeModal();
+      rebuildViewGenreSel();
+      renderMenuListBySelectedGenre();
+    }
+  });
+
+  setTimeout(()=>{
+    document.getElementById("emGenre").value = (m.genre||"未分類").trim() || "未分類";
+    document.getElementById("emTax").value = String(m.tax||10);
+  },0);
+}
+
+/* ========================= Order ========================= */
+function openOrderForSeat(seatId){
+  state.ui.orderSeatId = seatId;
+  state.ui.orderGenre = null;
+  save();
+  go("order");
+}
+document.getElementById("backToGenres").onclick = ()=>{
+  state.ui.orderGenre = null;
+  save();
+  renderOrder();
+};
+
+function renderOrder(){
+  const seat = state.seats.find(s=> s.id===state.ui.orderSeatId);
+  if(!seat){ go("main"); return; }
+
+  // header
+  const titleEl = document.getElementById("orderHeaderTitle");
+  const genre = state.ui.orderGenre;
+
+  if(!genre){
+    titleEl.innerHTML = `<span class="badge">注文</span><span style="font-weight:950;">席 ${escapeHtml(seat.label)}</span>`;
+  }else{
+    titleEl.innerHTML = `<span class="badge">商品（${escapeHtml(genre)}）</span><span style="font-weight:950;">（ジャンルへで戻る）</span>`;
+  }
+
+  const stageGenres = document.getElementById("orderStageGenres");
+  const stageItems = document.getElementById("orderStageItems");
+  const genreGrid = document.getElementById("genreGrid");
+  const itemsGrid = document.getElementById("itemsGrid");
+
+  const items = [...state.menu].sort((a,b)=> jaSort(a.name,b.name));
+  const genres = [...new Set(items.map(x=> (x.genre||"未分類").trim()||"未分類"))].sort(jaSort);
+
+  genreGrid.innerHTML = "";
+  for(const g of genres){
+    const btn = document.createElement("button");
+    btn.className = "genreBtn";
+    btn.textContent = g;
+    btn.onclick = ()=>{
+      state.ui.orderGenre = g;
+      save();
+      renderOrder();
+    };
+    genreGrid.appendChild(btn);
+  }
+
+  if(!genre){
+    stageGenres.style.display = "block";
+    stageItems.style.display = "none";
+  }else{
+    stageGenres.style.display = "none";
+    stageItems.style.display = "block";
+    itemsGrid.innerHTML = "";
+    const inGenre = items.filter(x=> ((x.genre||"未分類").trim()||"未分類")===genre);
+
+    for(const m of inGenre){
+      const btn = document.createElement("button");
+      btn.className = "itemBtn";
+      btn.innerHTML = `${escapeHtml(m.name)}<small>${yen(m.price)}</small>`;
+      btn.onclick = ()=> openQtyModal(seat, m);
+      itemsGrid.appendChild(btn);
+    }
+  }
+
+  renderOrderList(seat);
+}
+
+function renderOrderList(seat){
+  const box = document.getElementById("orderList");
+  const sumEl = document.getElementById("orderSum");
+  box.innerHTML = "";
+
+  const orders = seat.orders || [];
+  const sum = orders.reduce((s,o)=> s + (o.price||0)*(o.qty||1), 0);
+  sumEl.textContent = `合計 ${yen(sum)}`;
+
+  for(const o of orders){
+    const row = document.createElement("div");
+    row.className = "listRow";
+    row.innerHTML = `
+      <div class="listName">${escapeHtml(o.name)}</div>
+      <div class="listMeta">${o.qty}個 / ${yen(o.price)}</div>
+      <button class="listBtn btnSmall">修正</button>
+    `;
+    row.querySelector("button").onclick = ()=> openQtyModal(seat, o, true);
+    box.appendChild(row);
+  }
+}
+
+function openQtyModal(seat, item, isEdit=false){
+  let qty = isEdit ? (item.qty||1) : 1;
+
+  openModal({
+    title: isEdit ? "注文修正" : "個数選択",
+    sub: isEdit ? "0個にすると一覧から消えます" : "◀︎ / ▶︎ で個数を調整します",
+    bodyHtml: `
+      <div style="font-weight:950;">${escapeHtml(item.name)}　<span class="muted2">${yen(item.price||0)}</span></div>
+      <div class="stepper">
+        <button class="stepBtn" id="qDec">◀︎</button>
+        <div class="stepNum" id="qNum">${qty}</div>
+        <button class="stepBtn" id="qInc">▶︎</button>
+      </div>
+    `,
+    yesText:"決定",
+    noText:"戻る",
+    onYes: ()=>{
+      const n = qty;
+      if(isEdit){
+        if(n<=0){
+          seat.orders = (seat.orders||[]).filter(x=> x!==item);
+        }else{
+          item.qty = n;
+        }
+      }else{
+        seat.orders = seat.orders || [];
+        seat.orders.push({
+          name: item.name,
+          price: item.price,
+          tax: item.tax,
+          qty: n,
+          category: item.category,
+          ts: nowTs(),
+          seatLabelRaw: seat.label,
+          seatLabelKey: normalizeKey(seat.label),
+        });
+      }
+      save();
+      closeModal();
+      renderOrder();
+    }
+  });
+
+  setTimeout(()=>{
+    const render = ()=> document.getElementById("qNum").textContent = String(qty);
+    document.getElementById("qDec").onclick = ()=> { qty = Math.max(0, qty-1); render(); };
+    document.getElementById("qInc").onclick = ()=> { qty = Math.min(99, qty+1); render(); };
+  },0);
+}
+
+document.getElementById("goCheckout").onclick = ()=> go("checkout");
+
+/* ========================= Checkout ========================= */
+document.querySelectorAll(".payBtn").forEach(btn=>{
+  btn.onclick = ()=>{
+    state.ui.pay = btn.dataset.pay;
+    save();
+    renderCheckoutPay();
+  };
+});
+function renderCheckoutPay(){
+  document.querySelectorAll(".payBtn").forEach(btn=>{
+    btn.classList.toggle("selected", btn.dataset.pay===state.ui.pay);
+  });
+}
+function renderCheckout(){
+  const seat = state.seats.find(s=> s.id===state.ui.orderSeatId);
+  if(!seat){ go("main"); return; }
+
+  state.ui.pay = "cash"; // 15: 毎回現金へ
+  save();
+
+  const total = seatTotal(seat);
+  document.getElementById("coSeatLabel").textContent = `席 ${seat.label}`;
+  document.getElementById("coPeople").textContent = seat.party?.people ? `${seat.party.people}名` : "";
+  document.getElementById("coTotal").textContent = `合計 ${yen(total)}`;
+  renderCheckoutPay();
+
+  const box = document.getElementById("checkoutOrderList");
+  box.innerHTML = "";
+  for(const o of (seat.orders||[])){
+    const row = document.createElement("div");
+    row.className = "listRow";
+    row.innerHTML = `
+      <div class="listName">${escapeHtml(o.name)}</div>
+      <div class="listMeta">${o.qty}個 / ${yen(o.price)}</div>
+      <button class="listBtn btnSmall">修正</button>
+    `;
+    row.querySelector("button").onclick = ()=> openQtyModal(seat, o, true);
+    box.appendChild(row);
+  }
+}
+document.getElementById("warikanBtn").onclick = ()=> openModal({ title:"割り勘（無料版）", sub:"無料版では簡易表示のみです（次フェーズで強化）", yesText:"OK" });
+
+document.getElementById("confirmCheckout").onclick = ()=>{
+  const seat = state.seats.find(s=> s.id===state.ui.orderSeatId);
+  if(!seat) return;
+
+  const total = seatTotal(seat);
+  if(total<=0){
+    openModal({ title:"合計が0円です", sub:"注文がありません", yesText:"OK" });
+    return;
+  }
+
+  openModal({
+    title:"電子レシートはいりますか？",
+    sub:"無料版は「送る」は有料版案内になります",
+    yesText:"○ 送る",
+    noText:"✖︎ いらない",
+    onYes: ()=>{
+      closeModal();
+      openModal({
+        title:"有料版のサービスです",
+        sub:"無料版では電子レシート送信は使えません。準備ができ次第、有料版で提供します。",
+        yesText:"OK",
+        onYes: ()=> closeModal()
+      });
+    },
+    onNo: ()=>{
+      finalizeCheckout(seat);
+      closeModal();
+      go("main");
+    }
+  });
+};
+
+function finalizeCheckout(baseSeat){
+  const baseId = baseSeat.id;
+  const related = [baseSeat, ...state.seats.filter(s=> s.mergedInto===baseId)];
+  const allItems = [];
+  let amount = 0;
+
+  for(const s of related){
+    for(const o of (s.orders||[])){
+      amount += (o.price||0)*(o.qty||1);
+      allItems.push({ name:o.name, qty:o.qty, price:o.price });
+    }
+  }
+
+  state.sales.push({
+    id: "SA"+nowTs()+"_"+Math.random().toString(16).slice(2),
+    ts: nowTs(),
+    amount,
+    pay: state.ui.pay,
+    seatLabel: baseSeat.label,
+    items: allItems
+  });
+
+  for(const s of related){
+    s.orders = [];
+    s.status = "empty";
+    s.party = null;
+    s.openedAt = null;
+    s.mergedInto = null;
+  }
+  save();
+}
+
+/* ========================= Kitchen (2,2-2,2-3) ========================= */
+document.getElementById("kRefresh").onclick = ()=> renderKitchen();
+document.getElementById("kFoodTab").onclick = ()=>{
+  state.ui.kitchenTab = "food"; save(); renderKitchen(); syncKitchenTabs();
+};
+document.getElementById("kDrinkTab").onclick = ()=>{
+  state.ui.kitchenTab = "drink"; save(); renderKitchen(); syncKitchenTabs();
+};
+function syncKitchenTabs(){
+  const foodBtn = document.getElementById("kFoodTab");
+  const drinkBtn = document.getElementById("kDrinkTab");
+  foodBtn.classList.toggle("btnPrimary", state.ui.kitchenTab==="food");
+  drinkBtn.classList.toggle("btnPrimary", state.ui.kitchenTab==="drink");
+}
+
+function kitchenKey(order){
+  return `${order.seatId}|${order.ts}|${order.name}`;
+}
+
+function collectKitchenOrders(){
+  const list = [];
+  for(const seat of state.seats){
+    if(seat.mergedInto) continue;
+    for(const o of (seat.orders||[])){
+      list.push({
+        seatId: seat.id,
+        seatLabel: seat.label,
+        seatKey: normalizeKey(seat.label),
+        name: o.name,
+        qty: o.qty||1,
+        ts: o.ts || seat.openedAt || nowTs(),
+        category: o.category || "food"
+      });
+    }
+  }
+  return list;
+}
+
+function renderKitchen(){
+  syncKitchenTabs();
+  const tab = state.ui.kitchenTab;
+  const kList = document.getElementById("kList");
+  kList.innerHTML = "";
+
+  const all = collectKitchenOrders().filter(o=> tab==="food" ? o.category==="food" : o.category==="drink");
+  const remain = all.filter(o=> !state.kitchenDone[kitchenKey(o)]);
+
+  if(tab==="drink"){
+    remain.sort((a,b)=> a.ts-b.ts);
+    for(const o of remain){
+      kList.appendChild(renderKitchenCardSingle(o, false, false));
+    }
+    return;
+  }
+
+  const byName = {};
+  for(const o of remain){
+    byName[o.name] = byName[o.name] || [];
+    byName[o.name].push(o);
+  }
+  const names = Object.keys(byName).sort(jaSort);
+
+  for(const nm of names){
+    const group = byName[nm].sort((a,b)=> (a.ts-b.ts) || (a.seatKey.localeCompare(b.seatKey, "ja", {numeric:true, sensitivity:"base"})));
+    const base = group[0];
+    const subs = group.slice(1);
+
+    const promoted = subs.length>0;
+    const card = renderKitchenCardGroup(base, subs, promoted);
+    kList.appendChild(card);
+  }
+}
+
+function renderKitchenCardSingle(o, promoted, isSub){
+  const card = document.createElement("div");
+  card.className = "kCard" + (promoted ? " promoted" : "");
+  const overdue = (nowTs() - o.ts) >= 15*60*1000;
+  if(overdue) card.classList.add("overdue");
+
+  const left = document.createElement("div");
+  left.innerHTML = `
+    <div class="kName">${escapeHtml(o.name)} <span class="kQty">${escapeHtml(String(o.qty))}個</span></div>
+    <div class="kMeta">
+      <span class="kSeat">${escapeHtml(o.seatLabel)}</span>
+      <span class="kTime">${escapeHtml(fmtTime(o.ts))}</span>
+    </div>
+  `;
+
+  const slider = makeSlider(()=>{
+    state.kitchenDone[kitchenKey(o)] = true;
+    save();
+    renderKitchen();
+  }, isSub);
+
+  card.appendChild(left);
+  card.appendChild(slider);
+  return card;
+}
+
+function renderKitchenCardGroup(base, subs, promoted){
+  const card = document.createElement("div");
+  card.className = "kCard" + (promoted ? " promoted" : "");
+  const overdue = (nowTs() - base.ts) >= 15*60*1000;
+  if(overdue) card.classList.add("overdue");
+
+  const left = document.createElement("div");
+  left.innerHTML = `
+    <div class="kName">${escapeHtml(base.name)} <span class="kQty">${escapeHtml(String(base.qty))}個</span></div>
+    <div class="kMeta">
+      <span class="kSeat">${escapeHtml(base.seatLabel)}</span>
+      <span class="kTime">${escapeHtml(fmtTime(base.ts))}</span>
+    </div>
+  `;
+
+  const sliderBase = makeSlider(()=>{
+    state.kitchenDone[kitchenKey(base)] = true;
+    save();
+    renderKitchen();
+  }, false);
+
+  if(subs.length){
+    const subWrap = document.createElement("div");
+    subWrap.className = "kSubLine";
+
+    subs.forEach(s=>{
+      const row = document.createElement("div");
+      row.className = "kSubItem";
+      const overdueSub = (nowTs() - s.ts) >= 15*60*1000;
+
+      const left2 = document.createElement("div");
+      left2.className = "kSubLeft";
+      left2.innerHTML = `
+        <span class="kSeat">${escapeHtml(s.seatLabel)}</span>
+        <span class="kTime">${escapeHtml(fmtTime(s.ts))}</span>
+        <span class="kQty">${escapeHtml(String(s.qty))}個</span>
+      `;
+
+      const sliderSub = makeSlider(()=>{
+        state.kitchenDone[kitchenKey(s)] = true;
+        save();
+        renderKitchen();
+      }, true);
+
+      row.appendChild(left2);
+      row.appendChild(sliderSub);
+
+      if(overdueSub){
+        row.style.borderColor = "rgba(255,87,87,.35)";
+        row.style.background = "rgba(255,87,87,.08)";
+      }
+      subWrap.appendChild(row);
+    });
+
+    left.appendChild(subWrap);
+  }
+
+  card.appendChild(left);
+  card.appendChild(sliderBase);
+
+  return card;
+}
+
+function makeSlider(onDone, isSub){
+  const slider = document.createElement("div");
+  slider.className = "slider" + (isSub ? " short shift" : "");
+  slider.innerHTML = `
+    <div class="sliderTrack">完了</div>
+    <div class="sliderKnob">▶</div>
+  `;
+  const knob = slider.querySelector(".sliderKnob");
+  let dragging=false, startX=0, startLeft=0;
+
+  const maxLeft = ()=> slider.clientWidth - knob.clientWidth - 4;
+
+  function setLeft(px){
+    px = Math.max(2, Math.min(px, maxLeft()+2));
+    knob.style.left = px+"px";
+  }
+  function doneCheck(){
+    const left = parseFloat(knob.style.left || "2");
+    if(left >= maxLeft()) onDone();
+    else setLeft(2);
+  }
+
+  const onDown = (e)=>{
+    dragging=true;
+    startX = (e.touches? e.touches[0].clientX : e.clientX);
+    startLeft = parseFloat(knob.style.left || "2");
+  };
+  const onMove = (e)=>{
+    if(!dragging) return;
+    const x = (e.touches? e.touches[0].clientX : e.clientX);
+    const dx = x - startX;
+    setLeft(startLeft + dx);
+    e.preventDefault?.();
+  };
+  const onUp = ()=>{
+    if(!dragging) return;
+    dragging=false;
+    doneCheck();
+  };
+
+  knob.addEventListener("mousedown", onDown);
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
+
+  knob.addEventListener("touchstart", onDown, {passive:false});
+  window.addEventListener("touchmove", onMove, {passive:false});
+  window.addEventListener("touchend", onUp);
+
+  return slider;
+}
+
+/* ========================= Sales (5: NaN対策含む) ========================= */
+function renderSales(){ /* view only */ }
+
+function renderMonthSales(){
+  const box = document.getElementById("monthSalesBox");
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${pad2(now.getMonth()+1)}`;
+  const inMonth = state.sales.filter(s=>{
+    const d = new Date(s.ts);
+    if(!isFinite(d.getTime())) return false;
+    const y = d.getFullYear();
+    const m = pad2(d.getMonth()+1);
+    return `${y}-${m}`===ym;
+  });
+  const sum = inMonth.reduce((a,b)=> a + (b.amount||0), 0);
+  box.innerHTML = `<div>今月（${ym}）合計：<span style="font-weight:950; font-size:1.2rem;">${yen(sum)}</span></div>
+                   <div style="margin-top:8px;">件数：${inMonth.length}件</div>`;
+}
+
+function renderYearSales(){
+  const box = document.getElementById("yearSalesBox");
+  const now = new Date();
+  const y = now.getFullYear();
+  const inYear = state.sales.filter(s=>{
+    const d = new Date(s.ts);
+    return isFinite(d.getTime()) && d.getFullYear()===y;
+  });
+  const sum = inYear.reduce((a,b)=> a + (b.amount||0), 0);
+  box.innerHTML = `<div>今年（${y}）合計：<span style="font-weight:950; font-size:1.2rem;">${yen(sum)}</span></div>
+                   <div style="margin-top:8px;">件数：${inYear.length}件</div>`;
+}
+
+function safeSalesDate(ts){
+  const d = new Date(ts);
+  if(!isFinite(d.getTime())) return "日時不明";
+  return `${d.getFullYear()}/${pad2(d.getMonth()+1)}/${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function renderSalesManage(){
+  const log = document.getElementById("salesLog");
+  if(!state.sales.length){
+    log.innerHTML = "売上データはまだありません。";
+    return;
+  }
+  const sorted = [...state.sales].sort((a,b)=> (b.ts||0)-(a.ts||0));
+  log.innerHTML = sorted.slice(0,40).map(s=>{
+    const d = safeSalesDate(s.ts);
+    const pay = s.pay==="cash"?"現金":(s.pay==="card"?"カード":"QR/電子決済");
+    return `<div style="padding:10px 0; border-bottom:1px solid rgba(255,255,255,.06);">
+      <div style="font-weight:950;">${escapeHtml(d)}　${yen(s.amount||0)}　(${pay})</div>
+      <div class="muted2">※ 席番号・人数はレシートに記載しない（内部保持のみ）</div>
+    </div>`;
+  }).join("");
+}
+
+document.getElementById("goMonthSales").onclick = ()=> go("month");
+document.getElementById("goYearSales").onclick = ()=> go("year");
+document.getElementById("goSalesManage").onclick = ()=> go("manage");
+
+document.getElementById("monthToYear").onclick = ()=> go("year");
+document.getElementById("monthToManage").onclick = ()=> go("manage");
+document.getElementById("yearToMonth").onclick = ()=> go("month");
+document.getElementById("yearToManage").onclick = ()=> go("manage");
+document.getElementById("manageToMonth").onclick = ()=> go("month");
+document.getElementById("manageToYear").onclick = ()=> go("year");
+
+document.getElementById("exportCsv").onclick = ()=>{
+  const rows = [];
+  rows.push(["日時","金額","支払い方法","明細"].join(","));
+  for(const s of state.sales){
+    const dt = safeSalesDate(s.ts);
+    const pay = s.pay==="cash"?"現金":(s.pay==="card"?"カード":"QR/電子決済");
+    const detail = (s.items||[]).map(it=> `${it.name}x${it.qty}`).join(" / ");
+    rows.push([dt, String(s.amount||0), pay, `"${detail.replace(/"/g,'""')}"`].join(","));
+  }
+  const blob = new Blob([rows.join("\n")], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "売上.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+document.getElementById("clearSales").onclick = ()=>{
+  openModal({
+    title:"売上を全削除しますか？",
+    sub:"元に戻せません（危険）",
+    yesText:"削除",
+    noText:"戻る",
+    yesClass:"btnDanger",
+    onYes: ()=>{
+      state.sales = [];
+      save();
+      closeModal();
+      renderSalesManage();
+    }
+  });
+};
+
+/* ========================= Store Info ========================= */
+function renderStoreInfo(){
+  document.getElementById("stName").value = state.store.name || "";
+  document.getElementById("stPhone").value = state.store.phone || "";
+  document.getElementById("stAddr").value = state.store.addr || "";
+}
+document.getElementById("saveStoreInfo").onclick = ()=>{
+  state.store.name = (document.getElementById("stName").value||"").trim();
+  state.store.phone = (document.getElementById("stPhone").value||"").trim();
+  state.store.addr = (document.getElementById("stAddr").value||"").trim();
+  save();
+  openModal({ title:"保存しました", sub:"有料版の電子レシートで自動表示予定です", yesText:"OK" });
+};
+
+/* ========================= Boot ========================= */
+function escapeHtml(s){
+  return String(s||"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#39;");
+}
+
+(function init(){
+  syncNetIcon();
+  const v = state.ui.view;
+  if(views[v]) go(v);
+  else go("main");
+  syncDock();
+  syncTopCenter();
+  syncTopMainBtn();
+  renderMain();
+})();
+</script>
+</body>
+</html>
 🔴
