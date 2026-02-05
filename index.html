@@ -3582,6 +3582,98 @@ renderMenuRegister();
   // 今この瞬間も試す
   tryWire();
 })();
+/* =========================
+   席登録：名称ボタンが見た目だけで state に入らない対策（追記パッチ）
+   末尾に貼るだけ
+========================= */
+(() => {
+  const NAMES = ["カウンター","立ち","テーブル","座敷","個室","その他"];
+
+  function findNameFromButton(btn){
+    const t = (btn.textContent || "").trim();
+    // ボタン内に改行や余計な文字があっても拾えるように includes
+    for (const n of NAMES) if (t.includes(n)) return n;
+    return null;
+  }
+
+  function markSelected(name){
+    const btns = Array.from(document.querySelectorAll("button"));
+    for (const b of btns){
+      const n = findNameFromButton(b);
+      if (!n) continue;
+      // 既存CSSに依存しないよう class を両方いじる（どっちでも効く）
+      if (n === name){
+        b.classList.add("isSelected","selected","active");
+        b.setAttribute("aria-pressed","true");
+      } else {
+        b.classList.remove("isSelected","selected","active");
+        b.setAttribute("aria-pressed","false");
+      }
+    }
+  }
+
+  function wire(){
+    // state が無いタイミングだと落ちるのでガード
+    if (!window.state) return false;
+    if (!state.ui) state.ui = {};
+
+    // いったん全ボタンから「名称ボタンっぽいもの」を拾って個別にハンドラ付与
+    const btns = Array.from(document.querySelectorAll("button"));
+    let found = 0;
+
+    for (const b of btns){
+      const name = findNameFromButton(b);
+      if (!name) continue;
+
+      // 二重付与防止
+      if (b.__seatGroupWired) continue;
+      b.__seatGroupWired = true;
+      found++;
+
+      const onPick = (ev) => {
+        try{
+          ev && ev.preventDefault && ev.preventDefault();
+          ev && ev.stopPropagation && ev.stopPropagation();
+        }catch{}
+
+        // ★ここが本命：内部stateに確実に入れる
+        state.ui.seatGroup = name;
+
+        // 念のため “最後に選んだ名称” も控える（どこかで state が上書きされても復旧しやすい）
+        window.__lastSeatGroup = name;
+
+        markSelected(name);
+
+        // 画面側に再描画関数がある場合は呼ぶ（存在しなければ無視）
+        try { if (typeof window.renderSeatReg === "function") window.renderSeatReg(); } catch {}
+        try { if (typeof window.save === "function") window.save(); } catch {}
+      };
+
+      // iPhone対策：touchstartも拾う（clickが潰れる/遅れるケース対策）
+      b.addEventListener("click", onPick, { passive:false });
+      b.addEventListener("touchstart", onPick, { passive:false });
+    }
+
+    // 既に選択されてる表示があるなら state を補完（逆方向の補正）
+    if (!state.ui.seatGroup && window.__lastSeatGroup){
+      state.ui.seatGroup = window.__lastSeatGroup;
+    }
+    if (state.ui.seatGroup) markSelected(state.ui.seatGroup);
+
+    return found > 0;
+  }
+
+  // DOM準備/画面切替のタイミングでも拾えるようにリトライ
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries++;
+    const ok = wire();
+    if (ok || tries > 40) clearInterval(timer); // 最大10秒程度で打ち切り
+  }, 250);
+
+  // 念のため初回即実行
+  try{ wire(); }catch{}
+})();
 </script>
 </body>
 </html>
