@@ -3483,196 +3483,219 @@ go(state.ui.view || "main");
 renderMain();
 renderSeatRegisterPreview();
 renderMenuRegister();
-/* =========================
-   FIX: 席登録「名称」ボタンが state に反映されない問題
-   追記するだけで動くパッチ
-========================= */
-(function seatGroupFixPatch(){
-  const GROUP_LABELS = ["カウンター","立ち","テーブル","座敷","個室","その他"];
+/* ========================= PATCH (貼るだけ) =========================
+  目的：
+  1) 席登録：見た目で選択されてても state.ui.seatGroup が入らず「名称を選んでください」になるのを修正
+  2) 上部バー：『バックアップ』が見切れる問題を修正（表示を『保存』に変更＋CSS調整）
+  3) メニュー：デフォルトジャンル（おすすめ/定番/ビール/ハイボール/ソフトドリンク）を入れない＆残ってたら除去
+===================================================================== */
+(function PATCH_ONE_FREE_V1(){
+  try{
+    // ---------- 0) 便利関数 ----------
+    const safeText = (v)=> (v==null ? "" : String(v));
+    const replaceBackupWord = (s)=> safeText(s).replaceAll("バックアップ","保存");
+    const DEFAULT_GENRES = ["おすすめ","定番","ビール","ハイボール","ソフトドリンク"];
+    const uniq = (arr)=> Array.from(new Set((arr||[]).filter(Boolean)));
 
-  function ensureSeatForm(){
-    if (!window.state) window.state = {};
-    if (!state.seatForm) state.seatForm = {};
-  }
+    // ---------- 1) 上部バー：見切れ対策 + 文言を「保存」へ ----------
+    // CSSを注入（横スクロール許可 + ボタン幅の最小化 + 省略表示）
+    const style = document.createElement("style");
+    style.textContent = `
+      /* PATCH: Top Dock overflow fix */
+      .topDock, .dockTop, #topDock, #dockTop {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none;
+      }
+      .topDock::-webkit-scrollbar, .dockTop::-webkit-scrollbar, #topDock::-webkit-scrollbar, #dockTop::-webkit-scrollbar {
+        display:none;
+      }
+      .topDock > *, .dockTop > *, #topDock > *, #dockTop > *{
+        flex: 0 0 auto !important;
+        min-width: 0 !important;
+      }
+      .topDock button, .dockTop button, #topDock button, #dockTop button,
+      .topDock .dockBtn, .dockTop .dockBtn, #topDock .dockBtn, #dockTop .dockBtn{
+        padding: 10px 12px !important;
+        font-size: 14px !important;
+        line-height: 1.1 !important;
+        min-width: 0 !important;
+      }
+      .topDock button *, .dockTop button *, #topDock button *, #dockTop button *{
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+    `;
+    document.head.appendChild(style);
 
-  function findSeatRegRoot(){
-    // できるだけ広く探す（IDが違っても拾えるように）
-    return (
-      document.getElementById("seatReg") ||
-      document.querySelector('[data-view="seatReg"]') ||
-      document.querySelector('[data-view="seatreg"]') ||
-      document.querySelector("#view-seatReg") ||
-      document.querySelector("#view-seatreg") ||
-      document.body
-    );
-  }
-
-  function pickGroupButtons(root){
-    const btns = Array.from(root.querySelectorAll("button"));
-    return btns.filter(b => GROUP_LABELS.includes((b.textContent || "").trim()));
-  }
-
-  function syncVisual(btns){
-    const cur = ((state.seatForm && state.seatForm.group) || "").trim();
-    btns.forEach(b => {
-      const on = (b.textContent || "").trim() === cur;
-      // 既存CSSに影響しない“追加クラス”だけ付ける
-      b.classList.toggle("seatGroupSelected", on);
-      // よくあるクラスも念のため同期（既存が使ってたら効く）
-      b.classList.toggle("active", on);
-      b.classList.toggle("selected", on);
-      b.setAttribute("aria-pressed", on ? "true" : "false");
-    });
-  }
-
-  function wireOnce(){
-    const root = findSeatRegRoot();
-    const btns = pickGroupButtons(root);
-    if (!btns.length) return false;
-
-    // 二重登録防止
-    if (root.__seatGroupFixWired) {
-      // 画面再描画に備えて見た目だけ同期
-      try { ensureSeatForm(); syncVisual(btns); } catch(e){}
-      return true;
+    // ボタンの表示文言を「バックアップ」→「保存」に（id不明でも拾えるように）
+    function renameBackupButtons(){
+      const btns = Array.from(document.querySelectorAll("button, .dockBtn, a"));
+      btns.forEach(el=>{
+        const t = safeText(el.textContent).trim();
+        if(t.includes("バックアップ")){
+          el.textContent = t.replaceAll("バックアップ","保存");
+        }
+      });
     }
-    root.__seatGroupFixWired = true;
 
-    btns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        // 既存ハンドラが走った“あと”に state を確実に上書きする
-        setTimeout(() => {
-          try {
-            ensureSeatForm();
-            const label = (btn.textContent || "").trim();
-            const cur = (state.seatForm.group || "").trim();
-            state.seatForm.group = (cur === label) ? "" : label; // もう一度押したら解除
-            syncVisual(btns);
-          } catch(e) {
-            // 何もしない（落ちないのが最優先）
+    // openModal があるなら、モーダル文言も「バックアップ」→「保存」に統一（関連文言があっても崩れない）
+    if(typeof window.openModal === "function" && !window.__openModalPatchedForBackupWord){
+      const _openModal = window.openModal;
+      window.openModal = function(opt){
+        try{
+          if(opt && typeof opt === "object"){
+            const o = {...opt};
+            if("title" in o) o.title = replaceBackupWord(o.title);
+            if("sub" in o) o.sub = replaceBackupWord(o.sub);
+            if("bodyHtml" in o) o.bodyHtml = replaceBackupWord(o.bodyHtml);
+            if("yesText" in o) o.yesText = replaceBackupWord(o.yesText);
+            if("noText" in o) o.noText = replaceBackupWord(o.noText);
+            return _openModal(o);
           }
-        }, 0);
-      }, false);
-    });
+        }catch(e){}
+        return _openModal(opt);
+      };
+      window.__openModalPatchedForBackupWord = true;
+    }
 
-    // 初期同期
-    try { ensureSeatForm(); syncVisual(btns); } catch(e){}
-    return true;
-  }
+    // ---------- 2) 席登録：seatGroup の状態が入らない問題を修正 ----------
+    // 方針：席登録の「名称」ボタン群を拾って、タップ/クリックで state.ui.seatGroup を確実にセットする
+    // さらに、画面遷移や再描画でDOMが作り直されても拾い直す（intervalで短時間リトライ）
+    function wireSeatGroup(){
+      try{
+        if(!window.state || !state.ui) return false;
 
-  function tryWire(){
-    if (wireOnce()) return;
-    setTimeout(tryWire, 250);
-  }
+        // 「名称」の選択ボタンっぽいものを広めに拾う
+        const candidates = Array.from(document.querySelectorAll("button, .btn, .pill, .segBtn, .choiceBtn, .seatGroupBtn"));
+        const nameBtns = candidates.filter(b=>{
+          const t = safeText(b.textContent).trim();
+          return DEFAULT_GENRES.includes(t) ? false : ["カウンター","立ち","テーブル","座敷","個室","その他"].includes(t);
+        });
 
-  // DOM準備後も、画面切替後も拾えるようにする
-  document.addEventListener("DOMContentLoaded", tryWire);
+        if(nameBtns.length===0) return false;
 
-  // もし go(view) があるなら、画面遷移のたびに再同期
-  const oldGo = window.go;
-  if (typeof oldGo === "function" && !oldGo.__seatGroupFixWrapped) {
-    window.go = function(){
-      const r = oldGo.apply(this, arguments);
-      setTimeout(tryWire, 50);
-      return r;
-    };
-    window.go.__seatGroupFixWrapped = true;
-  }
+        const setGroup = (val)=>{
+          state.ui.seatGroup = val;
+          try{ window.__lastSeatGroup = val; }catch(e){}
+        };
 
-  // 今この瞬間も試す
-  tryWire();
-})();
-/* =========================
-   席登録：名称ボタンが見た目だけで state に入らない対策（追記パッチ）
-   末尾に貼るだけ
-========================= */
-(() => {
-  const NAMES = ["カウンター","立ち","テーブル","座敷","個室","その他"];
+        nameBtns.forEach(b=>{
+          if(b.__seatGroupPatched) return;
+          b.__seatGroupPatched = true;
 
-  function findNameFromButton(btn){
-    const t = (btn.textContent || "").trim();
-    // ボタン内に改行や余計な文字があっても拾えるように includes
-    for (const n of NAMES) if (t.includes(n)) return n;
-    return null;
-  }
+          const val = safeText(b.textContent).trim();
 
-  function markSelected(name){
-    const btns = Array.from(document.querySelectorAll("button"));
-    for (const b of btns){
-      const n = findNameFromButton(b);
-      if (!n) continue;
-      // 既存CSSに依存しないよう class を両方いじる（どっちでも効く）
-      if (n === name){
-        b.classList.add("isSelected","selected","active");
-        b.setAttribute("aria-pressed","true");
-      } else {
-        b.classList.remove("isSelected","selected","active");
-        b.setAttribute("aria-pressed","false");
+          const handler = (ev)=>{
+            try{
+              setGroup(val);
+              // 既存の見た目更新があるなら少し待ってから再同期（描画側が上書きすることがあるため）
+              setTimeout(()=>{ try{ setGroup(val); }catch(e){} }, 0);
+              setTimeout(()=>{ try{ setGroup(val); }catch(e){} }, 50);
+            }catch(e){}
+          };
+
+          b.addEventListener("click", handler, {passive:true});
+          b.addEventListener("touchstart", handler, {passive:true});
+        });
+
+        // すでに緑（選択状態）になってるのに state が空なら、見た目から推測して入れる
+        if(!state.ui.seatGroup){
+          const selected = nameBtns.find(b=>{
+            const cls = safeText(b.className);
+            // 「selected」「active」や、緑系の既存クラスを雑に拾う（外れても害なし）
+            return /selected|active|on|isOn/i.test(cls);
+          }) || nameBtns.find(b=>{
+            // インライン style で枠/背景が変わる実装もある
+            const st = b.getAttribute("style")||"";
+            return /green|#0f|#1f|rgb\(/i.test(st);
+          });
+
+          if(selected){
+            const v = safeText(selected.textContent).trim();
+            if(v) setGroup(v);
+          }
+        }
+
+        return true;
+      }catch(e){
+        return false;
       }
     }
-  }
 
-  function wire(){
-    // state が無いタイミングだと落ちるのでガード
-    if (!window.state) return false;
-    if (!state.ui) state.ui = {};
-
-    // いったん全ボタンから「名称ボタンっぽいもの」を拾って個別にハンドラ付与
-    const btns = Array.from(document.querySelectorAll("button"));
-    let found = 0;
-
-    for (const b of btns){
-      const name = findNameFromButton(b);
-      if (!name) continue;
-
-      // 二重付与防止
-      if (b.__seatGroupWired) continue;
-      b.__seatGroupWired = true;
-      found++;
-
-      const onPick = (ev) => {
-        try{
-          ev && ev.preventDefault && ev.preventDefault();
-          ev && ev.stopPropagation && ev.stopPropagation();
-        }catch{}
-
-        // ★ここが本命：内部stateに確実に入れる
-        state.ui.seatGroup = name;
-
-        // 念のため “最後に選んだ名称” も控える（どこかで state が上書きされても復旧しやすい）
-        window.__lastSeatGroup = name;
-
-        markSelected(name);
-
-        // 画面側に再描画関数がある場合は呼ぶ（存在しなければ無視）
-        try { if (typeof window.renderSeatReg === "function") window.renderSeatReg(); } catch {}
-        try { if (typeof window.save === "function") window.save(); } catch {}
+    // go(view) があるなら、遷移のたびに拾い直す
+    if(typeof window.go === "function" && !window.__goWrappedForSeatGroup){
+      const _go = window.go;
+      window.go = function(){
+        const r = _go.apply(this, arguments);
+        setTimeout(()=>{ try{ renameBackupButtons(); wireSeatGroup(); }catch(e){} }, 30);
+        return r;
       };
-
-      // iPhone対策：touchstartも拾う（clickが潰れる/遅れるケース対策）
-      b.addEventListener("click", onPick, { passive:false });
-      b.addEventListener("touchstart", onPick, { passive:false });
+      window.__goWrappedForSeatGroup = true;
     }
 
-    // 既に選択されてる表示があるなら state を補完（逆方向の補正）
-    if (!state.ui.seatGroup && window.__lastSeatGroup){
-      state.ui.seatGroup = window.__lastSeatGroup;
-    }
-    if (state.ui.seatGroup) markSelected(state.ui.seatGroup);
+    // ---------- 3) メニュー：デフォルトジャンルを入れない & 残ってたら除去 ----------
+    function purgeDefaultMenuGenres(){
+      try{
+        if(!window.state) return;
 
-    return found > 0;
+        // よくある候補プロパティを全部チェックして消す（存在しないものは無視）
+        const removeFromArray = (arr)=> uniq((arr||[]).filter(x=> !DEFAULT_GENRES.includes(String(x).trim())));
+
+        // ジャンル候補配列があるなら除去
+        if(Array.isArray(state.menuGenres)) state.menuGenres = removeFromArray(state.menuGenres);
+        if(state.ui && Array.isArray(state.ui.menuGenres)) state.ui.menuGenres = removeFromArray(state.ui.menuGenres);
+        if(state.ui && Array.isArray(state.ui.genres)) state.ui.genres = removeFromArray(state.ui.genres);
+        if(Array.isArray(state.genres)) state.genres = removeFromArray(state.genres);
+
+        // メニューアイテムがあるなら「ジャンル未分類」は残しつつ、上の5つが勝手に入ってたら消したい → ジャンル文字だけ変更
+        if(Array.isArray(state.menu)){
+          state.menu.forEach(m=>{
+            if(!m) return;
+            const g = safeText(m.genre).trim();
+            if(DEFAULT_GENRES.includes(g)){
+              // 既存データを壊さないため「未分類」に寄せる（アイテム自体は消さない）
+              m.genre = "未分類";
+            }
+          });
+        }
+
+        // 「初期デフォルトを入れる関数」がもし存在したら無効化
+        ["seedDefaultGenres","seedMenuDefaults","ensureDefaultGenres","initDefaultGenres","bootstrapDefaultGenres"].forEach(fn=>{
+          if(typeof window[fn] === "function"){
+            window[fn] = function(){ /* PATCH: disabled */ };
+          }
+        });
+
+        // 保存関数があるなら一度保存して固定
+        if(typeof window.save === "function"){
+          try{ window.save(); }catch(e){}
+        }
+      }catch(e){}
+    }
+
+    // ---------- 実行タイミング ----------
+    function runAll(){
+      renameBackupButtons();
+      wireSeatGroup();
+      purgeDefaultMenuGenres();
+    }
+
+    // すぐ実行 + DOM準備後 + 少しリトライ
+    runAll();
+    document.addEventListener("DOMContentLoaded", runAll);
+
+    let tries = 0;
+    const timer = setInterval(()=>{
+      tries++;
+      runAll();
+      if(tries>=40) clearInterval(timer);
+    }, 250);
+
+  }catch(e){
+    // 何もしない（落ちてもアプリ全体を止めない）
   }
-
-  // DOM準備/画面切替のタイミングでも拾えるようにリトライ
-  let tries = 0;
-  const timer = setInterval(() => {
-    tries++;
-    const ok = wire();
-    if (ok || tries > 40) clearInterval(timer); // 最大10秒程度で打ち切り
-  }, 250);
-
-  // 念のため初回即実行
-  try{ wire(); }catch{}
 })();
 </script>
 </body>
