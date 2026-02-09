@@ -708,6 +708,108 @@
 </head>
 
 <body>
+  
+  <!-- =========================
+  FIRST LAUNCH SCREEN
+  初回起動オンボーディング
+========================= -->
+
+<div id="firstLaunchScreen">
+
+  <!-- Header -->
+  <header id="firstHeader">
+    <h1>ONEへようこそ</h1>
+  </header>
+
+  <!-- Main Scroll Area -->
+  <main id="firstMain">
+
+    <!-- Intro -->
+    <section id="firstIntro">
+      <p>
+        ONEは、飲食店の現場で使うための<br>
+        端末完結型レジアプリです。
+      </p>
+      <p>
+        操作を始める前に、<br>
+        大切なことをご確認ください。
+      </p>
+    </section>
+
+    <!-- Important Notices -->
+    <section id="firstNotices">
+      <h2>大切なこと</h2>
+
+      <label class="checkRow">
+        <input type="checkbox" id="chkDataLocal">
+        <span>売上・注文などのデータは、この端末に保存されます</span>
+      </label>
+
+      <label class="checkRow">
+        <input type="checkbox" id="chkNoRecovery">
+        <span>無料版では、データの復旧・救済はできません</span>
+      </label>
+
+      <label class="checkRow">
+        <input type="checkbox" id="chkSaveEnd">
+        <span>営業終了時には「保存」を行ってください</span>
+      </label>
+
+      <label class="checkRow">
+        <input type="checkbox" id="chkSelfBackup">
+        <span>売上データは、メールなどで自己保存できます</span>
+      </label>
+    </section>
+
+    <!-- Terms -->
+    <section id="firstTerms">
+      <h2>利用条件</h2>
+
+      <div id="termsBox">
+        <p>・本アプリは現状有姿で提供されます</p>
+        <p>・データ管理は利用者の責任で行ってください</p>
+        <p>・無料版ではサポート・復旧を保証しません</p>
+      </div>
+
+      <label class="checkRow">
+        <input type="checkbox" id="chkAgree">
+        <span>上記内容を理解しました</span>
+      </label>
+    </section>
+
+    <!-- Store Name -->
+    <section id="firstStore">
+      <h2>店舗名</h2>
+      <input
+        type="text"
+        id="storeNameInput"
+        placeholder="例：居酒屋さくら"
+      >
+    </section>
+
+    <!-- Password -->
+    <section id="firstPassword">
+      <h2>初回パスワード</h2>
+      <input
+        type="password"
+        id="firstPasswordInput"
+        placeholder="初回パスワードを入力"
+      >
+      <p id="passwordError" class="errorText" style="display:none;">
+        パスワードが違います
+      </p>
+    </section>
+
+  </main>
+
+  <!-- Fixed Footer -->
+  <footer id="firstFooter">
+    <button id="startOneBtn" disabled>
+      ONEをはじめる
+    </button>
+  </footer>
+
+</div>
   <!-- ========================= TOP BAR ========================= -->
   <div class="topbar" id="topbar">
     <div class="topbarInner">
