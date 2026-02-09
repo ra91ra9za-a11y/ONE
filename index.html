@@ -703,6 +703,195 @@
       color: rgba(255,240,200,.92);
       font-weight: 900;
     }
+    /* =========================
+  FIRST LAUNCH SCREEN (ONE tone)
+  - iPhone SE対応
+  - Header/Footer固定
+  - Mainのみスクロール
+========================= */
+
+#firstLaunchScreen{
+  /* ONEトーン：基本は無彩色＋控えめアクセント */
+  --bg: #f6f7f8;
+  --panel: #ffffff;
+  --text: #111;
+  --sub: #555;
+  --line: #e6e8eb;
+  --muted: #9aa0a6;
+
+  /* アクセント（ONEカラーはここだけ変えればOK） */
+  --accent: #1f2937;        /* ほぼ黒寄り */
+  --accent2: #374151;       /* 少し薄め */
+  --danger: #b91c1c;
+
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+
+  /* iPhoneの下部安全領域 */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+#firstHeader{
+  position: sticky; /* fixedでもOKだがstickyの方が実装が軽い */
+  top: 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 14px;
+  z-index: 10;
+}
+
+#firstHeader h1{
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.3px;
+}
+
+#firstMain{
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px;
+}
+
+#firstMain section{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+#firstIntro p{
+  margin: 0 0 10px 0;
+  color: var(--sub);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+#firstMain h2{
+  margin: 0 0 10px 0;
+  font-size: 15px;
+}
+
+.checkRow{
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 10px;
+
+  /* 行全体タップしやすく */
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkRow + .checkRow{
+  border-top: 1px dashed var(--line);
+}
+
+.checkRow input[type="checkbox"]{
+  margin-top: 2px;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+
+  /* iOSでの見た目を整える */
+  accent-color: var(--accent);
+}
+
+.checkRow span{
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+/* 約款ボックス */
+#termsBox{
+  background: #f9fafb;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 10px;
+  margin-bottom: 10px;
+}
+
+#termsBox p{
+  margin: 0 0 6px 0;
+  font-size: 13px;
+  color: var(--sub);
+}
+#termsBox p:last-child{ margin-bottom: 0; }
+
+/* 入力欄 */
+#firstStore input,
+#firstPassword input{
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 16px; /* iOSでズーム防止 */
+  outline: none;
+}
+
+#firstStore input::placeholder,
+#firstPassword input::placeholder{
+  color: var(--muted);
+}
+
+/* エラー */
+.errorText{
+  margin: 10px 2px 0 2px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+/* Footer固定ボタン */
+#firstFooter{
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom)) 14px;
+  border-top: 1px solid var(--line);
+}
+
+#startOneBtn{
+  width: 100%;
+  padding: 14px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+/* 非活性は「押せない」が一目で分かる */
+#startOneBtn:disabled{
+  background: #d1d5db;
+  border-color: #d1d5db;
+  color: #6b7280;
+}
+
+/* 押した時のフィードバック（静かに） */
+#startOneBtn:active:not(:disabled){
+  transform: scale(0.99);
+}
+
+/* 小さい画面（iPhone SE）向け微調整 */
+@media (max-height: 700px){
+  #firstHeader h1{ font-size: 17px; }
+  #firstMain{ padding: 12px; }
+  #firstMain section{ padding: 12px; }
+  .checkRow{ padding: 9px 6px; }
+}
 
   </style>
 </head>
