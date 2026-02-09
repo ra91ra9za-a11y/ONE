@@ -1417,6 +1417,133 @@
 /* =========================
   保存データ（ローカル）
 ========================= */
+/* =========================
+  First Launch Logic (ONE)
+  - ボタン有効化
+  - パス判定
+  - 初回フラグ保存
+========================= */
+
+(() => {
+  // ====== 設定（店舗ごとHTMLでここだけ変える）======
+  const STORE_PASSWORD = "REPLACE_ME_STORE_PASSWORD"; // 店舗ごとに差し替え
+  const LS_FIRST_OK_KEY = "ONE_FIRST_OK";
+  const LS_STORE_NAME_KEY = "ONE_STORE_NAME";
+
+  // ====== DOM ======
+  const firstScreen = document.getElementById("firstLaunchScreen");
+  const btnStart = document.getElementById("startOneBtn");
+
+  const chkIds = [
+    "chkDataLocal",
+    "chkNoRecovery",
+    "chkSaveEnd",
+    "chkSelfBackup",
+    "chkAgree",
+  ];
+  const chks = chkIds.map(id => document.getElementById(id));
+
+  const storeNameInput = document.getElementById("storeNameInput");
+  const passInput = document.getElementById("firstPasswordInput");
+  const passErr = document.getElementById("passwordError");
+
+  // ====== Helpers ======
+  const isFirstOk = () => localStorage.getItem(LS_FIRST_OK_KEY) === "true";
+
+  function showFirstScreen(show){
+    if (!firstScreen) return;
+    firstScreen.style.display = show ? "flex" : "none";
+  }
+
+  function allChecked(){
+    return chks.every(c => c && c.checked);
+  }
+
+  function storeNameValid(){
+    const v = (storeNameInput?.value || "").trim();
+    return v.length > 0;
+  }
+
+  function passwordValid(){
+    const v = (passInput?.value || "");
+    return v === STORE_PASSWORD;
+  }
+
+  function updateStartBtn(){
+    // パスエラーは「入力していて不一致」の時だけ静かに出す
+    const typed = (passInput?.value || "").length > 0;
+    const okPass = passwordValid();
+
+    if (passErr){
+      passErr.style.display = (typed && !okPass) ? "block" : "none";
+    }
+
+    const canStart = allChecked() && storeNameValid() && okPass;
+    if (btnStart) btnStart.disabled = !canStart;
+  }
+
+  function completeFirstLaunch(){
+    // 初回通過の保存
+    localStorage.setItem(LS_FIRST_OK_KEY, "true");
+    localStorage.setItem(LS_STORE_NAME_KEY, (storeNameInput.value || "").trim());
+
+    // 初回画面を閉じる（メイン画面表示は既存の go/render に合わせる）
+    showFirstScreen(false);
+
+    // ここであなたの既存初期化に接続する：
+    // 例）renderMain(); go("main");
+    // ※ 既存関数名が決まっていないので呼ばない
+  }
+
+  // ====== Init ======
+  function initFirstLaunch(){
+    if (!firstScreen) return;
+
+    // 既に通過済みなら表示しない
+    if (isFirstOk()){
+      showFirstScreen(false);
+      return;
+    }
+
+    // 初回は表示
+    showFirstScreen(true);
+
+    // 初期状態
+    if (btnStart) btnStart.disabled = true;
+    if (passErr) passErr.style.display = "none";
+
+    // イベント
+    chks.forEach(c => c && c.addEventListener("change", updateStartBtn));
+    storeNameInput && storeNameInput.addEventListener("input", updateStartBtn);
+    passInput && passInput.addEventListener("input", updateStartBtn);
+
+    // Enterで開始（押しやすさ）
+    passInput && passInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && btnStart && !btnStart.disabled){
+        e.preventDefault();
+        btnStart.click();
+      }
+    });
+
+    btnStart && btnStart.addEventListener("click", () => {
+      // 念のため再チェック（勝手に進まない）
+      updateStartBtn();
+      if (btnStart.disabled) return;
+      completeFirstLaunch();
+    });
+
+    // 初回計算
+    updateStartBtn();
+  }
+
+  // DOM準備後に起動
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initFirstLaunch);
+  } else {
+    initFirstLaunch();
+  }
+})();
+
 const KEY = "ONE_FREE_V2";
 const nowTs = ()=> Date.now();
 const pad2 = (n)=> String(n).padStart(2,"0");
