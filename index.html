@@ -3211,497 +3211,553 @@ function openSyncModal(){
   ここから先は PART8 で続く
 ========================= */
 /* =========================
-  PART8：設定・ヘルプ・有料導線 ＋ メニュー登録（完成版）
-  重要：ここでHTMLを閉じて8分割完成
+  PART8：設定・ヘルプ・売上管理（入口）・バックアップ送信・メニュー登録（入口）
+  役割：営業中は基本触らない領域／自己解決／問い合わせ／バックアップ／（控えめな有料導線）
+  IMPORTANT：ここで </script></body></html> を閉じて 8分割完成
 ========================= */
 
 /* =========================================================
-   A) 設定（scrSettings）
-   ※ボタン配置は写真F寄せ（縦並び・分かりやすく）
+  0) 画面が無い場合は PART8 側で追加（壊れ防止）
+========================================================= */
+(function ensurePart8Screens(){
+  const app = document.querySelector("main.app");
+  if(!app) return;
+
+  // 売上管理（新規）
+  if(!$("scrSalesManage")){
+    const sec = document.createElement("section");
+    sec.className = "screen";
+    sec.id = "scrSalesManage";
+    sec.innerHTML = `<div class="pill">売上管理（PART8で実装）</div>`;
+    // scrSales の直後あたりに挿入（適当でOK：showScreenで制御する）
+    const after = $("scrSales") || $("scrKitchen") || $("scrMain");
+    after && after.parentNode ? after.parentNode.insertBefore(sec, after.nextSibling) : app.appendChild(sec);
+
+    // screens 配列に追加（PART1の showScreen が参照）
+    try{
+      if(Array.isArray(screens) && !screens.includes("scrSalesManage")){
+        screens.push("scrSalesManage");
+      }
+    }catch(e){}
+  }
+})();
+
+/* =========================================================
+  A) 設定（scrSettings）UI
 ========================================================= */
 (function buildSettingsUI(){
   const scr = $("scrSettings");
+  if(!scr) return;
+
   scr.innerHTML = `
-    <div style="font-weight:900; margin-bottom:10px">設定</div>
+    <div class="pill" style="margin-bottom:10px">設定</div>
 
-    <button class="btn lime full" id="goHelp" style="margin-bottom:10px">ヘルプ / Q&A</button>
-    <button class="btn full" id="goContact" style="margin-bottom:10px">お問合せ</button>
-    <button class="btn full" id="goTerms" style="margin-bottom:14px">利用条件・注意事項</button>
+    <button class="btn" id="goSalesManage" style="width:100%; margin-bottom:10px">売上管理</button>
+    <button class="btn" id="goBackup" style="width:100%; margin-bottom:10px">メールでデータ送信（バックアップ）</button>
 
-    <div style="border:1px solid rgba(255,255,255,0.10); border-radius:14px; padding:12px; background:rgba(255,255,255,0.04); margin-bottom:12px">
-      <div style="font-weight:900; margin-bottom:6px">無料版について</div>
-      <div style="opacity:.88">
-        ・利用可能端末：最大3台<br>
-        ・データの復旧、保証なし<br>
-        ・サポートは限定的
-      </div>
+    <div style="height:8px"></div>
+
+    <button class="btn" id="goHelp" style="width:100%; margin-bottom:10px">ヘルプ / Q&A</button>
+    <button class="btn" id="goContact" style="width:100%; margin-bottom:10px">お問合せ</button>
+    <button class="btn" id="goTerms" style="width:100%; margin-bottom:10px">利用条件・注意事項</button>
+
+    <div style="height:10px"></div>
+
+    <div class="pill" style="margin-bottom:8px">無料版について</div>
+    <div class="pill" style="color:var(--muted); margin-bottom:10px">
+      ・利用可能端末：最大3台<br>
+      ・データの復旧、保証なし<br>
+      ・サポートは限定的
     </div>
 
-    <div style="border:1px solid rgba(255,255,255,0.10); border-radius:14px; padding:12px; background:rgba(255,255,255,0.04); margin-bottom:12px">
-      <div style="font-weight:900; margin-bottom:6px">有料版のご案内</div>
-      <div style="opacity:.88">
-        ・利用端末数の拡張<br>
-        ・データの安全な保存<br>
-        ・サポート対応<br>
-        ・税理士、会計ソフト向けデータ出力<br>
-        ・売上分析、グラフ表示<br>
-        ・AIによる料理・メニュー提案<br>
-        ・将来追加される新機能
-      </div>
+    <div class="pill" style="margin-bottom:8px">有料版のご案内</div>
+    <div class="pill" style="color:var(--muted); margin-bottom:10px">
+      ・利用端末数の拡張<br>
+      ・データの安全な保存<br>
+      ・サポート対応<br>
+      ・税理士、会計ソフト向けデータ出力<br>
+      ・売上分析、グラフ表示<br>
+      ・AIによる料理・メニュー提案<br>
+      ・将来追加される新機能
     </div>
 
-    <div style="border:1px solid rgba(255,255,255,0.10); border-radius:14px; padding:12px; background:rgba(255,255,255,0.04)">
-      <div style="font-weight:900; margin-bottom:6px">バージョン情報</div>
-      <div style="opacity:.88">
-        ONE<br>
-        Version：FREE 0.2.0<br>
-        更新日：2026/02/11<br>
-        現在は無料版です
-      </div>
+    <div class="pill" style="margin-bottom:8px">バージョン情報</div>
+    <div class="pill" style="color:var(--muted)">
+      ONE<br>
+      Version：FREE 0.1.0<br>
+      更新日：2026/02/13<br>
+      現在は無料版です
     </div>
   `;
 })();
 
 /* =========================================================
-   B) ヘルプ / Q&A（モーダル）
+  B) ヘルプ / Q&A（モーダル）
+  ※PART2/4/5の仕様変更があっても、ここは「短く」固定
 ========================================================= */
 const QA_LIST = [
-  {q:"会計合算はどうやって行いますか？", a:"同じ席内にある複数の会計を、会計合算ボタンでまとめます。別の席同士を直接合算することはできません。別席をまとめたい場合は、先に席移動で同じ席に集めてください。"},
-  {q:"別の席同士を直接合算できないのはなぜですか？", a:"操作ミスや会計事故を防ぐためです。ONEでは「席＝会計の箱」として管理しているため、合算は必ず同一席内で行う設計になっています。"},
-  {q:"席移動と会計合算の違いは何ですか？", a:"席移動は、物理的にお客さまが席を移った時の操作です。会計合算は、同じ席の中にある会計をまとめる操作です。目的が違うため、操作も分かれています。"},
+  {q:"会計合算はどうやって行いますか？", a:"同じ席内にある複数の会計を、会計合算ボタンでまとめます。別席同士を直接合算することはできません。別席をまとめたい場合は、先に席移動で同じ席に集めてください。"},
+  {q:"別の席同士を直接合算できないのはなぜですか？", a:"操作ミスや会計事故を防ぐためです。ONEでは「席＝会計の箱」として管理しているため、合算は必ず同一席内で行う設計です。"},
+  {q:"席移動と会計合算の違いは何ですか？", a:"席移動は物理移動、会計合算は同一席内の会計をまとめる操作です。目的が違うため分かれています。"},
   {q:"会計分割はいつできますか？", a:"同一席内で、合算されている会計を元に戻したい時に行います。なお、合算後に追加された注文は分割できません。"},
   {q:"商品が来なかった場合の修正方法は？", a:"会計確定前であれば、注文画面から該当商品を取消してください。取消は「−注文」として履歴に残ります。"},
-  {q:"注文数を間違えた時はどうなりますか？", a:"注文画面の「注文履歴」をタップすることで修正できます。注文後でも取消が可能で、0以下にはなりません。修正内容は履歴として残ります。"},
-  {q:"キッチン画面の並び順はどうなっていますか？", a:"未調理の商品が上に表示されます。同じ商品がある場合は、まとめて表示されるため、まとめて調理しやすくなっています。"},
-  {q:"調理完了はどうやって行いますか？", a:"該当商品のスライド操作で調理完了となります。タップだけでは完了しないため、誤操作を防げます。"},
-  {q:"注文取消はキッチンにどう表示されますか？", a:"取消された注文は、キッチン画面から自動的に除外されます。すでに提供済みの商品には影響しません。"},
-  {q:"電波がない場所でも使えますか？", a:"使えます。注文・会計・席操作は端末内に保存されます。ただし、端末間でのデータ共有は行われないため、通信環境が整っている場所での利用を推奨します。"},
-  {q:"同期マーク❌が出た時はどうすればいいですか？", a:"電波状況や一時的な不具合により、同期できていない状態です。電波の良い場所で同期を行ってください。状況によっては、自動的に再同期される場合もあります。"},
-  {q:"複数端末で同時に使えますか？", a:"無料版では最大3台まで使用できます。注文確定や会計確定など、決定を伴う操作ごとに端末間で同期されます。"},
-  {q:"データはどこに保存されていますか？", a:"すべて使用している端末内に保存されます。端末の故障・紛失・不具合に備え、売上管理から定期的にデータのバックアップを行ってください。"},
-  {q:"機種変更した場合はどうなりますか？", a:"端末内のデータは自動では引き継がれません。事前に保存やデータ送信を行ってください。"},
-  {q:"営業終了時に必ず行うことは？", a:"保存操作を行い、必要に応じて売上データをメールなどで送信してください。データ保全のために重要です。"},
+  {q:"注文数を間違えた時はどうなりますか？", a:"注文履歴から取消できます。0以下にはなりません。修正内容は履歴として残ります。"},
+  {q:"キッチン画面の並び順は？", a:"未調理が上。同じ商品はまとめて表示され、まとめて調理できます。"},
+  {q:"調理完了は？", a:"スライド操作で完了。タップだけでは完了しないので誤操作を防げます。"},
+  {q:"電波がない場所でも使えますか？", a:"使えます。注文・会計・席操作は端末内に保存されます。端末間共有はできないため、通信環境が整っている場所での利用を推奨します。"},
+  {q:"同期マーク❌が出た時は？", a:"同期できていない状態です。電波の良い場所で保存を行うと再同期を試みます。"},
+  {q:"複数端末で同時に使えますか？", a:"無料版は最大3台。決定を伴う操作ごとに同期されます。"},
+  {q:"データはどこに保存されていますか？", a:"端末内です。故障・紛失に備え、売上管理から定期的にバックアップ送信を行ってください。"},
+  {q:"機種変更した場合は？", a:"自動引継ぎはありません。事前にバックアップ送信を行ってください。"},
+  {q:"営業終了時に必ず行うことは？", a:"保存操作と、必要に応じてバックアップ送信を行ってください。"},
 ];
 
 function openHelp(){
   const body = QA_LIST.map(x=>`
-    <div style="font-weight:900; margin-bottom:6px">Q：${x.q}</div>
-    <div style="opacity:.88; margin-bottom:12px">A：${x.a}</div>
+    <div class="pill" style="margin-bottom:6px; font-weight:900">Q：${x.q}</div>
+    <div class="pill" style="margin-bottom:12px; color:var(--muted)">A：${x.a}</div>
   `).join("");
-
-  openModal("ヘルプ / Q&A", body, [{label:"戻る", lime:false, onClick:()=> closeModal()}]);
+  openModal("ヘルプ / Q&A", body, [{label:"戻る", onClick:()=> closeModal()}]);
 }
 
 /* =========================================================
-   C) お問合せ（モーダル）
+  C) お問合せ（モーダル）
 ========================================================= */
 function openContact(){
   openModal(
     "お問合せ",
     `
-      <div style="margin-bottom:10px; opacity:.9">
+      <div class="pill" style="margin-bottom:10px">
         ONEに関するご質問・不具合のご連絡は下記よりお願いいたします。
       </div>
-      <div style="opacity:.88; margin-bottom:10px">
+      <div class="pill" style="color:var(--muted); margin-bottom:10px">
         ご連絡の際は<br>
         ・店舗名<br>
         ・使用端末<br>
         ・発生した状況<br>
         を記載いただくとスムーズです。
       </div>
-      <div style="opacity:.88">・メールで問い合わせ（任意）</div>
-      <div style="opacity:.88">・LINEで問い合わせ（任意）</div>
+      <div class="pill">・メールで問い合わせ（任意）</div>
+      <div class="pill">・LINEで問い合わせ（任意）</div>
     `,
-    [{label:"戻る", lime:false, onClick:()=> closeModal()}]
+    [{label:"戻る", onClick:()=> closeModal()}]
   );
 }
 
 /* =========================================================
-   D) 利用条件・注意事項（固定文言）
+  D) 利用条件・注意事項（固定）
 ========================================================= */
 function openTerms(){
   openModal(
     "利用条件・注意事項",
     `
-      <div style="opacity:.9">
+      <div class="pill" style="margin-bottom:10px">
         ・データは端末内に保存されます<br>
         ・無料版ではデータの復旧・保証は行いません<br>
         ・営業終了時には保存を行ってください<br>
         ・データ管理は利用者の責任で行ってください
       </div>
-      <div style="opacity:.75; margin-top:10px">※ 初回起動画面と同一内容（文言固定）</div>
+      <div class="pill" style="color:var(--muted)">
+        ※ 初回起動画面と同一内容（文言固定）
+      </div>
     `,
-    [{label:"戻る", lime:false, onClick:()=> closeModal()}]
+    [{label:"戻る", onClick:()=> closeModal()}]
   );
 }
 
 /* =========================================================
-   E) メニュー登録（scrMenu）
-   仕様：
-    - 上部は共通ルール
-    - カテゴリー（料理/ドリンク）はキッチン表示に反映（注文には出さない）
-      → 文は「登録」の下に移動（あなたの指示）
-    - 料理/ドリンク → 決定 → ジャンル3列（最後に＋追加）
-      → ジャンル選択で下に「決定（左）/削除（右）」
-      → 削除：確認→戻る→削除スライド（ジャンル内商品も削除）
-    - 決定→登録欄（商品名/金額/税率）全部入力で登録
-    - 登録後：商品名/金額は空白へ（二重登録防止）
-    - 下段に一覧、横に編集（ジャンル/商品名/金額/税率）
+  E) 売上管理（scrSalesManage）
+  ※「本日の売上」はメイン導線のみ（ここに置かない）
 ========================================================= */
-(function buildMenuUI(){
-  const scr = $("scrMenu");
+(function buildSalesManageUI(){
+  const scr = $("scrSalesManage");
+  if(!scr) return;
+
   scr.innerHTML = `
-    <div style="font-weight:900; margin-bottom:10px">メニュー登録</div>
+    <div class="pill" style="margin-bottom:10px">売上管理</div>
 
-    <!-- カテゴリー -->
-    <div style="font-weight:900; margin-bottom:8px">カテゴリー</div>
-    <div style="display:flex; gap:10px; margin-bottom:8px">
-      <div class="seatCard in" id="catFood" style="flex:1; min-height:56px; display:flex; align-items:center; justify-content:center; font-weight:900">料理</div>
-      <div class="seatCard in" id="catDrink" style="flex:1; min-height:56px; display:flex; align-items:center; justify-content:center; font-weight:900">ドリンク</div>
-    </div>
-    <button class="btn lime full" id="catCommit" style="margin-bottom:10px">決定</button>
+    <button class="btn" id="goDailySales" style="width:100%; margin-bottom:10px">日別売上</button>
+    <button class="btn" id="goMonthSales" style="width:100%; margin-bottom:10px">月売上</button>
+    <button class="btn" id="goYearSales" style="width:100%; margin-bottom:10px">年売上</button>
 
-    <!-- ジャンル -->
-    <div id="genreArea" style="display:none">
-      <div style="font-weight:900; margin-bottom:8px">ジャンル</div>
-      <div id="genreGrid" class="seatGrid" style="margin-bottom:8px"></div>
+    <div style="height:10px"></div>
 
-      <div style="display:flex; gap:10px; margin-bottom:10px">
-        <button class="btn lime full" id="genreDecide" style="flex:1">決定</button>
-        <button class="btn full" id="genreDelete" style="flex:1">削除</button>
-      </div>
-    </div>
+    <button class="btn primary" id="goBackup2" style="width:100%; margin-bottom:10px">メールでデータ送信（バックアップ）</button>
 
-    <!-- 登録 -->
-    <div id="itemArea" style="display:none">
-      <div style="font-weight:900; margin-bottom:8px">登録</div>
-
-      <div style="opacity:.85; margin-bottom:14px">
-        カテゴリー（料理/ドリンク）はキッチンの「料理/ドリンク」表示に反映します（注文には出しません）。
-      </div>
-
-      <input id="itemName" class="btn full" placeholder="商品名" style="text-align:left; margin-bottom:8px" />
-      <input id="itemPrice" class="btn full" placeholder="金額（数字）" inputmode="numeric" style="text-align:left; margin-bottom:8px" />
-
-      <div style="display:flex; gap:10px; margin-bottom:10px">
-        <button class="btn full" id="tax8" style="flex:1">8%</button>
-        <button class="btn full" id="tax10" style="flex:1">10%</button>
-      </div>
-
-      <button class="btn lime full" id="itemAdd" style="margin-bottom:14px">登録</button>
-
-      <div style="font-weight:900; margin-bottom:8px">作った商品</div>
-      <div id="itemList"></div>
+    <div class="pill" style="color:var(--muted)">
+      ※ 本日の売上は「メイン画面」からのみ開けます
     </div>
   `;
 })();
 
-/* ===== Menu state ===== */
-state.menu = state.menu || {
-  cat: null, // "food" | "drink"
-  genres: { food: [], drink: [] },
-  selectedGenre: null,
-  tax: null,
-  items: [] // {id, cat, genre, name, price, tax}
-};
-
-function setCardHL(el, on){
-  el.style.outline = on ? "2px solid rgba(122,167,255,0.9)" : "";
-  el.style.background = on ? "rgba(122,167,255,0.14)" : "";
+/* =========================================================
+  F) バックアップ送信（モーダル実装）
+  - 会計データ → CSV
+  - 訂正履歴 → CSV
+  - 席設定・メニュー → JSON
+  - 4ファイルを“直接送信”（iOSは共有シートでメール添付を想定）
+  - 送信したアドレスは最大5件まで自動登録
+    5件登録済みの状態で新しいアドレスに送信した場合、そのアドレスは保存されません
+========================================================= */
+const BACKUP_ADDR_KEY = KEY + "_BACKUP_ADDRS";
+function loadBackupAddrs(){
+  try{
+    const a = JSON.parse(localStorage.getItem(BACKUP_ADDR_KEY) || "[]");
+    return Array.isArray(a) ? a.slice(0,5) : [];
+  }catch(e){
+    return [];
+  }
+}
+function saveBackupAddrs(list){
+  const a = (list||[]).slice(0,5);
+  localStorage.setItem(BACKUP_ADDR_KEY, JSON.stringify(a));
+}
+function isEmailLike(v){
+  const s = (v||"").trim();
+  if(!s) return false;
+  // 超ゆるいチェック（止めない思想）
+  return s.includes("@") && s.includes(".");
 }
 
-function renderGenres(){
-  const grid = $("genreGrid");
-  grid.innerHTML = "";
+function csvEscape(s){
+  const v = String(s ?? "");
+  if(/[",\n]/.test(v)) return `"${v.replace(/"/g,'""')}"`;
+  return v;
+}
+function toCSV(headers, rows){
+  const head = headers.map(csvEscape).join(",");
+  const body = rows.map(r=> r.map(csvEscape).join(",")).join("\n");
+  return head + "\n" + body + "\n";
+}
 
-  const list = state.menu.genres[state.menu.cat] || [];
-  const final = list.concat(["＋ ジャンル追加"]);
+function buildBackupFiles(){
+  // 1) 会計データ（CSV）
+  const sales = (state.sales && state.sales.list) ? state.sales.list : [];
+  const saleRows = sales.map(s=>{
+    const dIn  = new Date(s.inTs || s.ts || nowTs());
+    const dOut = new Date(s.outTs || s.ts || nowTs());
+    return [
+      `${pad2(dIn.getHours())}:${pad2(dIn.getMinutes())}`,
+      `${pad2(dOut.getHours())}:${pad2(dOut.getMinutes())}`,
+      s.seatId || "",
+      s.name || "",
+      s.pay || "",
+      Number(s.amount||0),
+      s.saleId || ""
+    ];
+  });
+  const salesCsv = toCSV(
+    ["入店時間","退店時間","席番号","名前","支払い方法","金額","saleId"],
+    saleRows
+  );
 
-  final.forEach(g=>{
-    const c = document.createElement("div");
-    c.className = "seatCard in";
-    c.style.minHeight="56px";
-    c.style.display="flex";
-    c.style.alignItems="center";
-    c.style.justifyContent="center";
-    c.style.fontWeight="900";
-    c.textContent = g;
+  // 2) 訂正履歴（CSV）
+  const corrRows = [];
+  sales.forEach(s=>{
+    const corrs = s.corrections || [];
+    corrs.forEach(c=>{
+      const t = new Date(c.ts || nowTs());
+      corrRows.push([
+        s.saleId || "",
+        s.seatId || "",
+        c.who || "",
+        c.why || "",
+        c.name || "",
+        Number(c.qty||0),
+        `${t.getFullYear()}-${pad2(t.getMonth()+1)}-${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}`
+      ]);
+    });
+  });
+  const corrCsv = toCSV(
+    ["saleId","席番号","修正者","理由","商品","数量（減）","修正日時"],
+    corrRows
+  );
 
-    const isAdd = (g==="＋ ジャンル追加");
-    const on = (!isAdd && state.menu.selectedGenre===g);
-    if(on) setCardHL(c,true);
+  // 3) 席設定（JSON）
+  const seatJson = JSON.stringify({
+    exportedAt: nowTs(),
+    seatSetup: state.seatSetup || {},
+    seats: state.seats || []
+  }, null, 2);
 
-    c.onclick = ()=>{
-      if(isAdd){
-        openModal(
-          "ジャンル追加",
-          `<input id="newGenre" class="btn full" style="text-align:left" placeholder="ジャンル名" />`,
-          [
-            {label:"追加", lime:true, onClick:()=>{
-              const v = ($("newGenre").value||"").trim();
-              if(!v){ toast("ジャンル名を入力してください"); return; }
-              const arr = state.menu.genres[state.menu.cat];
-              if(arr.includes(v)){ toast("同じジャンルがあります"); return; }
+  // 4) メニュー（JSON）
+  const menuJson = JSON.stringify({
+    exportedAt: nowTs(),
+    menu: state.menu || {}
+  }, null, 2);
 
-              // 作ったジャンルは追加ボックスの前に来る＝pushでOK（＋は固定で最後に描画）
-              arr.push(v);
-              state.menu.selectedGenre = v;
+  // filename
+  const d = new Date();
+  const stamp = `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}_${pad2(d.getHours())}${pad2(d.getMinutes())}`;
+  return [
+    {name:`ONE_会計データ_${stamp}.csv`, type:"text/csv", content:salesCsv},
+    {name:`ONE_訂正履歴_${stamp}.csv`, type:"text/csv", content:corrCsv},
+    {name:`ONE_席設定_${stamp}.json`, type:"application/json", content:seatJson},
+    {name:`ONE_メニュー_${stamp}.json`, type:"application/json", content:menuJson},
+  ];
+}
 
-              closeModal();
-              renderGenres();
-            }},
-            {label:"戻る", lime:false, onClick:()=> closeModal()},
-          ]
-        );
+async function shareFiles(files, emailTo){
+  // Web Share API（iOSの共有シート→メール添付が狙える）
+  const blobs = files.map(f=> new File([f.content], f.name, {type:f.type}));
+  const title = "ONE バックアップ";
+  const text =
+`ONE バックアップです。
+（会計CSV／訂正CSV／席設定JSON／メニューJSON）
+
+【送信先アドレス登録について】
+・送信したアドレスは最大5件まで自動登録されます。
+・5件登録済みの状態で新しいアドレスに送信した場合、そのアドレスは保存されません。
+・登録内容を変更したい場合は、不要なアドレスを削除してから送信してください。`;
+
+  if(navigator.share && navigator.canShare && navigator.canShare({files: blobs})){
+    await navigator.share({title, text, files: blobs});
+    return true;
+  }
+
+  // 共有できない場合：ダウンロードにフォールバック
+  blobs.forEach(b=>{
+    const url = URL.createObjectURL(b);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = b.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=> URL.revokeObjectURL(url), 2000);
+  });
+
+  // mailto は添付ができない（ブラウザ制限）ので、ここは案内のみ
+  openModal(
+    "バックアップ",
+    `この端末ではファイル添付送信ができないため、ファイルをダウンロードしました。<br><br>メール作成画面で、添付として追加してください。`,
+    [{label:"戻る", onClick:()=> closeModal()}]
+  );
+  return false;
+}
+
+function openBackupModal(){
+  let addrs = loadBackupAddrs();
+  let picked = {
+    sales: true,  // 会計データ（本日/日別/月/年の元）
+    corr: true,   // 訂正履歴
+    seat: true,   // 席設定
+    menu: true    // メニュー
+  };
+
+  function addrOptionsHtml(){
+    if(addrs.length===0) return `<div class="pill" style="color:var(--muted)">登録アドレスはありません</div>`;
+    return addrs.map((a,idx)=>`
+      <div class="kRow" style="margin-bottom:8px">
+        <div class="kLeft">
+          <div class="kName">${a}</div>
+        </div>
+        <div class="kSlide" style="gap:8px">
+          <button class="btn" data-pick="${idx}">選択</button>
+          <button class="btn" data-del="${idx}">削除</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function bodyHtml(){
+    return `
+      <div class="pill" style="margin-bottom:10px">送信するデータ</div>
+
+      <div class="kRow">
+        <div class="kLeft"><div class="kName">会計データ（本日／日別／月／年）</div></div>
+        <div class="kSlide"><input type="checkbox" id="bkSales" ${picked.sales?"checked":""} /></div>
+      </div>
+
+      <div class="kRow">
+        <div class="kLeft"><div class="kName">訂正伝票（修正履歴）</div></div>
+        <div class="kSlide"><input type="checkbox" id="bkCorr" ${picked.corr?"checked":""} /></div>
+      </div>
+
+      <div class="kRow">
+        <div class="kLeft"><div class="kName">席設定情報</div></div>
+        <div class="kSlide"><input type="checkbox" id="bkSeat" ${picked.seat?"checked":""} /></div>
+      </div>
+
+      <div class="kRow" style="margin-bottom:12px">
+        <div class="kLeft"><div class="kName">メニュー情報</div></div>
+        <div class="kSlide"><input type="checkbox" id="bkMenu" ${picked.menu?"checked":""} /></div>
+      </div>
+
+      <div class="pill" style="margin-bottom:6px">送信先アドレス</div>
+      <input id="bkTo" class="btn" style="width:100%; text-align:left; margin-bottom:10px" placeholder="例：backup@example.com" />
+
+      <div class="pill" style="margin-bottom:8px">登録アドレス（最大5件）</div>
+      ${addrOptionsHtml()}
+
+      <div class="pill" style="color:var(--muted); margin-top:8px">
+        【送信先アドレス登録について】<br>
+        ・送信したアドレスは最大5件まで自動登録されます。<br>
+        ・5件登録済みの状態で新しいアドレスに送信した場合、そのアドレスは保存されません。<br>
+        ・登録内容を変更したい場合は、不要なアドレスを削除してから送信してください。
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="pill" style="margin-bottom:6px">送信</div>
+      <input id="bkSlide" class="kRange" type="range" min="0" max="100" value="0" />
+    `;
+  }
+
+  openModal(
+    "メールでデータ送信（バックアップ）",
+    bodyHtml(),
+    [{label:"戻る", onClick:()=> closeModal()}]
+  );
+
+  // バインド
+  setTimeout(()=>{
+    const to = $("bkTo");
+    const slide = $("bkSlide");
+
+    const syncPicked = ()=>{
+      picked.sales = !!$("bkSales").checked;
+      picked.corr  = !!$("bkCorr").checked;
+      picked.seat  = !!$("bkSeat").checked;
+      picked.menu  = !!$("bkMenu").checked;
+    };
+
+    // 選択/削除
+    $("modalBody").querySelectorAll("[data-pick]").forEach(b=>{
+      b.onclick = ()=>{
+        const idx = Number(b.getAttribute("data-pick"));
+        to.value = addrs[idx] || "";
+      };
+    });
+    $("modalBody").querySelectorAll("[data-del]").forEach(b=>{
+      b.onclick = ()=>{
+        const idx = Number(b.getAttribute("data-del"));
+        addrs.splice(idx,1);
+        saveBackupAddrs(addrs);
+        // 再描画
+        $("modalBody").innerHTML = bodyHtml();
+        closeModal();
+        openBackupModal();
+      };
+    });
+
+    slide.onchange = async ()=>{
+      if(Number(slide.value||0) < 88){ slide.value = 0; return; }
+      syncPicked();
+
+      if(!picked.sales && !picked.corr && !picked.seat && !picked.menu){
+        slide.value = 0;
+        toast("送信する項目を選択してください");
         return;
       }
 
-      state.menu.selectedGenre = (state.menu.selectedGenre===g) ? null : g;
-      renderGenres();
-    };
+      const emailTo = (to.value||"").trim();
+      if(!isEmailLike(emailTo)){
+        slide.value = 0;
+        toast("送信先アドレスを入力してください");
+        return;
+      }
 
-    grid.appendChild(c);
-  });
+      // 送信ファイル生成
+      const all = buildBackupFiles();
+      const sendFiles = [];
+      all.forEach(f=>{
+        if(f.name.includes("会計データ") && picked.sales) sendFiles.push(f);
+        if(f.name.includes("訂正履歴") && picked.corr)   sendFiles.push(f);
+        if(f.name.includes("席設定") && picked.seat)     sendFiles.push(f);
+        if(f.name.includes("メニュー") && picked.menu)   sendFiles.push(f);
+      });
+
+      // アドレス保存ルール：5件未満なら登録、5件なら新規は保存しない
+      if(!addrs.includes(emailTo)){
+        if(addrs.length < 5){
+          addrs.unshift(emailTo); // 新しいのを先頭
+          saveBackupAddrs(addrs);
+        }else{
+          // 保存しない（確定仕様）
+        }
+      }
+
+      try{
+        closeModal();
+        await shareFiles(sendFiles, emailTo);
+        toast("メールでデータを送信しました");
+        // 画面は売上管理へ戻る（確定仕様）
+        showScreen("scrSalesManage");
+      }catch(e){
+        toast("送信をキャンセルしました");
+      }
+    };
+  },0);
 }
 
-function renderItems(){
-  const box = $("itemList");
-  box.innerHTML = "";
+/* =========================================================
+  G) メニュー登録（入口だけ）
+  ※あなたの現行PART1は scrMenuSetup がある（スクリーン名が違うので合わせる）
+  ここでは入口だけ用意しておく（本実装はあなたが次にやりたい時に作る）
+========================================================= */
+(function buildMenuSetupPlaceholder(){
+  const scr = $("scrMenuSetup");
+  if(!scr) return;
 
-  const list = state.menu.items.filter(it=> it.cat===state.menu.cat && it.genre===state.menu.selectedGenre);
+  // 既に何か入ってたら触らない（事故防止）
+  const has = scr.querySelector(".p8MenuBuilt");
+  if(has) return;
 
-  if(list.length===0){
-    box.innerHTML = `<div style="opacity:.85">まだありません</div>`;
-    return;
-  }
-
-  list.forEach(it=>{
-    const row = document.createElement("div");
-    row.className="kRow";
-    row.innerHTML = `
-      <div class="kLeft">
-        <div class="kName">${it.name}</div>
-      </div>
-      <div class="kSlide" style="gap:10px">
-        <div style="font-weight:900">${yen(it.price)}</div>
-        <div style="font-weight:900; opacity:.85">${it.tax}%</div>
-        <button class="btn" data-edit="${it.id}">編集</button>
-      </div>
-    `;
-    box.appendChild(row);
-  });
-
-  box.querySelectorAll("[data-edit]").forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = btn.getAttribute("data-edit");
-      const it = state.menu.items.find(x=> x.id===id);
-      if(!it) return;
-
-      openModal(
-        "編集",
-        `
-          <div style="font-weight:900; margin-bottom:8px">ジャンル</div>
-          <div style="opacity:.9; margin-bottom:10px">${it.genre}</div>
-
-          <div style="margin-bottom:6px">商品名</div>
-          <input id="eName" class="btn full" style="text-align:left" value="${it.name}" />
-
-          <div style="margin-top:10px;margin-bottom:6px">金額</div>
-          <input id="ePrice" class="btn full" style="text-align:left" inputmode="numeric" value="${it.price}" />
-
-          <div style="margin-top:10px;margin-bottom:6px">税率</div>
-          <div style="display:flex; gap:10px">
-            <button class="btn full" id="e8" style="flex:1">8%</button>
-            <button class="btn full" id="e10" style="flex:1">10%</button>
-          </div>
-        `,
-        [
-          {label:"保存", lime:true, onClick:()=>{
-            const nm = ($("eName").value||"").trim();
-            const pr = Number(($("ePrice").value||"").trim());
-            if(!nm || !Number.isFinite(pr) || pr<=0 || !(it.tax===8 || it.tax===10)){
-              toast("未記入があります");
-              return;
-            }
-            it.name = nm;
-            it.price = pr;
-            closeModal();
-            renderItems();
-            persistAll && persistAll();
-            toast("更新しました");
-          }},
-          {label:"戻る", lime:false, onClick:()=> closeModal()},
-        ]
-      );
-
-      setTimeout(()=>{
-        const h = (v)=>{
-          it.tax = v;
-          $("e8").classList.toggle("lime", v===8);
-          $("e10").classList.toggle("lime", v===10);
-        };
-        $("e8").onclick = ()=> h(8);
-        $("e10").onclick = ()=> h(10);
-        h(it.tax||10);
-      },0);
-    };
-  });
-}
-
-/* ===== Menu interactions ===== */
-(function hookMenu(){
-  const food = $("catFood");
-  const drink = $("catDrink");
-
-  function pickCat(cat){
-    state.menu.cat = cat;
-    setCardHL(food, cat==="food");
-    setCardHL(drink, cat==="drink");
-  }
-
-  food.onclick = ()=> pickCat("food");
-  drink.onclick = ()=> pickCat("drink");
-
-  $("catCommit").onclick = ()=>{
-    if(!state.menu.cat){ toast("カテゴリーを選択してください"); return; }
-    $("genreArea").style.display = "block";
-    state.menu.selectedGenre = null;
-    renderGenres();
-    persistAll && persistAll();
-  };
-
-  $("genreDelete").onclick = ()=>{
-    const g = state.menu.selectedGenre;
-    if(!g){ toast("ジャンルを選択してください"); return; }
-
-    // 削除ボタン→確認画面→戻るで削除スライド
-    openModal(
-      "削除確認",
-      "ジャンル内の商品が削除されます",
-      [
-        {label:"戻る", lime:false, onClick:()=> closeModal()},
-        {label:"削除へ", lime:true, onClick:()=>{
-          closeModal();
-          openModal(
-            "削除",
-            `
-              <div style="color:var(--danger); font-weight:900; margin-bottom:10px">
-                ジャンル「${g}」とジャンル内商品を削除します
-              </div>
-              <input id="gDelSlide" class="range" type="range" min="0" max="100" value="0" />
-            `,
-            [{label:"戻る", lime:false, onClick:()=> closeModal()}]
-          );
-
-          setTimeout(()=>{
-            $("gDelSlide").onchange = ()=>{
-              if(Number($("gDelSlide").value||0) < 88){ $("gDelSlide").value=0; return; }
-
-              state.menu.items = state.menu.items.filter(it=> !(it.cat===state.menu.cat && it.genre===g));
-              state.menu.genres[state.menu.cat] = state.menu.genres[state.menu.cat].filter(x=> x!==g);
-              state.menu.selectedGenre = null;
-
-              $("itemArea").style.display = "none";
-              closeModal();
-              renderGenres();
-              persistAll && persistAll();
-              toast("削除しました");
-            };
-          },0);
-        }},
-      ]
-    );
-  };
-
-  $("genreDecide").onclick = ()=>{
-    const g = state.menu.selectedGenre;
-    if(!g){ toast("ジャンルを選択してください"); return; }
-    $("itemArea").style.display = "block";
-
-    // 税率
-    const setTax = (v)=>{
-      state.menu.tax = v;
-      $("tax8").classList.toggle("lime", v===8);
-      $("tax10").classList.toggle("lime", v===10);
-    };
-    $("tax8").onclick = ()=> setTax(8);
-    $("tax10").onclick = ()=> setTax(10);
-    setTax(10);
-
-    renderItems();
-    persistAll && persistAll();
-  };
-
-  $("itemAdd").onclick = ()=>{
-    const g = state.menu.selectedGenre;
-    const nm = ($("itemName").value||"").trim();
-    const pr = Number(($("itemPrice").value||"").trim());
-    const tx = state.menu.tax;
-
-    if(!g || !nm || !Number.isFinite(pr) || pr<=0 || !(tx===8 || tx===10)){
-      toast("未記入があります");
-      return;
-    }
-
-    state.menu.items.push({
-      id: "m_" + Math.random().toString(36).slice(2),
-      cat: state.menu.cat,
-      genre: g,
-      name: nm,
-      price: pr,
-      tax: tx
-    });
-
-    // 二重登録防止：空白に戻す
-    $("itemName").value = "";
-    $("itemPrice").value = "";
-
-    renderItems();
-    persistAll && persistAll();
-
-    toast("登録しました");
-  };
+  scr.innerHTML = `
+    <div class="pill p8MenuBuilt" style="margin-bottom:10px">メニュー登録</div>
+    <div class="pill" style="color:var(--muted); margin-bottom:10px">
+      ※ ここは次の作業で「写真読み取り」や「ジャンル/商品登録」を本実装します
+    </div>
+    <button class="btn" id="menuToMain" style="width:100%">メインへ戻る</button>
+  `;
+  $("menuToMain").onclick = ()=> showScreen("scrMain");
 })();
 
-/* ===== 設定導線 ===== */
-$("goHelp").onclick = ()=> openHelp();
-$("goContact").onclick = ()=> openContact();
-$("goTerms").onclick = ()=> openTerms();
+/* =========================================================
+  H) 設定内ボタン導線
+========================================================= */
+(function hookPart8Buttons(){
+  const b1 = $("goHelp");     if(b1) b1.onclick = ()=> openHelp();
+  const b2 = $("goContact");  if(b2) b2.onclick = ()=> openContact();
+  const b3 = $("goTerms");    if(b3) b3.onclick = ()=> openTerms();
 
-/* ===== showScreen hook ===== */
+  const sm = $("goSalesManage");
+  if(sm) sm.onclick = ()=> showScreen("scrSalesManage");
+
+  const bk = $("goBackup");
+  if(bk) bk.onclick = ()=> openBackupModal();
+
+  const bk2 = $("goBackup2");
+  if(bk2) bk2.onclick = ()=> openBackupModal();
+
+  // 売上管理内：各ボタンの遷移先は PART4 側で作る（今は入口だけ）
+  const d = $("goDailySales"); if(d) d.onclick = ()=> toast("日別売上（PART4で実装）");
+  const m = $("goMonthSales"); if(m) m.onclick = ()=> toast("月売上（PART4で実装）");
+  const y = $("goYearSales");  if(y) y.onclick = ()=> toast("年売上（PART4で実装）");
+})();
+
+/* =========================================================
+  I) showScreen 拡張（ヘッダーの中央ボタン文言は PART1 のルールのまま）
+  ※ここでは追加の再描画だけ
+========================================================= */
 (function hookShowScreenPart8(){
   if(showScreen._p8Hooked) return;
   const _show = showScreen;
   showScreen = function(id){
     _show(id);
-    if(id==="scrMenu"){
-      // 初期表示
-      state.menu.cat = null;
-      state.menu.selectedGenre = null;
-      $("genreArea").style.display = "none";
-      $("itemArea").style.display = "none";
-      setCardHL($("catFood"), false);
-      setCardHL($("catDrink"), false);
-      persistAll && persistAll();
+    if(id==="scrSalesManage"){
+      // 特になし（UIは常に静的）
     }
-
-    // 設定から売上へ入る場合は通常（タブあり）
-    if(id==="scrSales"){
-      // メインから入ったフラグを消すのは「設定→売上」を作った時にここで制御する
-      // いまは「メイン下段の本日の売上」だけが _salesFromMain を立てる設計
+    if(id==="scrSettings"){
+      // 特になし
     }
   };
   showScreen._p8Hooked = true;
 })();
 
-/* ===== 起動後の最後の整形 ===== */
-(function finalize(){
-  // 復元済みなら描画、無ければ初期のまま
-  renderSeats();
-})();
-
 /* =========================
-  ここまでで 8分割 完成
+  ここまでで 8分割 完成（HTMLを閉じる）
 ========================= */
 </script>
 </body>
