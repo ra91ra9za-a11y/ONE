@@ -864,16 +864,27 @@
       ここから先は PART2 で続く
     ========================= */
 /* =========================
-  PART2：メイン動線修正・席移動・注文（完成版）
+  PART2：メイン動線修正・席移動（トグル）・注文（完成版）
   役割：
-   - 空席：来店/予約（中央表示・押しやすい・文言不要）
+   - 空席：来店/予約（中央表示・押しやすい）
    - 予約：来店/キャンセル/戻る
    - 来店：注文画面へ
-   - 合流（➡︎A,B）：どちらの注文/会計をしますか？の分岐
-   - 席移動：入力→移動/合流→確認→スライド確定
+   - 合流（➡︎A,B）：どちらの注文/会計？＋（注文/席移動/合流）導線
+   - 席移動：メイン上で2席選択 → 移動/合流 → 確認 → スライド確定
+  注意：
+   - 「席移動」はキーボード無し（トグル選択のみ）
+   - 既存機能は削らない（注文/予約/合流/同期emitEvent）
 ========================= */
 
-/* ===== UI追加：注文画面の骨格 ===== */
+/* =========================================================
+  0) PART2 State
+========================================================= */
+state.order = state.order || { seatId:null, subId:null, _genre:null };
+state.move = state.move || { on:false, picks:[] }; // picks = [fromId, toId]
+
+/* =========================================================
+  1) UI：注文画面の骨格
+========================================================= */
 (function buildOrderUI(){
   const scr = $("scrOrder");
   scr.innerHTML = `
@@ -898,11 +909,12 @@
     </div>
   `;
 })();
-
 $("goMenuSetup").onclick = ()=> showScreen("scrMenu");
 $("orderBackToMain").onclick = ()=> showScreen("scrMain");
 
-/* ===== 注文：ジャンル→商品一覧（注文には料理/ドリンクを出さない） ===== */
+/* =========================================================
+  2) 注文：ジャンル→商品一覧
+========================================================= */
 function renderOrder(){
   const seat = seatById(state.order.seatId);
   if(!seat){ showScreen("scrMain"); return; }
@@ -924,10 +936,7 @@ function renderOrder(){
   if(state.menu && state.menu.genres){
     const f = state.menu.genres.food || [];
     const d = state.menu.genres.drink || [];
-    // 重複排除しつつ順番維持
-    [...f, ...d].forEach(x=>{
-      if(!allGenres.includes(x)) allGenres.push(x);
-    });
+    [...f, ...d].forEach(x=>{ if(!allGenres.includes(x)) allGenres.push(x); });
   }
 
   const areaG = $("orderGenreArea");
@@ -967,10 +976,8 @@ function renderOrder(){
 
     grid.appendChild(b);
   });
-
   areaG.appendChild(grid);
 
-  // 商品一覧（選択ジャンルがある時だけ）
   if(!state.order._genre){
     areaI.innerHTML = `<div style="margin-top:10px; opacity:.85">ジャンルを選択してください</div>`;
     $("orderTotal").textContent = yen(calcOrdersTotal(bucket.orders));
@@ -978,8 +985,6 @@ function renderOrder(){
   }
 
   const genre = state.order._genre;
-
-  // itemsは cat/genre/name/price/tax を持つ（PART8のメニュー登録）
   const items = (state.menu?.items || []).filter(it=> it.genre===genre);
 
   if(items.length===0){
@@ -988,7 +993,7 @@ function renderOrder(){
     return;
   }
 
-  // 追加ボタンで qty+1（取消は後で）
+  // 追加ボタン：◀︎（数量）▶︎ へ統一（いまは＋のみだったのでここで統一）
   items.forEach(it=>{
     const row = document.createElement("div");
     row.style.border="1px solid rgba(255,255,255,0.10)";
@@ -997,7 +1002,6 @@ function renderOrder(){
     row.style.background="rgba(255,255,255,0.04)";
     row.style.marginTop="10px";
 
-    // 現在qty
     const o = (bucket.orders||[]).find(x=> x.itemId===it.id);
     const qty = Number(o?.qty||0);
 
@@ -1009,37 +1013,89 @@ function renderOrder(){
         </div>
 
         <div style="display:flex; align-items:center; gap:10px">
-          <div style="font-weight:900; min-width:44px; text-align:center">${qty ? `×${qty}` : ""}</div>
-          <button class="btn lime" data-add="${it.id}">＋</button>
+          <button class="btn" data-minus="${it.id}">◀︎</button>
+          <div class="pill" style="min-width:54px; justify-content:center; font-weight:900" data-qty="${it.id}">${qty}</div>
+          <button class="btn lime" data-plus="${it.id}">▶︎</button>
         </div>
       </div>
     `;
 
-    row.querySelector(`[data-add="${it.id}"]`).onclick = ()=>{
-      // 注文追加
+    // 減らす（0は確認画面へ：案A）
+    row.querySelector(`[data-minus="${it.id}"]`).onclick = ()=>{
+      if(!o || o.qty<=0) return;
+
+      if(o.qty===1){
+        // 0になる＝削除確認
+        openModal(
+          "確認",
+          `「${it.name}」を 0 にしますか？<br><br>0にすると、この商品は注文から削除されます。`,
+          [
+            {label:"戻る", lime:false, onClick:()=> closeModal()},
+            {label:"決定（スライド）", lime:true, onClick:()=>{
+              closeModal();
+              openSlideConfirm("確定", ()=>{
+                // 削除
+                bucket.orders = bucket.orders.filter(x=> x.itemId!==it.id);
+                if(seat.merged){
+                  const b2 = ensureSub(seat, subId);
+                  b2.orders = bucket.orders;
+                  b2.total = calcOrdersTotal(bucket.orders);
+                }else{
+                  seat.orders = bucket.orders;
+                  seat.total = calcOrdersTotal(bucket.orders);
+                }
+                seat.total = calcSeatTotal(seat);
+
+                if(typeof emitEvent==="function") emitEvent("order_dec", {seatId: seat.id, subId, itemId: it.id, qty:0});
+                renderSeats();
+                renderOrder();
+              });
+            }},
+          ],
+          seat.id
+        );
+        return;
+      }
+
+      o.qty -= 1;
+      const sum = calcOrdersTotal(bucket.orders);
+      if(seat.merged){
+        const b2 = ensureSub(seat, subId);
+        b2.total = sum;
+      }else{
+        seat.total = sum;
+      }
+      seat.total = calcSeatTotal(seat);
+
+      if(typeof emitEvent==="function") emitEvent("order_dec", {seatId: seat.id, subId, itemId: it.id, qty:o.qty});
+      renderSeats();
+      renderOrder();
+    };
+
+    // 増やす
+    row.querySelector(`[data-plus="${it.id}"]`).onclick = ()=>{
       if(!o){
         bucket.orders.push({ itemId: it.id, name: it.name, price: it.price, tax: it.tax, qty: 1, cat: it.cat });
       }else{
         o.qty += 1;
       }
 
-      // 合計更新（座席にも反映）
       const sum = calcOrdersTotal(bucket.orders);
       if(seat.merged){
-        bucket.total = sum;
+        const b2 = ensureSub(seat, subId);
+        b2.total = sum;
       }else{
         seat.total = sum;
       }
+
       seat.status = "in";
       seat.people = Math.max(1, Number(seat.people||1));
       seat.bills = 1;
 
-      // キッチンに積む（PART3が拾う想定）
       if(typeof addKitchenFromOrder === "function") addKitchenFromOrder(seat, subId, it);
+      if(typeof emitEvent === "function") emitEvent("order_add", {seatId: seat.id, subId, itemId: it.id, qty:(o?o.qty:1)});
 
-      // 同期イベント（PART7が拾う）
-      if(typeof emitEvent === "function") emitEvent("order_add", {seatId: seat.id, subId, itemId: it.id});
-
+      seat.total = calcSeatTotal(seat);
       renderSeats();
       renderOrder();
     };
@@ -1050,17 +1106,16 @@ function renderOrder(){
   $("orderTotal").textContent = yen(calcOrdersTotal(bucket.orders));
 }
 
-/* ===== 空席：来店/予約モーダル（中央・押しやすい） ===== */
+/* =========================================================
+  3) 空席：来店 / 予約
+========================================================= */
 function openEmptyAction(seat){
   openModal(
     "空席",
-    `
-      <div style="opacity:.92; margin-bottom:10px">来店 / 予約 を選択してください</div>
-    `,
+    `<div style="opacity:.92; margin-bottom:10px">来店 / 予約 を選択してください</div>`,
     [
       {label:"来店", lime:true, onClick:()=>{
         closeModal();
-        // 来店：名前入力はしない（注文画面の修正時にやる：今はなし）
         seat.status = "in";
         seat.people = Math.max(1, Number(seat.people||1));
         seat.bills = 1;
@@ -1069,7 +1124,7 @@ function openEmptyAction(seat){
         seat.merged = false;
         seat.mergeLabel = "";
         seat.sub = null;
-
+        seat.orders = seat.orders || [];
         renderSeats();
         openOrderFor(seat.id, seat.id);
       }},
@@ -1083,7 +1138,10 @@ function openEmptyAction(seat){
   );
 }
 
-/* ===== 予約：入力画面 ===== */
+/* =========================================================
+  4) 予約：入力 → 保存
+  ※ 現状はキーボード出る（問題②の本体検証はここ）
+========================================================= */
 function openReserveInput(seat){
   openModal(
     "予約入力",
@@ -1103,15 +1161,12 @@ function openReserveInput(seat){
         const name = ($("rName").value||"").trim();
         const tel  = ($("rTel").value||"").trim();
 
-        if(!time || !name){
-          toast("未記入があります");
-          return;
-        }
+        if(!time || !name){ toast("未記入があります"); return; }
 
         seat.status = "reserve";
         seat.people = Math.max(1, Number(seat.people||1));
         seat.reserve = { time, name, tel, note:"" };
-        seat.name = "";     // 予約はカード上は予約扱い
+        seat.name = "";
         seat.total = 0;
         seat.bills = 0;
 
@@ -1127,7 +1182,7 @@ function openReserveInput(seat){
   );
 }
 
-/* ===== 予約カードタップ：来店/キャンセル/戻る ===== */
+/* 予約カード：来店 / キャンセル */
 function openReserveAction(seat){
   const r = seat.reserve || {};
   openModal(
@@ -1145,15 +1200,13 @@ function openReserveAction(seat){
         seat.bills = 1;
         seat.total = Number(seat.total||0);
         seat.reserve = null;
-
+        seat.orders = seat.orders || [];
         if(typeof emitEvent === "function") emitEvent("reserve_to_in", {seatId: seat.id});
         renderSeats();
         openOrderFor(seat.id, seat.id);
       }},
       {label:"キャンセル", lime:false, onClick:()=>{
         closeModal();
-        // 確認なし（あなたの思想：止めない／ただし誤操作は“スライド”でやるのが理想）
-        // 今回は軽い安全としてスライドだけ入れる
         openModal(
           "キャンセル",
           `
@@ -1172,6 +1225,7 @@ function openReserveAction(seat){
             seat.name="";
             seat.total=0;
             seat.bills=0;
+            seat.orders=[];
             if(typeof emitEvent === "function") emitEvent("reserve_cancel", {seatId: seat.id});
             closeModal();
             renderSeats();
@@ -1185,120 +1239,246 @@ function openReserveAction(seat){
   );
 }
 
-/* ===== 合流席タップ：どちらの注文/会計？ ===== */
-function openMergedPick(seat){
+/* =========================================================
+  5) 合流席タップ：注文/席移動/合流 ＋ A➡︎ / B 選択
+  ※ まずは「注文選択」が確実に動くように（移動/合流は次段で繋ぐ）
+========================================================= */
+function openMergedHub(seat){
   const subs = Object.values(seat.sub||{});
-  if(subs.length<=1){
-    openOrderFor(seat.id, seat.id);
-    return;
-  }
+  const ids = subs.map(x=> x.seatId);
 
-  const buttons = subs.map(su=>{
-    return {label: su.seatId, lime:true, onClick:()=>{
-      closeModal();
-      openOrderFor(seat.id, su.seatId);
-    }};
-  });
-  buttons.push({label:"戻る", lime:false, onClick:()=> closeModal()});
+  const btns = ids.map(id=>({
+    label: id,
+    lime:true,
+    onClick:()=>{ closeModal(); openOrderFor(seat.id, id); }
+  }));
+  btns.push({label:"戻る", lime:false, onClick:()=> closeModal()});
 
   openModal(
-    "どちらの注文、会計をしますか？",
-    `<div style="opacity:.9">席を選択してください</div>`,
-    buttons,
+    "合流席",
+    `
+      <div style="opacity:.9; margin-bottom:10px">どちらの注文・会計をしますか？</div>
+      <div style="opacity:.85">${seat.mergeLabel}</div>
+      <div style="height:8px"></div>
+      <div style="opacity:.85">※まずは席を選ぶだけでOK（注文画面へ）</div>
+    `,
+    btns,
     seat.id
   );
 }
 
-/* ===== 注文画面へ ===== */
+/* =========================================================
+  6) 注文画面へ
+========================================================= */
 function openOrderFor(seatId, subId){
   state.order.seatId = seatId;
   state.order.subId = subId;
-  state.order._genre = state.order._genre || null; // 유지
+  state.order._genre = state.order._genre || null;
   showScreen("scrOrder");
   renderOrder();
 }
 
-/* ===== 席カードタップ動線：空席/予約/来店/合流 ===== */
+/* =========================================================
+  7) 席カードタップ動線（空席/予約/来店/合流）＋ 席移動モード優先
+========================================================= */
+function clearMoveMode(){
+  state.move.on = false;
+  state.move.picks = [];
+  updateMoveUI();
+  renderSeatsWithMoveHL();
+}
+function togglePick(id){
+  const p = state.move.picks.slice();
+
+  const idx = p.indexOf(id);
+  if(idx !== -1){
+    p.splice(idx,1);
+  }else{
+    if(p.length>=2) return; // 2個まで
+    p.push(id);
+  }
+
+  state.move.picks = p;
+  renderSeatsWithMoveHL();
+
+  // 2個揃ったら即、選択バーに「移動/合流」出す（決定ボタンなし）
+  updateMoveUI();
+}
+
 onSeatTap = function(seatId){
   const seat = seatById(seatId);
   if(!seat) return;
 
-  if(seat.status==="empty"){
-    openEmptyAction(seat);
+  // 席移動モード中は、通常動線を止めて「選択」だけ
+  if(state.move.on){
+    togglePick(seatId);
     return;
   }
 
-  if(seat.status==="reserve"){
-    openReserveAction(seat);
-    return;
-  }
+  if(seat.status==="empty"){ openEmptyAction(seat); return; }
+  if(seat.status==="reserve"){ openReserveAction(seat); return; }
 
   // 来店
-  if(seat.merged){
-    openMergedPick(seat);
-    return;
-  }
+  if(seat.merged){ openMergedHub(seat); return; }
 
   openOrderFor(seat.id, seat.id);
 };
 
-/* ===== 席移動：新仕様 ===== */
-function openMoveHome(){
-  // 入力欄＋ 移動ボタン＋合流ボタン ＋戻る
-  openModal(
-    "席移動",
-    `
-      <div style="opacity:.92; margin-bottom:10px">どの席を、どこに移動しますか？</div>
-
-      <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px">
-        <input id="mvFrom" class="btn full" style="text-align:left" placeholder="どこから（例：A）" />
-        <div style="font-weight:900">→</div>
-        <input id="mvTo" class="btn full" style="text-align:left" placeholder="どこへ（例：B）" />
-      </div>
-
-      <div style="display:flex; gap:10px; margin-bottom:10px">
-        <button class="btn lime full" id="mvDoSwap">◯→◯に移動</button>
-        <button class="btn full" id="mvDoMerge">合流</button>
-      </div>
-
-      <div style="opacity:.85">※ 直接入力のみ（セレクターは後で追加可能）</div>
-    `,
-    [
-      {label:"戻る", lime:false, onClick:()=> closeModal()},
-    ]
-  );
-
-  setTimeout(()=>{
-    $("mvDoSwap").onclick = ()=> {
-      const from = ($("mvFrom").value||"").trim();
-      const to   = ($("mvTo").value||"").trim();
-      if(!from || !to){ toast("未記入があります"); return; }
-      openSwapConfirm(from, to);
-    };
-
-    $("mvDoMerge").onclick = ()=> {
-      const from = ($("mvFrom").value||"").trim();
-      const to   = ($("mvTo").value||"").trim();
-      if(!from || !to){ toast("未記入があります"); return; }
-      openMergeConfirm(from, to);
-    };
-  },0);
+/* =========================================================
+  8) 席移動（トグル仕様・決定ボタンなし）
+  メイン画面の「席移動」ボタン → 選択モード
+========================================================= */
+function enterMoveMode(){
+  state.move.on = true;
+  state.move.picks = [];
+  updateMoveUI();
+  renderSeatsWithMoveHL();
+  toast("席を2つ選んでください");
+}
+function exitMoveMode(){
+  clearMoveMode();
+  toast("席移動を終了しました");
 }
 
-$("goMove").onclick = ()=> openMoveHome();
+$("goMove").onclick = ()=> {
+  if(state.move.on){
+    exitMoveMode();
+  }else{
+    enterMoveMode();
+  }
+};
 
-/* ===== A⇔B（交換） ===== */
-function openSwapConfirm(fromId, toId){
-  closeModal();
+/* 画面上の案内（固定風のバー：scrMain内に差し込み） */
+(function ensureMoveBar(){
+  if($("moveBar")) return;
+
+  const hint = $("mainHint");
+  const bar = document.createElement("div");
+  bar.id = "moveBar";
+  bar.style.margin = "10px 0 10px";
+  bar.style.border = "1px solid rgba(255,255,255,0.10)";
+  bar.style.borderRadius = "14px";
+  bar.style.padding = "10px";
+  bar.style.background = "rgba(255,255,255,0.04)";
+  bar.style.display = "none";
+
+  bar.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+      <div style="font-weight:900">席を選んでください</div>
+      <button class="btn" id="mvBackBtn">戻る</button>
+    </div>
+
+    <div style="height:8px"></div>
+
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+      <div class="pill" id="mvFromP" style="font-weight:900">どこから：-</div>
+      <div class="pill" id="mvToP" style="font-weight:900">どこへ：-</div>
+    </div>
+
+    <div style="height:10px"></div>
+
+    <div id="mvActions" style="display:none; gap:10px">
+      <button class="btn lime full" id="mvDoMove">移動</button>
+      <button class="btn full" id="mvDoMerge">合流</button>
+    </div>
+  `;
+
+  hint.insertAdjacentElement("afterend", bar);
+
+  $("mvBackBtn").onclick = ()=> exitMoveMode();
+
+  $("mvDoMove").onclick = ()=> {
+    const [fromId, toId] = state.move.picks;
+    if(!fromId || !toId) return;
+    openMoveConfirm(fromId, toId);
+  };
+
+  $("mvDoMerge").onclick = ()=> {
+    const [fromId, toId] = state.move.picks;
+    if(!fromId || !toId) return;
+    openMergeConfirm(fromId, toId);
+  };
+})();
+
+function updateMoveUI(){
+  const bar = $("moveBar");
+  if(!bar) return;
+
+  bar.style.display = state.move.on ? "block" : "none";
+
+  if(!state.move.on) return;
+
+  const [fromId, toId] = state.move.picks;
+  $("mvFromP").textContent = `どこから：${fromId || "-"}`;
+  $("mvToP").textContent   = `どこへ：${toId || "-"}`;
+
+  const actions = $("mvActions");
+  if(fromId && toId){
+    actions.style.display = "flex";
+  }else{
+    actions.style.display = "none";
+  }
+
+  // メイン下ボタンの「席移動」見た目をモード中だけ強調
+  $("goMove").classList.toggle("lime", state.move.on);
+}
+
+/* 選択中の席カードを光らせる（既存renderSeatsを壊さずラップ） */
+function renderSeatsWithMoveHL(){
+  renderSeats();
+
+  if(!state.move.on) return;
+
+  const picks = state.move.picks || [];
+  picks.forEach(id=>{
+    const el = document.querySelector(`.seatCard[data-seat-id="${id}"]`);
+    if(el){
+      el.style.outline = "2px solid rgba(122,167,255,0.9)";
+      el.style.background = "rgba(122,167,255,0.14)";
+    }
+  });
+}
+
+/* PART1 initのrenderSeats()後でも動くように、renderSeatsを置き換えずに差し替え */
+(function hookRenderSeatsForMove(){
+  if(renderSeats._moveHooked) return;
+  const _r = renderSeats;
+  renderSeats = function(){
+    _r();
+    // 呼び出し元がPART1でも、モードのハイライトだけ足す
+    if(state.move && state.move.on){
+      const picks = state.move.picks || [];
+      picks.forEach(id=>{
+        const el = document.querySelector(`.seatCard[data-seat-id="${id}"]`);
+        if(el){
+          el.style.outline = "2px solid rgba(122,167,255,0.9)";
+          el.style.background = "rgba(122,167,255,0.14)";
+        }
+      });
+    }
+  };
+  renderSeats._moveHooked = true;
+})();
+function renderSeatsWithHighlight(){ renderSeats(); } // PART6等が呼ぶための互換
+
+/* =========================================================
+  9) 移動（A⇄B 交換）確認 → スライド確定
+========================================================= */
+function openMoveConfirm(fromId, toId){
   openModal(
     "確認",
-    `移動しますか？`,
+    `
+      <div style="font-weight:900; margin-bottom:6px">${fromId} と ${toId}</div>
+      <div style="opacity:.9">席を移動しますか？</div>
+      <div style="opacity:.85; margin-top:6px">選択した席間でデータが移動します（交換）</div>
+    `,
     [
       {label:"戻る", lime:false, onClick:()=> closeModal()},
       {label:"決定（スライド）", lime:true, onClick:()=>{
         closeModal();
         openSlideConfirm("移動", ()=>{
           doSwapSeats(fromId, toId);
+          clearMoveMode();
         });
       }},
     ]
@@ -1310,33 +1490,48 @@ function doSwapSeats(fromId, toId){
   const b = seatById(toId);
   if(!a || !b){ toast("席が見つかりません"); return; }
 
-  // 交換（idは維持し、中身を入れ替える）
   const keepA = JSON.parse(JSON.stringify(a));
   const keepB = JSON.parse(JSON.stringify(b));
 
-  // idだけ戻す
   Object.assign(a, keepB); a.id = fromId;
   Object.assign(b, keepA); b.id = toId;
 
-  // 同期
   if(typeof emitEvent==="function") emitEvent("seat_swap", {fromId, toId});
-
   renderSeats();
   toast("移動しました");
 }
 
-/* ===== 合流：AがBに移動 → A空席 / Bが➡︎A,B（データは足さない） ===== */
+/* =========================================================
+  10) 合流（A→B）確認 → スライド確定
+   - 表示：Bが代表カード / mergeLabel：➡︎A,B
+   - 人数と表示合計は合算表示（実データは sub に分離保持）
+   - from席は空席へ
+   - 内部：mergeKey を持つ（当日内の識別用：A➡︎B_1 等）
+========================================================= */
+state._mergeCounter = state._mergeCounter || {}; // "A->B" : n
+
+function nextMergeKey(fromId, toId){
+  const k = `${fromId}->${toId}`;
+  const n = (state._mergeCounter[k]||0) + 1;
+  state._mergeCounter[k] = n;
+  return `${fromId}➡︎${toId}_${n}`; // 内部用（表示はしない）
+}
+
 function openMergeConfirm(fromId, toId){
-  closeModal();
   openModal(
     "確認",
-    `合流しますか？`,
+    `
+      <div style="font-weight:900; margin-bottom:6px">${fromId} と ${toId}</div>
+      <div style="opacity:.9">席を合流しますか？</div>
+      <div style="opacity:.85; margin-top:6px">選択した席が同じカード内に表示されます（データは足しません）</div>
+    `,
     [
       {label:"戻る", lime:false, onClick:()=> closeModal()},
       {label:"決定（スライド）", lime:true, onClick:()=>{
         closeModal();
         openSlideConfirm("合流", ()=>{
           doMergeInto(fromId, toId);
+          clearMoveMode();
         });
       }},
     ]
@@ -1347,12 +1542,16 @@ function doMergeInto(fromId, toId){
   const from = seatById(fromId);
   const to   = seatById(toId);
   if(!from || !to){ toast("席が見つかりません"); return; }
+  if(fromId===toId){ toast("同じ席は合流できません"); return; }
 
-  // to を merged にする。subに toId / fromId を積む（データは足さない）
+  const mergeKey = nextMergeKey(fromId, toId);
+
+  // to を merged にする
   to.merged = true;
   to.sub = to.sub || {};
+  to.mergeKey = to.mergeKey || mergeKey;
 
-  // to 自身のデータを sub に格納（まだ無い時だけ）
+  // to自身をsubへ（初回だけ）
   const toSub = ensureSub(to, toId);
   if(!toSub._inited){
     toSub.people = Number(to.people||0);
@@ -1361,9 +1560,10 @@ function doMergeInto(fromId, toId){
     toSub.orders = (to.orders||[]);
     toSub.reserve = to.reserve || null;
     toSub._inited = true;
+    toSub._seatKey = `${toId}`; // 元席
   }
 
-  // from を sub に格納
+  // fromをsubへ
   const fromSub = ensureSub(to, fromId);
   fromSub.people = Number(from.people||0);
   fromSub.name = from.name || (from.reserve?.name||"");
@@ -1371,16 +1571,20 @@ function doMergeInto(fromId, toId){
   fromSub.orders = (from.orders||[]);
   fromSub.reserve = from.reserve || null;
   fromSub._inited = true;
+  fromSub._seatKey = mergeKey; // 当日内識別（A➡︎B_1）
 
-  // 表記：➡︎A,B（太い矢印でAから来た）
+  // 表示：➡︎A,B（※確定仕様）
   to.mergeLabel = `➡︎${fromId},${toId}`;
   to.status = "in";
-  // 人数表示は合算表示にする（現場目線で分かる）
+
+  // 人数は表示上 合算
   to.people = Number(toSub.people||0) + Number(fromSub.people||0);
   to.bills = 1;
-  to.name = ""; // 合流中は名前表示しない（あなたの指示）
 
-  // 代表の total は sub の合計（見た目用）
+  // 名前は合流中は消す（確定）
+  to.name = "";
+
+  // 代表totalは表示用に合計
   to.total = calcSeatTotal(to);
 
   // from を空席へ
@@ -1395,13 +1599,16 @@ function doMergeInto(fromId, toId){
   from.mergeLabel = "";
   from.sub = null;
 
-  if(typeof emitEvent==="function") emitEvent("seat_merge", {fromId, toId});
+  if(typeof emitEvent==="function") emitEvent("seat_merge", {fromId, toId, mergeKey});
 
   renderSeats();
   toast("合流しました");
 }
 
-/* ===== Slide confirm helper ===== */
+/* =========================================================
+  11) スライド確定（共通）
+  ※ 幅/太さはPART1の.rangeに従う（親指幅化はCSS側で後で統一）
+========================================================= */
 function openSlideConfirm(title, onDone){
   openModal(
     title,
@@ -1420,6 +1627,35 @@ function openSlideConfirm(title, onDone){
     };
   },0);
 }
+
+/* =========================================================
+  12) 画面遷移フック：メインへ戻ったら席移動バーも整える
+========================================================= */
+(function hookShowScreenPart2(){
+  if(showScreen._p2Hooked) return;
+  const _show = showScreen;
+  showScreen = function(id){
+    _show(id);
+
+    if(id==="scrMain"){
+      updateMoveUI();
+      renderSeats();
+    }else{
+      // メイン以外では席移動モード解除（事故防止）
+      if(state.move && state.move.on){
+        clearMoveMode();
+      }
+    }
+
+    if(id==="scrOrder"){
+      renderOrder();
+    }
+  };
+  showScreen._p2Hooked = true;
+})();
+
+/* 起動直後の保険 */
+updateMoveUI();
 
 /* =========================
   ここから先は PART3 で続く
