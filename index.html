@@ -3368,39 +3368,79 @@ function openSyncModal(){
   ここから先は PART8 で続く
 ========================= */
 /* =========================
-  PART8：設定・ヘルプ・有料導線 ＋ メニュー登録
+  PART8：設定・ヘルプ・有料導線 ＋ メニュー登録 ＋ 店舗情報（追加）
   役割：営業中は基本触らない領域／自己解決／問い合わせ／有料案内（控えめ）
         ＋ メニュー登録（料理/ドリンク→ジャンル→商品登録）
+        ＋ 店舗情報（従業員名含む）
   重要：ここでHTMLを閉じて8分割完成
 ========================= */
 
 /* =========================================================
-   A) 設定（scrSettings）
-   ※ここは「表示だけ」ではなく、導線ボタンを確定させる
+   0) 画面追加：店舗情報 / レシピ提案（※PART1に無いのでここで増設）
+========================================================= */
+(function ensureExtraScreens(){
+  // main.app の中に section を追加する
+  const app = document.querySelector("main.app");
+  if(!app) return;
+
+  // 店舗情報
+  if(!$("scrStoreInfo")){
+    const sec = document.createElement("section");
+    sec.className = "screen";
+    sec.id = "scrStoreInfo";
+    sec.innerHTML = `<div style="opacity:.8">（PART8で実装）</div>`;
+    app.appendChild(sec);
+    try{ screens.push("scrStoreInfo"); }catch(e){}
+  }
+
+  // レシピ提案（無料版は案内だけでもOK）
+  if(!$("scrRecipe")){
+    const sec2 = document.createElement("section");
+    sec2.className = "screen";
+    sec2.id = "scrRecipe";
+    sec2.innerHTML = `<div style="opacity:.8">（PART8で実装）</div>`;
+    app.appendChild(sec2);
+    try{ screens.push("scrRecipe"); }catch(e){}
+  }
+})();
+
+/* =========================================================
+   A) 設定（scrSettings） ※ボタン配置を “3列折り返し” に修復
 ========================================================= */
 (function buildSettingsUI(){
   const scr = $("scrSettings");
-  if(!scr) return;
-
   scr.innerHTML = `
     <div class="pill" style="margin-bottom:10px">設定</div>
 
-    <button class="btn" id="goSalesManage" style="width:100%; margin-bottom:10px">売上管理</button>
-    <button class="btn" id="goBackup" style="width:100%; margin-bottom:14px">メールでデータ送信（バックアップ）</button>
+    <!-- ボタン：3列折り返し -->
+    <div class="seatGrid" style="margin-bottom:10px">
+      <button class="seatCard" id="goSeatSetupBtn" style="min-height:56px; font-weight:900; display:flex; align-items:center; justify-content:center">席登録</button>
+      <button class="seatCard" id="goMenuBtn" style="min-height:56px; font-weight:900; display:flex; align-items:center; justify-content:center">メニュー登録</button>
+      <button class="seatCard" id="goStoreBtn" style="min-height:56px; font-weight:900; display:flex; align-items:center; justify-content:center">店舗情報</button>
 
-    <button class="btn" id="goHelp" style="width:100%; margin-bottom:10px">ヘルプ / Q&A</button>
-    <button class="btn" id="goContact" style="width:100%; margin-bottom:10px">お問合せ</button>
-    <button class="btn" id="goTerms" style="width:100%; margin-bottom:14px">利用条件・注意事項</button>
+      <button class="seatCard" id="goSalesManageBtn" style="min-height:56px; font-weight:900; display:flex; align-items:center; justify-content:center">売上管理</button>
+      <button class="seatCard" id="goFaqBtn" style="min-height:56px; font-weight:900; display:flex; align-items:center; justify-content:center">よくある<br>お問合せ</button>
+      <button class="seatCard" id="goContactBtn" style="min-height:56px; font-weight:900; display:flex; align-items:center; justify-content:center">お問合せ</button>
+
+      <button class="seatCard" id="goRecipeBtn" style="min-height:56px; font-weight:900; display:flex; align-items:center; justify-content:center">レシピ提案</button>
+      <button class="seatCard" id="goTermsBtn" style="min-height:56px; font-weight:900; display:flex; align-items:center; justify-content:center">利用条件</button>
+      <button class="seatCard" id="goPwaBtn" style="min-height:56px; font-weight:900; display:flex; align-items:center; justify-content:center">全画面化</button>
+    </div>
+
+    <!-- 注意事項（横長） -->
+    <div class="pill" style="margin-bottom:12px; line-height:1.6">
+      ⚠️ 営業終了時・退勤時には必ず「保存」を行ってください（データ保全のため）
+    </div>
 
     <div class="pill" style="margin-bottom:8px">無料版について</div>
-    <div class="pill" style="color:var(--muted); margin-bottom:14px">
+    <div class="pill" style="color:var(--muted); margin-bottom:12px; line-height:1.7">
       ・利用可能端末：最大3台<br>
       ・データの復旧、保証なし<br>
       ・サポートは限定的
     </div>
 
     <div class="pill" style="margin-bottom:8px">有料版のご案内</div>
-    <div class="pill" style="color:var(--muted); margin-bottom:14px">
+    <div class="pill" style="color:var(--muted); margin-bottom:12px; line-height:1.7">
       ・利用端末数の拡張<br>
       ・データの安全な保存<br>
       ・サポート対応<br>
@@ -3411,7 +3451,7 @@ function openSyncModal(){
     </div>
 
     <div class="pill" style="margin-bottom:8px">バージョン情報</div>
-    <div class="pill" style="color:var(--muted)">
+    <div class="pill" style="color:var(--muted); line-height:1.7">
       ONE<br>
       Version：FREE 0.1.0<br>
       更新日：2026/02/10<br>
@@ -3421,24 +3461,72 @@ function openSyncModal(){
 })();
 
 /* =========================================================
-   B) ヘルプ / Q&A（モーダル表示）
+   B) よくある お問合せ（カテゴリ→Q&A表示：スクロール対応）
 ========================================================= */
-const QA_LIST = [
-  {q:"会計合算はどうやって行いますか？", a:"同じ席内にある複数の会計を、会計合算ボタンでまとめます。別の席同士を直接合算することはできません。別席をまとめたい場合は、先に席移動で同じ席に集めてください。"},
-  {q:"別の席同士を直接合算できないのはなぜですか？", a:"操作ミスや会計事故を防ぐためです。ONEでは「席＝会計の箱」として管理しているため、合算は必ず同一席内で行う設計になっています。"},
-  {q:"席移動と会計合算の違いは何ですか？", a:"席移動は物理的に席を移った時の操作です。会計合算は同じ席の中にある会計をまとめる操作です。"},
-  {q:"会計分割はいつできますか？", a:"同一席内で、合算されている会計を元に戻したい時に行います。なお、合算後に追加された注文は分割できません。"},
-  {q:"電波がない場所でも使えますか？", a:"使えます。注文・会計・席操作は端末内に保存されます。ただし、端末間での共有は行われないため、通信環境が整っている場所での利用を推奨します。"},
-  {q:"同期マーク❌が出た時はどうすればいいですか？", a:"電波状況や一時的不具合で同期できていない状態です。電波の良い場所で同期を行ってください。"},
-  {q:"営業終了時に必ず行うことは？", a:"保存操作を行い、必要に応じて売上データをメールなどで送信してください。"},
+const FAQ_CATS = [
+  {id:"seat",  label:"席/注文"},
+  {id:"sales", label:"売上/会計"},
+  {id:"sync",  label:"同期/保存"},
+  {id:"backup",label:"バックアップ"},
+  {id:"other", label:"その他"},
 ];
 
-function openHelp(){
-  const body = QA_LIST.map(x=>`
-    <div class="pill" style="margin-bottom:6px; font-weight:900">Q：${x.q}</div>
-    <div class="pill" style="margin-bottom:12px; color:var(--muted)">A：${x.a}</div>
-  `).join("");
-  openModal("ヘルプ / Q&A", body, [{label:"戻る", onClick:()=> closeModal()}]);
+const FAQ_LIST = [
+  {cat:"sales", q:"会計合算はどうやって行いますか？", a:"同じ席内にある複数の会計を、会計合算でまとめます。別の席同士を直接合算することはできません。別席をまとめたい場合は、先に席移動で同じ席に集めてください。"},
+  {cat:"sales", q:"会計分割はいつできますか？", a:"同一席内で、合算されている会計を元に戻したい時に行います。なお、合算後に追加された注文は分割できません。"},
+  {cat:"seat",  q:"席移動と合流の違いは何ですか？", a:"席移動は席データを入れ替えます（A⇄B）。合流は複数席を同じカード内に表示する操作です（A➡︎B）。"},
+  {cat:"seat",  q:"商品が来なかった場合の修正方法は？", a:"会計確定前であれば、注文履歴から該当商品を修正できます。取消は履歴として残ります。"},
+  {cat:"seat",  q:"注文数を間違えた時はどうなりますか？", a:"注文履歴から修正できます。修正内容は履歴に残ります。"},
+  {cat:"sync",  q:"同期マーク❌が出た時はどうすればいいですか？", a:"電波状況や一時的な不具合により、同期できていない状態です。電波の良い場所で同期（保存）を行ってください。"},
+  {cat:"sync",  q:"電波がない場所でも使えますか？", a:"使えます。注文・会計・席操作は端末内に保存されます。ただし端末間共有は行われないため、通信環境が整っている場所での利用を推奨します。"},
+  {cat:"backup",q:"データはどこに保存されていますか？", a:"端末内に保存されます。端末の故障・紛失・不具合に備え、売上管理からメール送信（バックアップ）を行ってください。"},
+  {cat:"backup",q:"機種変更した場合はどうなりますか？", a:"端末内のデータは自動では引き継がれません。事前に保存やデータ送信を行ってください。"},
+  {cat:"other", q:"営業終了時に必ず行うことは？", a:"保存操作を行い、必要に応じて売上データをメールなどで送信してください。データ保全のために重要です。"},
+];
+
+function openFaqHome(){
+  const body = `
+    <div style="max-height:70vh; overflow:auto; padding-right:4px">
+      <div class="pill" style="margin-bottom:10px; color:var(--muted); line-height:1.7">
+        項目を選ぶと、該当するQ&Aが表示されます。
+      </div>
+      <div class="seatGrid" id="faqCatGrid"></div>
+    </div>
+  `;
+  openModal("よくある お問合せ", body, [{label:"戻る", onClick:()=> closeModal()}]);
+
+  setTimeout(()=>{
+    const grid = $("faqCatGrid");
+    grid.innerHTML = "";
+    FAQ_CATS.forEach(c=>{
+      const b = document.createElement("button");
+      b.className = "seatCard";
+      b.style.minHeight = "56px";
+      b.style.fontWeight = "900";
+      b.style.display="flex";
+      b.style.alignItems="center";
+      b.style.justifyContent="center";
+      b.textContent = c.label;
+      b.onclick = ()=> openFaqList(c.id, c.label);
+      grid.appendChild(b);
+    });
+  },0);
+}
+
+function openFaqList(catId, catLabel){
+  const list = FAQ_LIST.filter(x=> x.cat===catId);
+  const body = `
+    <div style="max-height:70vh; overflow:auto; padding-right:4px">
+      ${list.map(x=>`
+        <div class="pill" style="margin-bottom:6px; font-weight:900">Q：${x.q}</div>
+        <div class="pill" style="margin-bottom:12px; color:var(--muted); line-height:1.7">A：${x.a}</div>
+      `).join("") || `<div class="pill">まだありません</div>`}
+    </div>
+  `;
+  openModal(catLabel, body, [
+    {label:"戻る", onClick:()=> openFaqHome()},
+    {label:"閉じる", onClick:()=> closeModal()},
+  ]);
 }
 
 /* =========================================================
@@ -3448,10 +3536,10 @@ function openContact(){
   openModal(
     "お問合せ",
     `
-      <div class="pill" style="margin-bottom:10px">
+      <div class="pill" style="margin-bottom:10px; line-height:1.7">
         ONEに関するご質問・不具合のご連絡は下記よりお願いいたします。
       </div>
-      <div class="pill" style="color:var(--muted); margin-bottom:10px">
+      <div class="pill" style="color:var(--muted); margin-bottom:10px; line-height:1.7">
         ご連絡の際は<br>
         ・店舗名<br>
         ・使用端末<br>
@@ -3472,14 +3560,16 @@ function openTerms(){
   openModal(
     "利用条件・注意事項",
     `
-      <div class="pill" style="margin-bottom:10px">
-        ・データは端末内に保存されます<br>
-        ・無料版ではデータの復旧・保証は行いません<br>
-        ・営業終了時には保存を行ってください<br>
-        ・データ管理は利用者の責任で行ってください
-      </div>
-      <div class="pill" style="color:var(--muted)">
-        ※ 初回起動画面と同一内容（文言固定）
+      <div style="max-height:70vh; overflow:auto; padding-right:4px">
+        <div class="pill" style="margin-bottom:10px; line-height:1.7">
+          ・データは端末内に保存されます<br>
+          ・無料版ではデータの復旧・保証は行いません<br>
+          ・営業終了時には保存を行ってください<br>
+          ・データ管理は利用者の責任で行ってください
+        </div>
+        <div class="pill" style="color:var(--muted)">
+          ※ 初回起動画面と同一内容（文言固定）
+        </div>
       </div>
     `,
     [{label:"戻る", onClick:()=> closeModal()}]
@@ -3487,89 +3577,167 @@ function openTerms(){
 }
 
 /* =========================================================
-   E) 売上管理（scrSalesManage）※画面が無ければ作る
-   - 日別売上 / 月売上 / 年売上 への導線
+   E) 全画面化（PWA/ホーム画面に追加）案内（モーダル）
 ========================================================= */
-(function ensureSalesManageScreen(){
-  // scrSalesManage が PART1 に無い場合の保険
-  if($("scrSalesManage")) return;
-  const app = document.querySelector("main.app");
-  if(!app) return;
+function openPwaGuide(){
+  openModal(
+    "全画面化（推奨）",
+    `
+      <div style="max-height:70vh; overflow:auto; padding-right:4px; line-height:1.7">
+        <div class="pill" style="margin-bottom:10px">
+          ONEを「ホーム画面に追加」で起動すると、ブラウザの下部バー等が出ず、アプリのように全画面で使えます。
+        </div>
 
-  const sec = document.createElement("section");
-  sec.className = "screen";
-  sec.id = "scrSalesManage";
-  sec.innerHTML = `<div class="pill">売上管理</div>`;
+        <div class="pill" style="margin-bottom:10px; color:var(--muted)">
+          ■ iPhone / iPad（Safari）<br>
+          1) SafariでONEを開く<br>
+          2) 共有 →「ホーム画面に追加」<br>
+          3) 以後、ホーム画面のONEアイコンから起動
+        </div>
 
-  // 末尾に追加（showScreenで制御される前提）
-  app.appendChild(sec);
+        <div class="pill" style="color:var(--muted)">
+          ■ Android（Chrome等）<br>
+          1) ブラウザでONEを開く<br>
+          2) メニュー →「ホーム画面に追加」<br>
+          3) 以後、ホーム画面のアイコンから起動
+        </div>
+      </div>
+    `,
+    [{label:"戻る", onClick:()=> closeModal()}]
+  );
+}
 
-  // screens配列があるなら追加（PART1の実装に依存）
-  if(Array.isArray(state.screens) && !state.screens.includes("scrSalesManage")){
-    state.screens.push("scrSalesManage");
-  }
-})();
+/* =========================================================
+   F) 店舗情報（scrStoreInfo）＋ 従業員名（プルダウン母体）
+========================================================= */
+state.store = state.store || {
+  shopName:"",
+  tel:"",
+  note:"",
+  staff:[], // ["山田","佐藤"...] 追加/削除はここだけ
+};
 
-(function buildSalesManageUI(){
-  const scr = $("scrSalesManage");
+function buildStoreInfoUI(){
+  const scr = $("scrStoreInfo");
   if(!scr) return;
 
   scr.innerHTML = `
-    <div class="pill" style="margin-bottom:10px">売上管理</div>
+    <div class="pill" style="margin-bottom:10px">店舗情報</div>
 
-    <button class="btn" id="goDaySales" style="width:100%; margin-bottom:10px">日別売上</button>
-    <button class="btn" id="goMonthSales" style="width:100%; margin-bottom:10px">月売上</button>
-    <button class="btn" id="goYearSales" style="width:100%; margin-bottom:14px">年売上</button>
+    <div class="pill" style="margin-bottom:8px">店舗</div>
+    <input id="stShop" class="btn full" style="text-align:left; margin-bottom:10px" placeholder="店舗名" />
+    <input id="stTel" class="btn full" style="text-align:left; margin-bottom:10px" placeholder="電話（任意）" inputmode="tel" />
+    <input id="stNote" class="btn full" style="text-align:left; margin-bottom:14px" placeholder="メモ（任意）" />
 
-    <div class="pill" style="color:var(--muted)">
-      ※ 本日の売上はメイン画面下部の「本日の売上」から入ります
+    <div class="pill" style="margin-bottom:8px">従業員名（修正者名の候補）</div>
+
+    <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px">
+      <input id="stStaffNew" class="btn full" style="text-align:left" placeholder="追加する従業員名" />
+      <button class="btn lime" id="stStaffAdd" style="min-width:92px; font-weight:900">追加</button>
+    </div>
+
+    <div class="pill" style="color:var(--muted); margin-bottom:10px; line-height:1.7">
+      ・削除はここからのみ可能です<br>
+      ・削除しても、売上の修正履歴から名前は消えません（記録は保持）
+    </div>
+
+    <div id="stStaffList"></div>
+
+    <div style="height:14px"></div>
+    <div style="display:flex; gap:10px">
+      <button class="btn full" id="stBack">戻る</button>
+      <button class="btn lime full" id="stSave">保存</button>
     </div>
   `;
-})();
 
-/* =========================================================
-   F) バックアップ（scrBackup）※画面が無ければ作る
-   ※中身は後で実装OK（いまは導線だけ壊さない）
-========================================================= */
-(function ensureBackupScreen(){
-  if($("scrBackup")) return;
-  const app = document.querySelector("main.app");
-  if(!app) return;
+  $("stShop").value = state.store.shopName || "";
+  $("stTel").value  = state.store.tel || "";
+  $("stNote").value = state.store.note || "";
 
-  const sec = document.createElement("section");
-  sec.className = "screen";
-  sec.id = "scrBackup";
-  sec.innerHTML = `
-    <div class="pill" style="margin-bottom:10px">メールでデータ送信（バックアップ）</div>
-    <div class="pill" style="color:var(--muted); margin-bottom:10px">
-      ※ ここは次の実装で作ります（導線のみ先に確定）
-    </div>
-    <button class="btn" id="bkBack" style="width:100%">戻る</button>
-  `;
-  app.appendChild(sec);
+  $("stBack").onclick = ()=> showScreen("scrSettings");
+  $("stSave").onclick = ()=>{
+    state.store.shopName = ($("stShop").value||"").trim();
+    state.store.tel      = ($("stTel").value||"").trim();
+    state.store.note     = ($("stNote").value||"").trim();
 
-  if(Array.isArray(state.screens) && !state.screens.includes("scrBackup")){
-    state.screens.push("scrBackup");
-  }
-})();
+    // 永続化（PART7のpersistAllがあればそこがまとめて保存）
+    if(typeof persistAll==="function") persistAll();
+    toast("保存しました");
+    showScreen("scrSettings");
+  };
 
-(function hookBackupBack(){
-  // 既存の描画後にボタンが生成されるのでクリック委譲でOK
-  document.addEventListener("click",(e)=>{
-    if(e.target && e.target.id==="bkBack"){
-      showScreen("scrSettings");
+  $("stStaffAdd").onclick = ()=>{
+    const v = ($("stStaffNew").value||"").trim();
+    if(!v){ toast("名前を入力してください"); return; }
+    if(state.store.staff.includes(v)){ toast("同じ名前があります"); return; }
+    state.store.staff.push(v);
+    $("stStaffNew").value = "";
+    renderStaffList();
+    if(typeof persistAll==="function") persistAll();
+    toast("追加しました");
+  };
+
+  function renderStaffList(){
+    const box = $("stStaffList");
+    box.innerHTML = "";
+    if(!state.store.staff.length){
+      box.innerHTML = `<div class="pill">まだ登録されていません</div>`;
+      return;
     }
-  });
-})();
+
+    state.store.staff.forEach(name=>{
+      const row = document.createElement("div");
+      row.className = "kRow";
+      row.innerHTML = `
+        <div class="kLeft">
+          <div class="kName">${name}</div>
+        </div>
+        <div class="kSlide" style="gap:10px">
+          <button class="btn" data-del="${name}">削除</button>
+        </div>
+      `;
+      box.appendChild(row);
+    });
+
+    box.querySelectorAll("[data-del]").forEach(btn=>{
+      btn.onclick = ()=>{
+        const nm = btn.getAttribute("data-del");
+        openModal(
+          "削除",
+          `
+            <div class="pill" style="margin-bottom:10px; color:var(--danger)">
+              「${nm}」を削除しますか？
+            </div>
+            <div class="pill" style="color:var(--muted); margin-bottom:10px; line-height:1.7">
+              ※ 売上の修正履歴から名前は消えません（記録は保持）
+            </div>
+            <input id="stDelSlide" class="range" type="range" min="0" max="100" value="0" />
+          `,
+          [{label:"戻る", onClick:()=> closeModal()}]
+        );
+        setTimeout(()=>{
+          $("stDelSlide").onchange = ()=>{
+            if(Number($("stDelSlide").value||0) < 88){ $("stDelSlide").value=0; return; }
+            state.store.staff = state.store.staff.filter(x=> x!==nm);
+            closeModal();
+            renderStaffList();
+            if(typeof persistAll==="function") persistAll();
+            toast("削除しました");
+          };
+        },0);
+      };
+    });
+  }
+
+  renderStaffList();
+}
 
 /* =========================================================
    G) メニュー登録（scrMenu）
-   ※あなたが貼ってくれたPART8版をそのまま採用
+   ※あなたの最新PART8に近い形を維持（設定から入れるように修復）
 ========================================================= */
 (function buildMenuUI(){
   const scr = $("scrMenu");
-  if(!scr) return;
-
   scr.innerHTML = `
     <div class="pill" style="margin-bottom:10px">メニュー登録</div>
 
@@ -3578,9 +3746,9 @@ function openTerms(){
       <div class="seatCard" id="catFood" style="flex:1; min-height:56px; display:flex; align-items:center; justify-content:center; font-weight:900">料理</div>
       <div class="seatCard" id="catDrink" style="flex:1; min-height:56px; display:flex; align-items:center; justify-content:center; font-weight:900">ドリンク</div>
     </div>
-    <button class="btn primary" id="catCommit" style="width:100%; margin-bottom:10px">決定</button>
+    <button class="btn lime full" id="catCommit" style="margin-bottom:10px">決定</button>
 
-    <div class="pill" style="color:var(--muted); margin-bottom:14px">
+    <div class="pill" style="color:var(--muted); margin-bottom:14px; line-height:1.7">
       カテゴリー（料理/ドリンク）はキッチンの「料理/ドリンク」表示に反映します（注文には出しません）。
     </div>
 
@@ -3588,48 +3756,48 @@ function openTerms(){
       <div class="pill" style="margin-bottom:8px">ジャンル</div>
       <div id="genreGrid" class="seatGrid" style="margin-bottom:8px"></div>
       <div style="display:flex; gap:10px; margin-bottom:14px">
-        <button class="btn primary" id="genreDecide" style="flex:1">決定</button>
-        <button class="btn" id="genreDelete" style="flex:1">削除</button>
+        <button class="btn lime full" id="genreDecide">決定</button>
+        <button class="btn full" id="genreDelete">削除</button>
       </div>
     </div>
 
     <div id="itemArea" style="display:none">
       <div class="pill" style="margin-bottom:8px">登録</div>
 
-      <input id="itemName" class="btn" placeholder="商品名" style="width:100%; text-align:left; margin-bottom:8px" />
-      <input id="itemPrice" class="btn" placeholder="金額（数字）" inputmode="numeric" style="width:100%; text-align:left; margin-bottom:8px" />
+      <input id="itemName" class="btn full" placeholder="商品名" style="text-align:left; margin-bottom:8px" />
+      <input id="itemPrice" class="btn full" placeholder="金額（数字）" inputmode="numeric" style="text-align:left; margin-bottom:8px" />
 
       <div style="display:flex; gap:10px; margin-bottom:10px">
-        <button class="btn" id="tax8" style="flex:1">8%</button>
-        <button class="btn" id="tax10" style="flex:1">10%</button>
+        <button class="btn full" id="tax8">8%</button>
+        <button class="btn full" id="tax10">10%</button>
       </div>
 
-      <button class="btn primary" id="itemAdd" style="width:100%; margin-bottom:14px">登録</button>
+      <button class="btn lime full" id="itemAdd" style="margin-bottom:14px">登録</button>
 
       <div class="pill" style="margin-bottom:8px">作った商品</div>
       <div id="itemList"></div>
+
+      <div style="height:12px"></div>
+      <button class="btn full" id="menuBackToSettings">戻る</button>
     </div>
   `;
 })();
 
-/* ===== Menu state ===== */
 state.menu = state.menu || {
-  cat: null,
+  cat: null,             // "food" | "drink"
   genres: { food: [], drink: [] },
   selectedGenre: null,
-  tax: null,
-  items: []
+  tax: null,             // 8 or 10
+  items: []              // {id, cat, genre, name, price, tax}
 };
 
 function setCardHL(el, on){
-  if(!el) return;
   el.style.outline = on ? "2px solid rgba(122,167,255,0.9)" : "";
   el.style.background = on ? "rgba(122,167,255,0.14)" : "";
 }
 
 function renderGenres(){
   const grid = $("genreGrid");
-  if(!grid) return;
   grid.innerHTML = "";
 
   const list = state.menu.genres[state.menu.cat] || [];
@@ -3653,9 +3821,9 @@ function renderGenres(){
       if(isAdd){
         openModal(
           "ジャンル追加",
-          `<input id="newGenre" class="btn" style="width:100%; text-align:left" placeholder="ジャンル名" />`,
+          `<input id="newGenre" class="btn full" style="text-align:left" placeholder="ジャンル名" />`,
           [
-            {label:"追加", primary:true, onClick:()=>{
+            {label:"追加", lime:true, onClick:()=>{
               const v = ($("newGenre").value||"").trim();
               if(!v){ toast("ジャンル名を入力してください"); return; }
               const arr = state.menu.genres[state.menu.cat];
@@ -3666,6 +3834,7 @@ function renderGenres(){
 
               closeModal();
               renderGenres();
+              if(typeof persistAll==="function") persistAll();
             }},
             {label:"戻る", onClick:()=> closeModal()},
           ]
@@ -3683,7 +3852,6 @@ function renderGenres(){
 
 function renderItems(){
   const box = $("itemList");
-  if(!box) return;
   box.innerHTML = "";
 
   const list = state.menu.items.filter(it=> it.cat===state.menu.cat && it.genre===state.menu.selectedGenre);
@@ -3721,19 +3889,19 @@ function renderItems(){
           <div class="pill" style="margin-bottom:8px">${it.genre}</div>
 
           <div style="margin-bottom:6px">商品名</div>
-          <input id="eName" class="btn" style="width:100%; text-align:left" value="${it.name}" />
+          <input id="eName" class="btn full" style="text-align:left" value="${it.name}" />
 
           <div style="margin-top:10px;margin-bottom:6px">金額</div>
-          <input id="ePrice" class="btn" style="width:100%; text-align:left" inputmode="numeric" value="${it.price}" />
+          <input id="ePrice" class="btn full" style="text-align:left" inputmode="numeric" value="${it.price}" />
 
           <div style="margin-top:10px;margin-bottom:6px">税率</div>
           <div style="display:flex; gap:10px">
-            <button class="btn" id="e8" style="flex:1">8%</button>
-            <button class="btn" id="e10" style="flex:1">10%</button>
+            <button class="btn full" id="e8">8%</button>
+            <button class="btn full" id="e10">10%</button>
           </div>
         `,
         [
-          {label:"保存", primary:true, onClick:()=>{
+          {label:"保存", lime:true, onClick:()=>{
             const nm = ($("eName").value||"").trim();
             const pr = Number(($("ePrice").value||"").trim());
             if(!nm || !Number.isFinite(pr) || pr<=0 || !(it.tax===8 || it.tax===10)){
@@ -3744,6 +3912,7 @@ function renderItems(){
             it.price = pr;
             closeModal();
             renderItems();
+            if(typeof persistAll==="function") persistAll();
             toast("更新しました");
           }},
           {label:"戻る", onClick:()=> closeModal()},
@@ -3753,8 +3922,8 @@ function renderItems(){
       setTimeout(()=>{
         const h = (v)=>{
           it.tax = v;
-          $("e8").classList.toggle("primary", v===8);
-          $("e10").classList.toggle("primary", v===10);
+          $("e8").classList.toggle("lime", v===8);
+          $("e10").classList.toggle("lime", v===10);
         };
         $("e8").onclick = ()=> h(8);
         $("e10").onclick = ()=> h(10);
@@ -3764,7 +3933,7 @@ function renderItems(){
   });
 }
 
-/* ===== Menu interactions ===== */
+/* メニュー操作 */
 (function hookMenu(){
   const food = $("catFood");
   const drink = $("catDrink");
@@ -3775,8 +3944,8 @@ function renderItems(){
     setCardHL(drink, cat==="drink");
   }
 
-  if(food) food.onclick = ()=> pickCat("food");
-  if(drink) drink.onclick = ()=> pickCat("drink");
+  food.onclick = ()=> pickCat("food");
+  drink.onclick = ()=> pickCat("drink");
 
   $("catCommit").onclick = ()=>{
     if(!state.menu.cat){ toast("カテゴリーを選択してください"); return; }
@@ -3794,7 +3963,7 @@ function renderItems(){
       "ジャンル内の商品が削除されます",
       [
         {label:"戻る", onClick:()=> closeModal()},
-        {label:"削除スライドへ", primary:true, onClick:()=>{
+        {label:"削除（スライド）", lime:true, onClick:()=>{
           closeModal();
           openModal(
             "削除",
@@ -3802,7 +3971,7 @@ function renderItems(){
               <div class="pill" style="margin-bottom:10px; color:var(--danger)">
                 ジャンル「${g}」とジャンル内商品を削除します
               </div>
-              <input id="gDelSlide" class="kRange" type="range" min="0" max="100" value="0" />
+              <input id="gDelSlide" class="range" type="range" min="0" max="100" value="0" />
             `,
             [{label:"戻る", onClick:()=> closeModal()}]
           );
@@ -3816,6 +3985,7 @@ function renderItems(){
               closeModal();
               renderGenres();
               $("itemArea").style.display = "none";
+              if(typeof persistAll==="function") persistAll();
               toast("削除しました");
             };
           },0);
@@ -3831,8 +4001,8 @@ function renderItems(){
 
     const setTax = (v)=>{
       state.menu.tax = v;
-      $("tax8").classList.toggle("primary", v===8);
-      $("tax10").classList.toggle("primary", v===10);
+      $("tax8").classList.toggle("lime", v===8);
+      $("tax10").classList.toggle("lime", v===10);
     };
     $("tax8").onclick = ()=> setTax(8);
     $("tax10").onclick = ()=> setTax(10);
@@ -3865,57 +4035,73 @@ function renderItems(){
     $("itemPrice").value = "";
 
     renderItems();
+    if(typeof persistAll==="function") persistAll();
     toast("登録しました");
   };
+
+  $("menuBackToSettings").onclick = ()=> showScreen("scrSettings");
 })();
 
 /* =========================================================
-   H) 設定ボタン内導線（クリック）
+   H) レシピ提案（scrRecipe） ※無料版は導線だけでもOK
 ========================================================= */
-(function hookSettingsButtons(){
-  // 既にDOMがある前提なので直でOK
-  const safe = (id, fn)=>{
-    const el = $(id);
-    if(el) el.onclick = fn;
-  };
+(function buildRecipeUI(){
+  const scr = $("scrRecipe");
+  if(!scr) return;
 
-  safe("goHelp", ()=> openHelp());
-  safe("goContact", ()=> openContact());
-  safe("goTerms", ()=> openTerms());
+  scr.innerHTML = `
+    <div class="pill" style="margin-bottom:10px">レシピ提案</div>
+    <div class="pill" style="color:var(--muted); line-height:1.7; margin-bottom:14px">
+      無料版では「レシピ提案」は案内のみです。<br>
+      有料版で「店舗の食材から毎日3品提案」などが利用できます。
+    </div>
+    <button class="btn full" id="recipeBack">戻る</button>
+  `;
 
-  safe("goSalesManage", ()=> showScreen("scrSalesManage"));
-  safe("goBackup", ()=> showScreen("scrBackup"));
-
-  safe("goDaySales", ()=> showScreen("scrSales"));   // PART4側で日別に切替える実装に合わせるなら後で調整
-  safe("goMonthSales", ()=> showScreen("scrSales"));
-  safe("goYearSales", ()=> showScreen("scrSales"));
+  $("recipeBack").onclick = ()=> showScreen("scrSettings");
 })();
 
-/* ===== showScreen拡張（設定・メニューの初期化） ===== */
+/* =========================================================
+   I) 設定ボタン導線（修復）
+========================================================= */
+$("goSeatSetupBtn").onclick = ()=> showScreen("scrSeatSetup");
+$("goMenuBtn").onclick      = ()=> showScreen("scrMenu");
+$("goStoreBtn").onclick     = ()=> { buildStoreInfoUI(); showScreen("scrStoreInfo"); };
+$("goSalesManageBtn").onclick = ()=> { showScreen("scrSales"); if(typeof renderSales==="function") renderSales(); };
+$("goFaqBtn").onclick       = ()=> openFaqHome();
+$("goContactBtn").onclick   = ()=> openContact();
+$("goRecipeBtn").onclick    = ()=> showScreen("scrRecipe");
+$("goTermsBtn").onclick     = ()=> openTerms();
+$("goPwaBtn").onclick       = ()=> openPwaGuide();
+
+/* ===== showScreen拡張（設定・メニュー・店舗情報 初期化） ===== */
 (function hookShowScreenPart8(){
   if(showScreen._p8Hooked) return;
   const _show = showScreen;
-
   showScreen = function(id){
     _show(id);
 
     if(id==="scrMenu"){
       state.menu.cat = null;
       state.menu.selectedGenre = null;
-      if($("genreArea")) $("genreArea").style.display = "none";
-      if($("itemArea")) $("itemArea").style.display = "none";
+      $("genreArea").style.display = "none";
+      $("itemArea").style.display = "none";
       setCardHL($("catFood"), false);
       setCardHL($("catDrink"), false);
     }
-  };
 
+    if(id==="scrStoreInfo"){
+      buildStoreInfoUI();
+    }
+  };
   showScreen._p8Hooked = true;
 })();
 
-/* ===== 起動直後 ===== */
+/* ===== 起動直後：必要なら初回画面 ===== */
 (function openFirst(){
+  // 初期はメインへ（PART1が先に呼んでいても問題なし）
   showScreen("scrMain");
-  if(typeof renderSeatsWithHighlight === "function") renderSeatsWithHighlight();
+  if(typeof renderSeats==="function") renderSeats();
 })();
 
 /* =========================
