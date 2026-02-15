@@ -178,8 +178,8 @@
       border-color:transparent;
     }
     .btn.full{ width:100%; }
-    
-    /* iOSの自動ズーム対策：入力系だけ16px固定 */
+
+/* iOSの自動ズーム対策：入力系だけ16px固定 */
 input.btn, select.btn, textarea.btn{
   font-size:16px;
 }
@@ -1466,6 +1466,343 @@ onSeatTap = function(seatId){
     }
   };
   showScreen._orderHookedV3 = true;
+})();
+
+
+/* =========================================================
+   8) 席移動（復活）：移動/合流トグル＋席セレクター＋スライド確定
+   - ここだけ追加：注文/席タップ動線は壊さない
+   - PART1の openMoveHome() をここで上書きして復活
+========================================================= */
+(function reviveSeatMove_v1(){
+  if(reviveSeatMove_v1._done) return;
+  reviveSeatMove_v1._done = true;
+
+  function allSeatsArray(){
+    const s = state.seats;
+    if(!s) return [];
+    if(Array.isArray(s)) return s.slice();
+    try{ return Object.values(s); }catch(e){ return []; }
+  }
+
+  function safeSeatId(seat){
+    return (seat && (seat.id || seat.seatId || "")) + "";
+  }
+
+  function seatSortKey(id){
+    // A1, A2, B1... / 数字だけは数値順
+    const t = String(id||"").trim();
+    const m = t.match(/^([A-Za-z]+)?\s*0*([0-9]+)?$/);
+    if(m){
+      const a = (m[1]||"").toUpperCase();
+      const n = m[2] ? Number(m[2]) : -1;
+      return `${a.padEnd(4,"~")}_${String(n).padStart(6,"0")}_${t}`;
+    }
+    return `~~~~_${t}`;
+  }
+
+  function pickSeatGridHtml(seats, selectedId, dataKey){
+    // seatGrid/seatCard を流用（キーボード無し）
+    const cards = seats.map(seat=>{
+      const id = safeSeatId(seat);
+      const sel = (id===selectedId);
+      const label = id || "(?)";
+      const st = seat.status || "empty";
+      const badge =
+        st==="empty" ? `<div style="opacity:.75">空席</div>` :
+        st==="reserve" ? `<div style="opacity:.85">予約</div>` :
+        seat.merged ? `<div style="opacity:.85">合流</div>` :
+        `<div style="opacity:.85">来店</div>`;
+
+      return `
+        <div class="seatCard" data-${dataKey}="${id}"
+             style="min-height:68px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; font-weight:900;
+                    ${sel ? "outline:2px solid rgba(120,255,140,.9); background:rgba(120,255,140,.12);" : ""}">
+          <div style="font-size:18px">${label}</div>
+          <div style="font-weight:900; font-size:12px">${badge}</div>
+        </div>
+      `;
+    }).join("");
+
+    return `<div class="seatGrid">${cards}</div>`;
+  }
+
+  function cloneSeatPayload(seat){
+    // 「移動」用：中身を丸ごと移す（id以外）
+    return {
+      status: seat.status || "empty",
+      people: Number(seat.people||0),
+      name: seat.name || "",
+      bills: Number(seat.bills||0),
+      total: Number(seat.total||0),
+      orders: Array.isArray(seat.orders) ? JSON.parse(JSON.stringify(seat.orders)) : [],
+      orderLog: Array.isArray(seat.orderLog) ? JSON.parse(JSON.stringify(seat.orderLog)) : [],
+      reserve: seat.reserve ? JSON.parse(JSON.stringify(seat.reserve)) : null,
+      merged: !!seat.merged,
+      mergeLabel: seat.mergeLabel || "",
+      sub: seat.sub ? JSON.parse(JSON.stringify(seat.sub)) : null,
+    };
+  }
+
+  function resetSeatToEmpty(seat){
+    seat.status="empty";
+    seat.people=0;
+    seat.name="";
+    seat.bills=0;
+    seat.total=0;
+    seat.orders=[];
+    seat.orderLog=[];
+    seat.reserve=null;
+    seat.merged=false;
+    seat.mergeLabel="";
+    seat.sub=null;
+  }
+
+  function ensureMergedContainer(target){
+    // target を合流コンテナ化（既に merged ならそのまま）
+    if(target.merged){
+      target.sub = target.sub || {};
+      return;
+    }
+    const keep = cloneSeatPayload(target);
+    target.merged = true;
+    target.mergeLabel = target.mergeLabel || (target.id || "");
+    target.sub = target.sub || {};
+
+    // target自身を sub に入れる（元の注文を失わないため）
+    const selfId = (target.id || "");
+    target.sub[selfId] = target.sub[selfId] || { seatId: selfId, orders: [], orderLog: [], total: 0 };
+
+    // 元のデータを self に入れる
+    target.sub[selfId].orders = keep.orders || [];
+    target.sub[selfId].orderLog = keep.orderLog || [];
+    target.sub[selfId].total = calcOrdersTotal(keep.orders || []);
+    target.total = calcSeatTotal(target);
+  }
+
+  function moveSeat(fromSeat, toSeat){
+    const payload = cloneSeatPayload(fromSeat);
+    // toは空席のみ許可（事故防止）
+    if((toSeat.status||"empty")!=="empty"){
+      toast("移動先は空席だけにしてください");
+      return false;
+    }
+
+    // toへ移す（idは維持）
+    toSeat.status = payload.status;
+    toSeat.people = payload.people;
+    toSeat.name = payload.name;
+    toSeat.bills = payload.bills;
+    toSeat.total = payload.total;
+    toSeat.orders = payload.orders || [];
+    toSeat.orderLog = payload.orderLog || [];
+    toSeat.reserve = payload.reserve;
+    toSeat.merged = !!payload.merged;
+    toSeat.mergeLabel = payload.mergeLabel || "";
+    toSeat.sub = payload.sub;
+
+    // from を空席へ
+    resetSeatToEmpty(fromSeat);
+
+    return true;
+  }
+
+  function mergeSeat(fromSeat, toSeat){
+    // from は「来店」だけ（予約/空席/合流は事故るので禁止）
+    if((fromSeat.status||"empty")!=="in"){
+      toast("合流元は「来店中」の席だけにしてください");
+      return false;
+    }
+    if(fromSeat.merged){
+      toast("合流元が合流席は未対応（まず分離してから）");
+      return false;
+    }
+
+    // to は「来店」or「合流」だけ（空席/予約は禁止）
+    if((toSeat.status||"empty")==="empty" || (toSeat.status||"empty")==="reserve"){
+      toast("合流先は「来店中」か「合流席」を選んでください");
+      return false;
+    }
+
+    ensureMergedContainer(toSeat);
+
+    // fromをsubへ追加
+    const fromId = fromSeat.id || "";
+    toSeat.sub = toSeat.sub || {};
+    toSeat.sub[fromId] = toSeat.sub[fromId] || { seatId: fromId, orders: [], orderLog: [], total: 0 };
+    toSeat.sub[fromId].orders = Array.isArray(fromSeat.orders) ? JSON.parse(JSON.stringify(fromSeat.orders)) : [];
+    toSeat.sub[fromId].orderLog = Array.isArray(fromSeat.orderLog) ? JSON.parse(JSON.stringify(fromSeat.orderLog)) : [];
+    toSeat.sub[fromId].total = calcOrdersTotal(toSeat.sub[fromId].orders || []);
+
+    // to の合計更新
+    toSeat.total = calcSeatTotal(toSeat);
+
+    // from を空席へ
+    resetSeatToEmpty(fromSeat);
+
+    return true;
+  }
+
+  // ====== ここがポイント：PART1のopenMoveHomeを上書きして復活 ======
+  window.openMoveHome = function openMoveHome(){
+    const seats = allSeatsArray()
+      .filter(s=> !!safeSeatId(s))
+      .sort((a,b)=> seatSortKey(safeSeatId(a)).localeCompare(seatSortKey(safeSeatId(b))));
+
+    if(seats.length===0){
+      toast("席がありません（席登録を先に）");
+      return;
+    }
+
+    let mode = "move"; // move | merge
+    let fromId = "";
+    let toId = "";
+
+    function renderBody(){
+      const fromList = seats.filter(s=>{
+        const st = s.status || "empty";
+        if(mode==="move"){
+          // 移動：来店/予約/合流も含めて「空席以外」を移動元に出す（必要なら）
+          return st !== "empty";
+        }
+        // 合流：来店中のみ
+        return st === "in" && !s.merged;
+      });
+
+      const toList = seats.filter(s=>{
+        const st = s.status || "empty";
+        if(mode==="move"){
+          // 移動先：空席だけ
+          return st === "empty";
+        }
+        // 合流先：来店 or 合流
+        return st === "in" || !!s.merged;
+      });
+
+      const modeBtns = `
+        <div style="display:flex; gap:10px; margin-bottom:12px">
+          <button class="btn ${mode==="move"?"lime":""}" id="mvModeMove" style="flex:1; font-weight:900">移動</button>
+          <button class="btn ${mode==="merge"?"lime":""}" id="mvModeMerge" style="flex:1; font-weight:900">合流</button>
+        </div>
+      `;
+
+      const fromHtml = `
+        <div style="font-weight:900; margin-bottom:8px">どこから</div>
+        ${pickSeatGridHtml(fromList, fromId, "mvfrom")}
+      `;
+
+      const toHtml = `
+        <div style="height:12px"></div>
+        <div style="font-weight:900; margin-bottom:8px">どこへ</div>
+        ${pickSeatGridHtml(toList, toId, "mvto")}
+      `;
+
+      const hint = `
+        <div style="height:12px"></div>
+        <div style="opacity:.85">
+          ${mode==="move"
+            ? "※ 移動：移動先は空席のみ（事故防止）"
+            : "※ 合流：合流元は来店中のみ／合流先は来店中 or 合流席"}
+        </div>
+        <div style="height:10px"></div>
+        <div style="color:var(--danger); font-weight:900; margin-bottom:8px">スライドで確定</div>
+        <input id="mvSlide" class="range" type="range" min="0" max="100" value="0" />
+      `;
+
+      return modeBtns + fromHtml + toHtml + hint;
+    }
+
+    openModal(
+      "席移動",
+      `<div id="mvWrap">${renderBody()}</div>`,
+      [
+        {label:"戻る", lime:false, onClick:()=> closeModal()},
+      ]
+    );
+
+    function wire(){
+      const wrap = $("mvWrap");
+
+      const rerender = ()=>{
+        if(!wrap) return;
+        wrap.innerHTML = renderBody();
+        wire(); // 付け直し
+      };
+
+      // mode
+      const bm = $("mvModeMove");
+      const bg = $("mvModeMerge");
+      if(bm) bm.onclick = ()=>{ mode="move"; fromId=""; toId=""; rerender(); };
+      if(bg) bg.onclick = ()=>{ mode="merge"; fromId=""; toId=""; rerender(); };
+
+      // select from
+      wrap.querySelectorAll("[data-mvfrom]").forEach(el=>{
+        el.onclick = ()=>{
+          fromId = el.getAttribute("data-mvfrom") || "";
+          // 同じの選ばせない
+          if(toId === fromId) toId = "";
+          rerender();
+        };
+      });
+
+      // select to
+      wrap.querySelectorAll("[data-mvto]").forEach(el=>{
+        el.onclick = ()=>{
+          toId = el.getAttribute("data-mvto") || "";
+          if(fromId === toId) return;
+          rerender();
+        };
+      });
+
+      // slide confirm
+      const sl = $("mvSlide");
+      if(sl){
+        sl.onchange = ()=>{
+          const v = Number(sl.value||0);
+          if(v < 88){ sl.value = 0; return; }
+
+          if(!fromId || !toId){
+            toast("「どこから」「どこへ」を選んでください");
+            sl.value = 0;
+            return;
+          }
+          if(fromId === toId){
+            toast("同じ席は選べません");
+            sl.value = 0;
+            return;
+          }
+
+          const fromSeat = seatById(fromId);
+          const toSeat = seatById(toId);
+          if(!fromSeat || !toSeat){
+            toast("席が見つかりません");
+            sl.value = 0;
+            return;
+          }
+
+          let ok = false;
+          if(mode==="move"){
+            ok = moveSeat(fromSeat, toSeat);
+            if(ok && typeof emitEvent==="function") emitEvent("seat_move", {from: fromId, to: toId});
+          }else{
+            ok = mergeSeat(fromSeat, toSeat);
+            if(ok && typeof emitEvent==="function") emitEvent("seat_merge", {from: fromId, to: toId});
+          }
+
+          if(!ok){
+            sl.value = 0;
+            return;
+          }
+
+          closeModal();
+          renderSeats();
+          toast(mode==="move" ? "移動しました" : "合流しました");
+        };
+      }
+    }
+
+    setTimeout(wire, 0);
+  };
 })();
 
 
