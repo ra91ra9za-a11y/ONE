@@ -515,6 +515,15 @@
   <div class="toast" id="toast"></div>
 
   <script>
+  
+// ===== iPhone用：JSエラーをアラートで出す（最優先デバッグ）=====
+window.onerror = function(msg, src, line, col, err){
+  alert("JSエラー:\n" + msg + "\n" + (src||"") + "\n" + line + ":" + col);
+};
+window.onunhandledrejection = function(e){
+  const r = e && e.reason;
+  alert("Promiseエラー:\n" + (r?.message || r || "unknown"));
+};
     /* =========================
       Common / State (PART1)
     ========================= */
