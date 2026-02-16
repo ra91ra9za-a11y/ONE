@@ -801,14 +801,34 @@ input.btn, select.btn, textarea.btn{
 /* =========================================================
    0) 軽いズーム抑止（ダブルタップ）
 ========================================================= */
+/* =========================================================
+   0) 軽いズーム抑止（ダブルタップ）
+   ※重要：input/textarea/select 等は絶対に潰さない（iOSでフォーカスが弾かれる原因）
+========================================================= */
 (function preventDoubleTapZoom(){
   if(preventDoubleTapZoom._done) return;
   preventDoubleTapZoom._done = true;
 
   let lastTouchEnd = 0;
+
   document.addEventListener("touchend", function(e){
+    const t = e.target;
+
+    // 入力・選択・編集・ボタン類は除外（ここが効く）
+    if(t && (t.closest && t.closest("input,textarea,select,button,[contenteditable='true'],label"))) {
+      lastTouchEnd = Date.now();
+      return;
+    }
+
+    // モーダル内も除外（入力以外でも誤爆しやすいので）
+    if(t && (t.closest && t.closest("#modal, .modal, .modalCard"))) {
+      lastTouchEnd = Date.now();
+      return;
+    }
+
     const now = Date.now();
     if(now - lastTouchEnd <= 300){
+      // ここで preventDefault するのは「入力以外」だけ
       e.preventDefault();
     }
     lastTouchEnd = now;
