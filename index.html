@@ -811,15 +811,14 @@ input.btn, select.btn, textarea.btn{
   document.addEventListener("touchend", function(e){
     const t = e.target;
 
-    // 入力系・ボタン・contenteditable・モーダル内は完全除外（ここが超重要）
-    if(
-      t &&
-      t.closest &&
-      (
-        t.closest("input,textarea,select,button,[contenteditable='true'],label") ||
-        t.closest("#modal,.modal,.modalCard")
-      )
-    ){
+    // 入力系は絶対に邪魔しない
+    if(t && t.closest && t.closest("input, textarea, select, button, [contenteditable='true'], label")){
+      lastTouchEnd = Date.now();
+      return;
+    }
+
+    // モーダル/ダイアログ/シート系は絶対に邪魔しない（←ここが肝）
+    if(t && t.closest && t.closest("#modal, .modal, .modalCard, .sheet, .dialog, .overlay, .modalMask, [role='dialog']")){
       lastTouchEnd = Date.now();
       return;
     }
@@ -829,6 +828,7 @@ input.btn, select.btn, textarea.btn{
       e.preventDefault();
     }
     lastTouchEnd = now;
+
   }, {passive:false});
 })();
 
