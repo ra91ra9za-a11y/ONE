@@ -2986,11 +2986,16 @@ try{ renderFix(); }catch(e){}
   ここから先は PART6 で続く
 ========================= */
 /* =========================
-  PART6：席登録（最新仕様）
+  PART6：席登録（最新仕様：②を触ったら即確定）
   - 「その他」削除
   - 「名称の作成」ボタン → 名称作成画面（キーボード）
   - 「名称と席の削除」ボタン → 削除画面（名称削除 / 席削除）
-  - 画面遷移：席登録 ⇄ 名称作成 ⇄ 名称と席の削除
+  - ルール：
+      ① 名称：タップで選択/解除（光る）→ その瞬間に確定扱い
+      ② 総席数：◀︎▶︎で変えた瞬間に確定扱い（決定ボタン不要）
+      ③ 席番号：入力/変更した瞬間に「作成予定の席」を自動生成して表示
+      作成予定の席：タップで編集（キーボードOK）
+      保存：作成予定の席を確定して作成
 ========================= */
 
 (function ensureSeatSetupSubScreens(){
@@ -3022,12 +3027,11 @@ try{ renderFix(); }catch(e){}
       <button class="btn" id="goNameDelete" style="flex:1; font-weight:900">名称と席の削除</button>
     </div>
 
-    <!-- ① 名称 -->
-    <div style="font-weight:900; margin-bottom:8px">① 名称</div>
-    <div id="ssNameGrid" class="seatGrid" style="margin-bottom:8px"></div>
-    <button class="btn lime full" id="ssNameCommit" style="margin-bottom:14px">決定</button>
+    <!-- ① 名称（タップで選択/解除＝確定扱い） -->
+    <div style="font-weight:900; margin-bottom:8px">① 名称（タップで選択 / 解除）</div>
+    <div id="ssNameGrid" class="seatGrid" style="margin-bottom:14px"></div>
 
-    <!-- ② 総席数／総卓数 -->
+    <!-- ② 総席数／総卓数（触った瞬間に確定扱い） -->
     <div style="font-weight:900; margin-bottom:8px">② 総席数 / 総卓数</div>
     <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px">
       <button class="btn" id="ssCntMinus">◀︎</button>
@@ -3037,8 +3041,12 @@ try{ renderFix(); }catch(e){}
 
     <!-- ③ 席番号 -->
     <div style="font-weight:900; margin-bottom:8px">③ 席番号（自動で次が入ります）</div>
-    <input class="btn full" id="ssStartLabel" placeholder="開始文字（例：A / 1 / あ / ア）" style="text-align:left; margin-bottom:6px" />
-    <div style="opacity:.85; margin-bottom:14px">入力が1文字のみの場合は自動で連番になります</div>
+    <input class="btn full" id="ssStartLabel" placeholder="開始文字（例：A / 1 / あ / ア / A1）" style="text-align:left; margin-bottom:6px" />
+    <div style="opacity:.85; margin-bottom:10px">入力が1文字のみの場合は自動で連番になります</div>
+
+    <!-- 作成予定の席（③の下に自動表示） -->
+    <div style="font-weight:900; margin-bottom:8px">作成予定の席（タップで編集）</div>
+    <div id="ssPreviewGrid" class="seatGrid" style="margin-bottom:14px"></div>
 
     <!-- ⑤ 保存 -->
     <button class="btn lime full" id="ssSave" style="padding:14px 12px; font-weight:900; margin-bottom:14px">保存</button>
@@ -3051,22 +3059,25 @@ try{ renderFix(); }catch(e){}
 
 /* ===== State ===== */
 state.seatSetup = state.seatSetup || {
-  // 「その他」削除済み
   baseNames: ["カウンター","テーブル","座敷","個室","立ち"],
   customNames: [],
-  selectedName: null,
-  committedName: null,
+  selectedName: null,      // いま選択中（タップ状態）
+  committedName: null,     // 確定扱い（この仕様では selectedName と同義でOK）
   count: 0,
-  groups: [] // {name, seatIds:[]}
+  preview: [],             // 作成予定の席（文字列配列）
+  editMap: {},             // {index: "編集後の席番号"}
+  groups: []               // {name, seatIds:[]}
 };
 
 function allNameButtons(){
   return state.seatSetup.baseNames.concat(state.seatSetup.customNames);
 }
 
+/* ===== ① 名称 ===== */
 function renderNameGrid(){
   const grid = $("ssNameGrid");
   grid.innerHTML = "";
+
   allNameButtons().forEach(n=>{
     const b = document.createElement("div");
     b.className = "seatCard in";
@@ -3084,8 +3095,18 @@ function renderNameGrid(){
     }
 
     b.onclick = ()=>{
+      // タップで選択/解除
       state.seatSetup.selectedName = (state.seatSetup.selectedName===n) ? null : n;
+      state.seatSetup.committedName = state.seatSetup.selectedName; // 決定ボタンなしのため同期
+
+      // 名称に応じてデフォルト席数も即適用（解除なら触らない）
+      if(state.seatSetup.committedName){
+        applyDefaultCountByName(state.seatSetup.committedName);
+      }
+
+      // プレビューは常に更新（②や③だけ触っても見える）
       renderNameGrid();
+      renderSeatPreview();
     };
 
     grid.appendChild(b);
@@ -3093,33 +3114,48 @@ function renderNameGrid(){
 }
 
 function applyDefaultCountByName(name){
+  // ここはあなたの運用で調整OK
   if(name==="テーブル" || name==="座敷" || name==="個室"){
-    state.seatSetup.count = 4;
+    state.seatSetup.count = Math.max(1, Number(state.seatSetup.count||0) || 4);
   }else{
-    state.seatSetup.count = 1;
+    state.seatSetup.count = Math.max(1, Number(state.seatSetup.count||0) || 1);
   }
   $("ssCntVal").textContent = String(state.seatSetup.count);
 }
 
-$("ssNameCommit").onclick = ()=>{
-  const pick = state.seatSetup.selectedName;
-  if(!pick){ toast("名称を選択してください"); return; }
-  state.seatSetup.committedName = pick;
-  applyDefaultCountByName(pick);
-  toast(`名称：${pick}`);
-};
+/* ===== ② 総席数 ===== */
+function clampCount(n){
+  n = Number(n||0);
+  if(!Number.isFinite(n)) n = 0;
+  return Math.max(0, Math.min(200, n)); // 上限は安全のため（必要なら変更）
+}
 
 $("ssCntMinus").onclick = ()=>{
-  state.seatSetup.count = Math.max(0, state.seatSetup.count - 1);
+  state.seatSetup.count = clampCount(state.seatSetup.count - 1);
   $("ssCntVal").textContent = String(state.seatSetup.count);
+  renderSeatPreview(); // ★②を触った瞬間に確定→即プレビュー
 };
 $("ssCntPlus").onclick = ()=>{
-  state.seatSetup.count = state.seatSetup.count + 1;
+  state.seatSetup.count = clampCount(state.seatSetup.count + 1);
   $("ssCntVal").textContent = String(state.seatSetup.count);
+  renderSeatPreview(); // ★②を触った瞬間に確定→即プレビュー
 };
 
-/* 連番 */
+/* ===== ③ 開始文字（入力した瞬間にプレビュー更新） ===== */
+(function hookStartLabelInput(){
+  const el = $("ssStartLabel");
+  if(!el || el._hooked) return;
+  el._hooked = true;
+
+  el.addEventListener("input", ()=>{
+    // 編集マップは残す（運用として自然）
+    renderSeatPreview();
+  });
+})();
+
+/* ===== 連番（強化版） ===== */
 function isSingleChar(str){ return (str||"").length===1; }
+
 function nextLabelOneChar(ch){
   if(ch>="0" && ch<="9"){ const n=Number(ch); if(Number.isFinite(n)) return String(n+1); }
   if(ch>="a" && ch<="z"){ return ch==="z" ? "a" : String.fromCharCode(ch.charCodeAt(0)+1); }
@@ -3133,24 +3169,128 @@ function nextLabelOneChar(ch){
   if(ka!==-1) return kata[(ka+1)%kata.length];
   return null;
 }
-function buildSeatIds(start, count){
-  const ids = [];
-  const s=(start||"").trim();
-  if(!s || count<=0) return ids;
 
+// 例：A1 → A2 → A3 …（末尾数字をインクリメント）
+function incTrailingNumber(str){
+  const m = String(str||"").match(/^(.*?)(\d+)$/);
+  if(!m) return null;
+  const pre = m[1];
+  const num = m[2];
+  const width = num.length;
+  const n = Number(num);
+  if(!Number.isFinite(n)) return null;
+  const nn = String(n+1).padStart(width, "0");
+  return pre + nn;
+}
+
+function buildSeatIdsSmart(start, count){
+  const ids = [];
+  const s = (start||"").trim();
+  const c = Math.max(0, Number(count||0));
+  if(!s || c<=0) return ids;
+
+  // 1文字 → 従来の連番
   if(isSingleChar(s)){
-    let cur=s;
-    for(let i=0;i<count;i++){
+    let cur = s;
+    for(let i=0;i<c;i++){
       ids.push(cur);
       const nx = nextLabelOneChar(cur);
-      if(!nx) break;
-      cur = nx;
+      if(!nx && i < c-1){
+        // 次が作れない場合はそこで止める（壊さない）
+        break;
+      }
+      cur = nx || cur;
     }
     return ids;
-  }else{
-    return [s]; // 1文字じゃない場合は1席のみ
   }
+
+  // 末尾が数字 → A1 / VIP01 などを連番
+  const inc = incTrailingNumber(s);
+  if(inc){
+    let cur = s;
+    for(let i=0;i<c;i++){
+      ids.push(cur);
+      const nx = incTrailingNumber(cur);
+      if(!nx && i < c-1) break;
+      cur = nx || cur;
+    }
+    return ids;
+  }
+
+  // それ以外（2文字以上で数字なし）
+  // → “同じ文字”で c個並べて、タップ編集で最終決定する運用にする
+  for(let i=0;i<c;i++) ids.push(s);
+  return ids;
 }
+
+/* ===== 作成予定席（プレビュー） ===== */
+function renderSeatPreview(){
+  const grid = $("ssPreviewGrid");
+  if(!grid) return;
+
+  const cnt = clampCount(state.seatSetup.count);
+  const start = ($("ssStartLabel").value||"").trim();
+
+  const base = buildSeatIdsSmart(start, cnt);
+
+  // editMap反映（タップ編集した席は上書き）
+  const preview = base.map((v, idx)=>{
+    const over = state.seatSetup.editMap?.[idx];
+    const ov = (over==null) ? "" : String(over).trim();
+    return ov ? ov : v;
+  });
+
+  state.seatSetup.preview = preview;
+
+  grid.innerHTML = "";
+
+  if(cnt<=0){
+    grid.innerHTML = `<div style="opacity:.85">②で席数を決めると、ここに席が出ます</div>`;
+    return;
+  }
+  if(!start){
+    grid.innerHTML = `<div style="opacity:.85">③に開始文字を入れると、ここに席が出ます</div>`;
+    return;
+  }
+  if(preview.length===0){
+    grid.innerHTML = `<div style="opacity:.85">作成予定の席を生成できません</div>`;
+    return;
+  }
+
+  preview.forEach((label, idx)=>{
+    const c = document.createElement("div");
+    c.className = "seatCard in";
+    c.style.minHeight="56px";
+    c.style.display="flex";
+    c.style.alignItems="center";
+    c.style.justifyContent="center";
+    c.style.fontWeight="900";
+    c.textContent = label || "—";
+
+    c.onclick = ()=>{
+      openModal(
+        "席番号を編集",
+        `
+          <div style="opacity:.85; margin-bottom:10px">席番号を入力してください</div>
+          <input id="ssEditSeat" class="btn full" style="text-align:left" value="${label||""}" autocomplete="off" />
+        `,
+        [
+          {label:"戻る", lime:false, onClick:()=> closeModal()},
+          {label:"保存", lime:true, onClick:()=>{
+            const v = ($("ssEditSeat").value||"").trim();
+            state.seatSetup.editMap[idx] = v;
+            closeModal();
+            renderSeatPreview();
+          }},
+        ]
+      );
+    };
+
+    grid.appendChild(c);
+  });
+}
+
+/* ===== 席生成/保存 ===== */
 function ensureSeatExists(id){
   if(state.seats.some(s=> s.id===id)) return;
   state.seats.push({
@@ -3170,17 +3310,39 @@ function ensureSeatExists(id){
 
 $("ssSave").onclick = ()=>{
   const name = state.seatSetup.committedName;
-  const cnt = Number(state.seatSetup.count||0);
+  const cnt = clampCount(state.seatSetup.count);
   const start = ($("ssStartLabel").value||"").trim();
 
-  if(!name){ toast("名称を決定してください"); return; }
+  if(!name){ toast("名称を選択してください"); return; }
   if(cnt<=0){ toast("総席/総卓数を入力してください"); return; }
   if(!start){ toast("開始文字を入力してください"); return; }
 
-  const seatIds = buildSeatIds(start, cnt);
+  // 保存は「作成予定の席」をそのまま使う
+  // ただし未生成なら生成する
+  if(!Array.isArray(state.seatSetup.preview) || state.seatSetup.preview.length!==cnt){
+    renderSeatPreview();
+  }
+  const planned = (state.seatSetup.preview||[]).map(x=> String(x||"").trim());
 
+  // 空の席番号はNG（事故防止）
+  if(planned.some(x=> !x)){
+    toast("空の席番号があります（タップして編集してください）");
+    return;
+  }
+
+  // 重複チェック（planned内）
+  const set = new Set();
+  for(const x of planned){
+    if(set.has(x)){
+      toast("席番号が重複しています（編集してください）");
+      return;
+    }
+    set.add(x);
+  }
+
+  // 既存席との衝突は作らない（スキップ）
   const unique = [];
-  seatIds.forEach(id=>{
+  planned.forEach(id=>{
     if(state.seats.some(s=> s.id===id)) return;
     unique.push(id);
     ensureSeatExists(id);
@@ -3196,11 +3358,18 @@ $("ssSave").onclick = ()=>{
   renderSeats();
   renderGroups();
 
+  // 入力だけリセット（editMapは次の作成で邪魔なので消す）
   $("ssStartLabel").value = "";
+  state.seatSetup.editMap = {};
+  state.seatSetup.preview = [];
+
+  renderSeatPreview();
+
   if(typeof emitEvent==="function") emitEvent("seat_setup_save", {name, seatIds: unique});
   toast("保存しました");
 };
 
+/* ===== 作った席（名称ごと） ===== */
 function renderGroups(){
   const box = $("ssGroups");
   box.innerHTML = "";
@@ -3269,7 +3438,10 @@ function buildNameCreateUI(){
     const v = ($("ncInput").value||"").trim();
     if(!v){ toast("名称を入力してください"); return; }
     if(allNameButtons().includes(v)){ toast("同じ名称があります"); return; }
+
     state.seatSetup.customNames.push(v);
+
+    // 作成した名称を即選択（確定扱い）
     state.seatSetup.selectedName = v;
     state.seatSetup.committedName = v;
 
@@ -3278,6 +3450,7 @@ function buildNameCreateUI(){
     showScreen("scrSeatSetup");
     renderNameGrid();
     applyDefaultCountByName(v);
+    renderSeatPreview();
   };
 }
 
@@ -3285,6 +3458,7 @@ function buildNameCreateUI(){
   名称と席の削除画面（scrNameDelete）
   - 名称削除：名称内の全席が空席のみ可能
   - 席削除：選択した席が空席のみ可能（複数選択）
+  ★スライドは見た目調整用にclass追加（CSSはPART1で当てる）
 ========================= */
 function buildNameDeleteUI(){
   const scr = $("scrNameDelete");
@@ -3299,7 +3473,7 @@ function buildNameDeleteUI(){
       名称内の全席が空席の場合のみ削除できます
     </div>
     <div class="pill" style="text-align:center; margin-bottom:6px">削除します（スライド）</div>
-    <input id="ndDelNameSlide" class="range" type="range" min="0" max="100" value="0" />
+    <input id="ndDelNameSlide" class="range rangeFat rangeThumbGreen" type="range" min="0" max="100" value="0" />
 
     <div style="height:16px"></div>
 
@@ -3307,7 +3481,7 @@ function buildNameDeleteUI(){
     <div id="ndSeatGrid" class="seatGrid" style="margin-bottom:10px"></div>
 
     <div class="pill" style="text-align:center; margin-bottom:6px">削除します（スライド）</div>
-    <input id="ndDelSeatSlide" class="range" type="range" min="0" max="100" value="0" />
+    <input id="ndDelSeatSlide" class="range rangeFat rangeThumbGreen" type="range" min="0" max="100" value="0" />
 
     <div style="height:14px"></div>
     <button class="btn full" id="ndBack">戻る</button>
@@ -3322,7 +3496,6 @@ function buildNameDeleteUI(){
       if(!map.has(g.name)) map.set(g.name, []);
       g.seatIds.forEach(id=> map.get(g.name).push(id));
     });
-    // “名称だけ作って席がない”場合も見せたい → customNamesも含める
     allNameButtons().forEach(n=>{
       if(!map.has(n)) map.set(n, []);
     });
@@ -3356,7 +3529,7 @@ function buildNameDeleteUI(){
       }
       b.onclick = ()=>{
         pickedName = (pickedName===n) ? null : n;
-        pickedSeats = new Set(); // 名前変えたら席選択はリセット
+        pickedSeats = new Set();
         renderNameGrid();
         renderSeatGrid();
       };
@@ -3397,7 +3570,6 @@ function buildNameDeleteUI(){
         c.style.background = "rgba(122,167,255,0.14)";
       }
 
-      // 使用中は選択不可（視覚も赤）
       if(!seatIsEmpty(id)){
         c.style.opacity = "0.75";
         c.style.borderColor = "rgba(255,107,107,0.55)";
@@ -3430,15 +3602,11 @@ function buildNameDeleteUI(){
       return false;
     }
 
-    // seats削除
     ids.forEach(id=>{
       state.seats = state.seats.filter(s=> s.id!==id);
     });
 
-    // groups削除
     state.seatSetup.groups = (state.seatSetup.groups||[]).filter(g=> g.name!==pickedName);
-
-    // custom nameも消す（baseNamesは消さない）
     state.seatSetup.customNames = (state.seatSetup.customNames||[]).filter(x=> x!==pickedName);
 
     pickedName = null;
@@ -3448,7 +3616,6 @@ function buildNameDeleteUI(){
     renderGroups();
     renderNameGrid();
     renderSeatGrid();
-    renderNameGrid(); // SeatSetup側
     if(typeof persistAll==="function") persistAll();
     toast("名称ごと削除しました");
     return true;
@@ -3469,7 +3636,6 @@ function buildNameDeleteUI(){
       state.seats = state.seats.filter(s=> s.id!==id);
     });
 
-    // groupsからも削除
     state.seatSetup.groups.forEach(g=>{
       if(g.name===pickedName){
         g.seatIds = g.seatIds.filter(id=> !pickedSeats.has(id));
@@ -3489,16 +3655,14 @@ function buildNameDeleteUI(){
 
   $("ndDelNameSlide").onchange = ()=>{
     if(Number($("ndDelNameSlide").value||0) < 88){ $("ndDelNameSlide").value=0; return; }
-    const ok = deleteNameAllSeats();
+    deleteNameAllSeats();
     $("ndDelNameSlide").value = 0;
-    if(ok){ /* keep */ }
   };
 
   $("ndDelSeatSlide").onchange = ()=>{
     if(Number($("ndDelSeatSlide").value||0) < 88){ $("ndDelSeatSlide").value=0; return; }
-    const ok = deletePickedSeats();
+    deletePickedSeats();
     $("ndDelSeatSlide").value = 0;
-    if(ok){ /* keep */ }
   };
 
   $("ndBack").onclick = ()=> showScreen("scrSeatSetup");
@@ -3507,19 +3671,20 @@ function buildNameDeleteUI(){
   renderSeatGrid();
 }
 
-/* ===== 导線 ===== */
+/* ===== 導線 ===== */
 $("goNameCreate").onclick = ()=> { buildNameCreateUI(); showScreen("scrNameCreate"); };
 $("goNameDelete").onclick = ()=> { buildNameDeleteUI(); showScreen("scrNameDelete"); };
 
 /* showScreen hook */
 (function hookShowScreenForSeatSetup(){
-  if(showScreen._ssHooked_v2) return;
+  if(showScreen._ssHooked_v3) return;
   const _show = showScreen;
   showScreen = function(id){
     _show(id);
     if(id==="scrSeatSetup"){
       renderNameGrid();
       renderGroups();
+      renderSeatPreview();
     }
     if(id==="scrNameCreate"){
       buildNameCreateUI();
@@ -3528,11 +3693,12 @@ $("goNameDelete").onclick = ()=> { buildNameDeleteUI(); showScreen("scrNameDelet
       buildNameDeleteUI();
     }
   };
-  showScreen._ssHooked_v2 = true;
+  showScreen._ssHooked_v3 = true;
 })();
 
 renderNameGrid();
 renderGroups();
+renderSeatPreview();
 
 /* =========================
   ここから先は PART7 で続く
@@ -4185,7 +4351,6 @@ $("goPwaBtn").onclick       = ()=> openPwaGuide();
 /* =========================
   ここまでで 8分割 完成
 ========================= */
-
 </script>
 </body>
 </html>
