@@ -1,4 +1,54 @@
 <!-- =========================
+  ONE レジアプリ（無料版）完全フル：PART1（修正版）
+========================= -->
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ONE FREE</title>
+
+<style>
+/* ===== 既存CSSそのまま ===== */
+/* ※あなたの貼ったCSSは変更なしなので省略せずそのまま使ってOK */
+</style>
+</head>
+
+<body>
+
+<!-- 既存HTMLはそのまま -->
+
+<script>
+/* =========================
+  Common / State (PART1 修正版)
+========================= */
+
+const KEY = "ONE_FREE_FULL_V2";
+const $ = (id)=> document.getElementById(id);
+
+function nowTs(){ return Date.now(); }
+function pad2(n){ return String(n).padStart(2,"0"); }
+function yen(n){
+  const x = Number(n||0);
+  return "¥" + x.toLocaleString("ja-JP");
+}
+
+/* ===================================================
+   🔴 危険だった gesture系は削除
+   ✅ dblclickのみ軽く抑止（入力系は除外）
+=================================================== */
+document.addEventListener("dblclick", function(e){
+  const t = e.target;
+  if(t && t.closest && t.closest("input,textarea,select,button,[contenteditable='true']")){
+    return;
+  }
+  e.preventDefault();
+}, {passive:false});
+
+/* ===== 既存modal / showScreen / state / renderSeats などはそのまま ===== */
+
+/* 以下あなたのPART1後半そのまま */
+<!-- =========================
   ONE レジアプリ（無料版）完全フル：PART1（差し替え版）
   役割：HTML骨格 / CSS / 共通定義 / 共通UI / メイン画面UI / 最低限JS
   保存KEY：ONE_FREE_FULL_V2
@@ -798,9 +848,12 @@ input.btn, select.btn, textarea.btn{
 ========================= */
 
 
+/* =========================
+  PART2：注文＋席動線（安全修正版）
+========================= */
+
 /* =========================================================
-   0) 軽いズーム抑止（ダブルタップ）
-   ※重要：input/textarea/select/button 触ってる時＆モーダル内は絶対に邪魔しない
+   0) 軽いズーム抑止（安全版）
 ========================================================= */
 (function preventDoubleTapZoom(){
   if(preventDoubleTapZoom._done) return;
@@ -808,17 +861,21 @@ input.btn, select.btn, textarea.btn{
 
   let lastTouchEnd = 0;
 
+  function isInteractive(t){
+    return !!(t && t.closest && 
+      t.closest("input,textarea,select,button,[contenteditable='true'],label"));
+  }
+
+  function inModal(t){
+    return !!(t && t.closest &&
+      t.closest("#modalBackdrop,.modal,.modalBody,.modalActions,[role='dialog']"));
+  }
+
   document.addEventListener("touchend", function(e){
     const t = e.target;
 
-    // 入力系は絶対に邪魔しない
-    if(t && t.closest && t.closest("input, textarea, select, button, [contenteditable='true'], label")){
-      lastTouchEnd = Date.now();
-      return;
-    }
-
-    // モーダル/ダイアログ/シート系は絶対に邪魔しない（←ここが肝）
-    if(t && t.closest && t.closest("#modal, .modal, .modalCard, .sheet, .dialog, .overlay, .modalMask, [role='dialog']")){
+    /* 入力系とモーダルは絶対に触らない */
+    if(isInteractive(t) || inModal(t)){
       lastTouchEnd = Date.now();
       return;
     }
