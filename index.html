@@ -1,8 +1,9 @@
 <!-- =========================
-  ONE レジアプリ（無料版）完全フル：PART1（差し替え版）
+  ONE レジアプリ（無料版）完全フル：PART1（昼の草原・配色版）
   役割：HTML骨格 / CSS / 共通定義 / 共通UI / メイン画面UI / 最低限JS
   保存KEY：ONE_FREE_FULL_V2
-  テーマ：昼の草原（単色背景・濃文字・太枠・丸フォント）
+  仕様：上部バー統一（ONE・📶・中央ボタン・保存）/ 下段はメインのみ（席移動｜本日の売上｜設定）
+  ※重要：PART1の末尾に </body></html> を入れない（PART8にある）
 ========================= -->
 <!doctype html>
 <html lang="ja">
@@ -12,31 +13,51 @@
   <title>ONE FREE</title>
 
   <style>
+    /* =========================================================
+      昼の草原（左の絵の方向）— 配色はここが本体
+      ルール：
+      - 白文字ベースはやめる（基本は濃い緑文字）
+      - “太枠（濃い緑）”は ボタン / 席カード / 下段ボタン だけ
+      - 情報箱（注意文/説明/集計）は囲わない（= panel）
+    ========================================================= */
     :root{
-      /* ===== 昼の草原テーマ ===== */
-      --bg:#EAF6E3;              /* 背景：草原の薄い緑（単色） */
-      --text:#1F2A1F;            /* 文字：濃い緑黒 */
-      --muted:#4F6A52;
+      /* 背景：単色（見やすさ優先） */
+      --bg:#EAF6DF;
 
-      --line:#2F6B3E;            /* 枠線：濃い緑 */
-      --header:#6FCF97;          /* ヘッダー：草原グリーン */
-      --headerLine:rgba(47,107,62,0.55);
+      /* パネル（非ボタン箱） */
+      --panel:#F7FBF2;
+      --panel2:#F2F8EC;
 
-      --lime:#5DAE63;            /* 強調ボタン：中間緑 */
-      --lime2:#4FA657;
+      /* 文字（白を基本使わない） */
+      --text:#1E3A2A;
+      --muted:#3D5B4A;
 
-      --accent:#2F6B3E;
-      --danger:#D64545;
-      --ok:#2E9E6B;
+      /* 枠（濃い緑） */
+      --line:#2F5E3F;
+      --stroke:6px;        /* 太枠 */
+      --radius:20px;
 
-      /* 席カード色（状態別） */
-      --seatEmpty:#F6FFF2;
-      --seatReserve:#F2FBFF;
-      --seatIn:#F7FFF6;
+      /* 上部バー */
+      --header:#73D19A;
+      --headerLine:rgba(0,0,0,0.18);
 
-      --headerH:56px;
-      --bottomH:62px;
-      --radius:18px;
+      /* ボタン塗り */
+      --btnFill:#F7FBF2;
+      --btnGreen:#64B26C;
+      --btnGreen2:#4B9555;
+
+      /* 状態色 */
+      --danger:#C33B2E;
+      --accent:#2F5E3F;
+      --ok:#2F8F63;
+
+      /* 席カード（状態で薄く変える） */
+      --seatEmpty:#F7FBF2;
+      --seatReserve:#F0F8FF;
+      --seatIn:#F7FBF2;
+
+      --headerH:58px;
+      --bottomH:70px;
     }
 
     *{ box-sizing:border-box; }
@@ -44,14 +65,17 @@
 
     body{
       margin:0;
-      font-family:
-        "Hiragino Maru Gothic ProN",
-        "Hiragino Sans",
-        "Rounded Mplus 1c",
-        "Noto Sans JP",
-        system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       background:var(--bg);
       color:var(--text);
+
+      /* 丸みがある優しい感じ（iOS丸ゴ寄り） */
+      font-family:
+        "M PLUS Rounded 1c",
+        "Hiragino Maru Gothic ProN",
+        "Hiragino Sans",
+        -apple-system, BlinkMacSystemFont,
+        system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+
       overflow-x:hidden;
       -webkit-font-smoothing:antialiased;
       text-rendering:optimizeLegibility;
@@ -74,6 +98,7 @@
       font-size:16px;
       -webkit-appearance:none;
       appearance:none;
+      color:var(--text);
     }
 
     .app{
@@ -89,7 +114,7 @@
       padding-top:env(safe-area-inset-top);
       height:calc(var(--headerH) + env(safe-area-inset-top));
       background:var(--header);
-      border-bottom:4px solid var(--line);  /* 太め */
+      border-bottom:3px solid var(--headerLine);
       z-index:50;
       display:flex;
       align-items:flex-end;
@@ -100,7 +125,7 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:0 12px 6px;
+      padding:0 12px 8px;
       gap:10px;
     }
     .brandWrap{
@@ -110,11 +135,10 @@
       min-width:96px;
     }
     .brand{
-      font-weight:900;
+      font-weight:1000;
       letter-spacing:0.5px;
-      font-size:20px;         /* 少し大きく */
+      font-size:22px;
       line-height:1;
-      color:var(--text);
     }
 
     /* アンテナ */
@@ -132,8 +156,9 @@
       touch-action:manipulation;
     }
     .antennaIcon{
-      font-size:26px;
+      font-size:24px;
       line-height:1;
+      filter: drop-shadow(0 1px 0 rgba(255,255,255,0.25));
     }
     .antennaX{
       position:absolute;
@@ -143,8 +168,8 @@
       line-height:1;
       color:var(--danger);
       display:none;
-      font-weight:900;
-      text-shadow:0 1px 0 rgba(0,0,0,0.25);
+      font-weight:1000;
+      text-shadow:0 1px 0 rgba(255,255,255,0.25);
     }
     .antennaWrap.off .antennaX{ display:block; }
 
@@ -154,36 +179,62 @@
       justify-content:center;
     }
 
+    /* ===== Buttons（太枠OK） ===== */
     .btn{
-      border:3px solid var(--line);           /* ✅ 太枠 */
-      background:rgba(255,255,255,0.70);
+      border:var(--stroke) solid var(--line);
+      background:var(--btnFill);
       color:var(--text);
-      border-radius:16px;                     /* ✅ 丸みUP */
-      padding:12px 14px;
-      font-size:18px;                         /* ✅ 大きめ */
+      border-radius:var(--radius);
+      padding:12px 16px;
+      font-size:18px;      /* ボタン文字：大きめ */
       line-height:1;
-      min-height:46px;
+      min-height:52px;
+      font-weight:1000;
       user-select:none;
       -webkit-user-select:none;
       touch-action:manipulation;
-      font-weight:900;                        /* ✅ 太字 */
+      box-shadow:0 3px 0 rgba(0,0,0,0.08);
     }
     .btn.lime{
-      background:var(--lime);
-      border-color:rgba(47,107,62,0.9);
-      color:#ffffff;
-      font-weight:900;
+      background:var(--btnGreen);
+      border-color:rgba(0,0,0,0.18);
+      color:#fff;
+      text-shadow:0 1px 0 rgba(0,0,0,0.18);
     }
     .btn.ghost{
       background:transparent;
       border-color:transparent;
+      box-shadow:none;
+      padding:10px 10px;
+      min-height:42px;
+      font-size:16px;
     }
     .btn.full{ width:100%; }
+
+    /* ===== “非ボタン箱” ===== */
+    .panel{
+      background:var(--panel);
+      border:none;
+      border-radius:26px;
+      padding:14px;
+      box-shadow:none;
+    }
+    .h1{
+      font-size:30px;
+      font-weight:1000;
+      margin:8px 0 10px;
+    }
+    .h2{
+      font-size:22px;
+      font-weight:1000;
+      margin:10px 0 8px;
+    }
+    .muted{ color:rgba(30,58,42,0.75); font-weight:900; }
 
     /* ===== Screens ===== */
     .screen{
       display:none;
-      padding:12px;
+      padding:14px;
       max-width:980px;
       margin:0 auto;
     }
@@ -192,10 +243,10 @@
     /* ===== Main ===== */
     .hintText{
       color:var(--text);
-      font-size:15px;
+      font-size:16px;
+      font-weight:900;
       padding:6px 2px;
       user-select:none;
-      font-weight:900;
     }
 
     .seatGrid{
@@ -204,19 +255,19 @@
       gap:12px;
     }
     .seatCard{
-      border:4px solid var(--line);           /* ✅ 太枠 */
-      border-radius:20px;                     /* ✅ 丸み */
+      border:var(--stroke) solid var(--line);
+      border-radius:26px;
       padding:12px;
-      min-height:128px;
+      min-height:122px;
       display:flex;
       flex-direction:column;
       justify-content:space-between;
-      gap:8px;
+      gap:10px;
       touch-action:manipulation;
       overflow:hidden;
-      background:rgba(255,255,255,0.55);
+      background:var(--seatEmpty);
+      box-shadow:0 3px 0 rgba(0,0,0,0.08);
     }
-
     .seatCard.empty{ background:var(--seatEmpty); }
     .seatCard.reserve{ background:var(--seatReserve); }
     .seatCard.in{ background:var(--seatIn); }
@@ -224,7 +275,7 @@
     .seatTop{
       display:flex;
       flex-direction:column;
-      gap:6px;
+      gap:8px;
       min-width:0;
     }
 
@@ -232,40 +283,39 @@
       display:flex;
       align-items:baseline;
       justify-content:space-between;
-      gap:8px;
+      gap:10px;
       min-width:0;
     }
     .seatNo{
-      font-size:26px;        /* ✅ 大きく */
-      font-weight:900;
+      font-size:30px;   /* 席番号：大きく */
+      font-weight:1000;
       letter-spacing:0.5px;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
     .seatPeople{
-      font-size:20px;        /* ✅ 大きく */
-      font-weight:900;
+      font-size:22px;   /* 人数：大きく */
+      font-weight:1000;
       white-space:nowrap;
       color:var(--text);
       opacity:0.95;
     }
 
     .seatLines{
-      font-size:14px;
-      color:rgba(31,42,31,0.92);
+      font-size:16px;
+      font-weight:900;
+      color:var(--text);
       display:flex;
       flex-direction:column;
-      gap:3px;
+      gap:6px;
       min-width:0;
-      font-weight:900;
     }
-    .seatLines .muted{ color:rgba(31,42,31,0.70); }
+    .seatLines .muted{ color:rgba(30,58,42,0.70); }
 
     .seatMoney{
-      font-size:18px;        /* ✅ 大きく */
-      font-weight:900;
-      margin-top:2px;
+      font-size:22px;
+      font-weight:1000;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
@@ -279,8 +329,8 @@
       bottom:0;
       padding-bottom:env(safe-area-inset-bottom);
       height:calc(var(--bottomH) + env(safe-area-inset-bottom));
-      background:rgba(234,246,227,0.97);
-      border-top:4px solid var(--line);       /* ✅ 太枠 */
+      background:rgba(234,246,223,0.96);
+      border-top:3px solid rgba(0,0,0,0.18);
       z-index:45;
       display:flex;
       align-items:center;
@@ -292,31 +342,31 @@
       padding:0 12px;
       display:grid;
       grid-template-columns:1fr 1fr 1fr;
-      gap:10px;
+      gap:12px;
       align-items:center;
       height:var(--bottomH);
     }
 
     .bottomBtn{
-      border-radius:16px;
-      min-height:50px;
-      font-weight:900;
-      border:3px solid var(--line);           /* ✅ 太枠 */
-      background:rgba(255,255,255,0.70);
+      border-radius:26px;
+      min-height:58px;
+      font-weight:1000;
+      border:var(--stroke) solid var(--line);
+      background:var(--btnFill);
       color:var(--text);
       touch-action:manipulation;
-      font-size:18px;
+      font-size:22px;   /* 下段：大きく */
+      box-shadow:0 3px 0 rgba(0,0,0,0.08);
     }
     .bottomBtn.move{
-      background:rgba(93,174,99,0.22);
-      border-color:rgba(47,107,62,0.9);
+      background:rgba(100,178,108,0.20);
     }
 
     /* ===== Modal ===== */
     .backdrop{
       position:fixed;
       inset:0;
-      background:rgba(0,0,0,0.45);
+      background:rgba(0,0,0,0.42);
       z-index:80;
       display:none;
       align-items:center;
@@ -329,49 +379,57 @@
 
     .modal{
       width:min(560px, 100%);
-      background:#ffffff;
-      border:4px solid var(--line);           /* ✅ 太枠 */
-      border-radius:20px;
+      background:var(--panel);
+      border:var(--stroke) solid var(--line);
+      border-radius:26px;
       overflow:hidden;
       max-height:calc(100vh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
       display:flex;
       flex-direction:column;
+      box-shadow:0 6px 0 rgba(0,0,0,0.10);
     }
     .modalHead{
-      padding:14px 14px 10px;
-      border-bottom:3px solid rgba(47,107,62,0.25);
-      font-weight:900;
+      padding:14px 14px 12px;
+      border-bottom:3px solid rgba(0,0,0,0.08);
+      font-weight:1000;
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
       flex:0 0 auto;
+      background:var(--panel2);
+    }
+    .modalTitleL{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
     }
     .modalSeatId{
-      font-weight:900;
+      font-weight:1000;
       font-size:18px;
       white-space:nowrap;
       color:var(--line);
     }
     .modalTitleText{
-      font-size:18px;        /* ✅ タイトル大きく */
-      font-weight:900;
+      font-size:18px;
+      font-weight:1000;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
-      color:var(--text);
     }
 
     .modalBody{
       padding:14px;
       color:var(--text);
       font-size:16px;
+      font-weight:900;
       line-height:1.65;
       overflow:auto;
       -webkit-overflow-scrolling:touch;
       flex:1 1 auto;
       min-height:0;
-      font-weight:900;
+      background:var(--panel);
     }
     .modalActions{
       padding:12px 14px 14px;
@@ -380,61 +438,61 @@
       justify-content:flex-end;
       flex-wrap:wrap;
       flex:0 0 auto;
+      background:var(--panel2);
     }
-
     .bigBtn{
-      min-height:52px;
-      padding:12px 14px;
-      font-weight:900;
-      border-radius:16px;
+      min-height:56px;
+      padding:14px 16px;
+      font-weight:1000;
+      border-radius:26px;
       font-size:18px;
     }
 
-    .backdrop.kbOpen{
-      align-items:flex-start;
-    }
+    /* 予約入力などでキーボードが出た時：上寄せ */
+    .backdrop.kbOpen{ align-items:flex-start; }
 
-    /* ===== Slide confirm（親指サイズ＋濃緑つまみ） ===== */
+    /* ===== Slide confirm ===== */
     .range{
       width:100%;
-      height:52px;                     /* ✅ 親指サイズ */
+      height:46px; /* 親指サイズ */
       -webkit-appearance:none;
       appearance:none;
-      background:rgba(47,107,62,0.18);
-      border-radius:30px;
-      outline:none;
-      border:3px solid rgba(47,107,62,0.45);
+      background:transparent;
+      touch-action:manipulation;
+    }
+    .range:focus{ outline:none; }
+    .range::-webkit-slider-runnable-track{
+      height:18px;
+      background:rgba(47,94,63,0.18);
+      border-radius:999px;
+      border:2px solid rgba(47,94,63,0.35);
     }
     .range::-webkit-slider-thumb{
       -webkit-appearance:none;
       appearance:none;
-      width:44px;                      /* ✅ 大きめ */
+      width:44px;
       height:44px;
-      border-radius:50%;
-      background:var(--line);          /* ✅ 濃い緑 */
-      border:3px solid rgba(255,255,255,0.75);
-      box-shadow:0 6px 16px rgba(0,0,0,0.18);
-    }
-
-    /* ===== pill（PART2/6で使うので最低限定義） ===== */
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:10px 12px;
       border-radius:999px;
-      border:3px solid rgba(47,107,62,0.28);
-      background:rgba(255,255,255,0.75);
-      font-weight:900;
-      color:var(--text);
+      background:var(--btnGreen2);  /* 濃い緑 */
+      border:4px solid rgba(0,0,0,0.18);
+      margin-top:-13px;
+      box-shadow:0 4px 0 rgba(0,0,0,0.16);
     }
 
-    /* ===== ◀︎ 値 ▶︎ の中央寄せ・大きく（汎用） ===== */
-    .counterValue{
-      min-width:90px;
+    /* ===== “◀︎ 値 ▶︎” 中央固定用 ===== */
+    .pill{
+      display:flex;
+      align-items:center;
+      justify-content:center;
       text-align:center;
-      font-weight:900;
-      font-size:28px;                  /* ✅ 大きく */
+      border:var(--stroke) solid var(--line);
+      background:#EEF6E6;
+      border-radius:22px;
+      min-height:56px;
+      padding:0 14px;
+      font-size:30px;
+      font-weight:1000;
+      box-shadow:0 3px 0 rgba(0,0,0,0.08);
       color:var(--text);
     }
 
@@ -444,12 +502,13 @@
       left:50%;
       transform:translateX(-50%);
       bottom:calc(var(--bottomH) + 18px + env(safe-area-inset-bottom));
-      background:rgba(0,0,0,0.78);
-      border:2px solid rgba(255,255,255,0.12);
+      background:rgba(47,94,63,0.92);
+      border:3px solid rgba(0,0,0,0.15);
       color:#fff;
       padding:10px 12px;
       border-radius:999px;
-      font-size:13px;
+      font-size:14px;
+      font-weight:1000;
       z-index:90;
       display:none;
       max-width:min(90vw, 860px);
@@ -459,11 +518,14 @@
     }
     .toast.show{ display:block; }
 
+    /* 小画面 */
     @media (max-width: 360px){
-      .seatNo{ font-size:24px; }
-      .seatPeople{ font-size:18px; }
-      .btn{ padding:11px 12px; font-size:17px; }
-      .antennaIcon{ font-size:24px; }
+      .brand{ font-size:20px; }
+      .btn{ font-size:17px; min-height:50px; }
+      .seatNo{ font-size:28px; }
+      .seatPeople{ font-size:20px; }
+      .bottomBtn{ font-size:20px; }
+      .pill{ font-size:28px; }
     }
   </style>
 </head>
@@ -503,25 +565,25 @@
     </section>
 
     <!-- キッチン -->
-    <section class="screen" id="scrKitchen"><div style="opacity:.8">（PART3で実装）</div></section>
+    <section class="screen" id="scrKitchen"><div class="panel muted">（PART3で実装）</div></section>
 
     <!-- 本日の売上/売上 -->
-    <section class="screen" id="scrSales"><div style="opacity:.8">（PART4で実装）</div></section>
+    <section class="screen" id="scrSales"><div class="panel muted">（PART4で実装）</div></section>
 
     <!-- 訂正伝票 -->
-    <section class="screen" id="scrFix"><div style="opacity:.8">（PART5で実装）</div></section>
+    <section class="screen" id="scrFix"><div class="panel muted">（PART5で実装）</div></section>
 
     <!-- 席登録 -->
-    <section class="screen" id="scrSeatSetup"><div style="opacity:.8">（PART6で実装）</div></section>
+    <section class="screen" id="scrSeatSetup"><div class="panel muted">（PART6で実装）</div></section>
 
     <!-- 設定 -->
-    <section class="screen" id="scrSettings"><div style="opacity:.8">（PART8で実装）</div></section>
+    <section class="screen" id="scrSettings"><div class="panel muted">（PART8で実装）</div></section>
 
     <!-- メニュー登録 -->
-    <section class="screen" id="scrMenu"><div style="opacity:.8">（PART8で実装）</div></section>
+    <section class="screen" id="scrMenu"><div class="panel muted">（PART8で実装）</div></section>
 
     <!-- 注文 -->
-    <section class="screen" id="scrOrder"><div style="opacity:.8">（PART2で実装）</div></section>
+    <section class="screen" id="scrOrder"><div class="panel muted">（PART2で実装）</div></section>
   </main>
 
   <!-- ===== Bottom (Main only) ===== -->
@@ -535,7 +597,7 @@
 
   <!-- ===== Modal ===== -->
   <div class="backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
-    <div class="modal" id="modal">
+    <div class="modal">
       <div class="modalHead">
         <div class="modalTitleL">
           <div class="modalSeatId" id="modalSeatId" style="display:none"></div>
@@ -564,14 +626,6 @@
       const x = Number(n||0);
       return "¥" + x.toLocaleString("ja-JP");
     }
-
-    /* ダブルタップ/ピンチでの拡大を抑止（入力フォーカスを壊しにくい保険） */
-    (function preventZoom(){
-      document.addEventListener("dblclick", (e)=>{ e.preventDefault(); }, {passive:false});
-      document.addEventListener("gesturestart", (e)=>{ e.preventDefault(); }, {passive:false});
-      document.addEventListener("gesturechange", (e)=>{ e.preventDefault(); }, {passive:false});
-      document.addEventListener("gestureend", (e)=>{ e.preventDefault(); }, {passive:false});
-    })();
 
     function toast(msg, ms=1800){
       const t = $("toast");
@@ -749,7 +803,7 @@
 
         let nameLine = "";
         if(seat.merged){
-          nameLine = `<span style="font-weight:900">${seat.mergeLabel || "➡︎"}</span>`;
+          nameLine = `<span style="font-weight:1000">${seat.mergeLabel || "➡︎"}</span>`;
         }else if(seat.status==="in" && seat.name){
           nameLine = seat.name;
         }else if(seat.status==="reserve"){
@@ -818,10 +872,36 @@
       ここから先は PART2 で続く
     ========================= */
 /* =========================
-  PART2：注文（本来の構成に復元）＋席タップ動線（空席/予約/来店/合流）
-  ＋席移動（復活）
-  ※重要：入力を弾く原因になるため「touchend系ダブルタップ抑止」はPART2では入れない
+  PART2：注文（本来の構成に復元）＋席タップ動線（空席/予約/来店/合流）＋席移動（復活）
+  重要：
+   - “弾かれる”原因になりやすい touchend preventDefault はやらない
+   - dblclick のみ軽く抑止（入力/モーダル内は除外）
+   - ID衝突回避：注文UIのIDは orderCatFood / orderCatDrink 等
 ========================= */
+
+
+/* =========================================================
+   0) 軽いズーム抑止（dblclickのみ）
+   ※ touchend preventDefault はクリックが死ぬ事があるのでやらない
+========================================================= */
+(function preventDoubleTapZoomSafe(){
+  if(preventDoubleTapZoomSafe._done) return;
+  preventDoubleTapZoomSafe._done = true;
+
+  document.addEventListener("dblclick", function(e){
+    const t = e.target;
+    if(
+      t && t.closest &&
+      (
+        t.closest("input,textarea,select,button,[contenteditable='true'],label") ||
+        t.closest("#modalBackdrop,.modal,.modalCard,.sheet,.dialog,.overlay,.modalMask,[role='dialog']")
+      )
+    ){
+      return; // 絶対に邪魔しない
+    }
+    if(e.cancelable) e.preventDefault();
+  }, {passive:false});
+})();
 
 
 /* =========================================================
@@ -835,16 +915,16 @@
   scr.innerHTML = `
     <!-- 上部：注文 / 席番号 / 会計（入口） -->
     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px">
-      <div style="font-weight:900; font-size:18px">注文</div>
-      <div style="font-weight:900; opacity:.9" id="orderSeatLabel"></div>
+      <div style="font-weight:1000; font-size:22px">注文</div>
+      <div style="font-weight:1000; opacity:.9" id="orderSeatLabel"></div>
       <button class="btn lime" id="orderGoPay">会計</button>
     </div>
 
     <!-- 中部上段：料理/ドリンク/戻る -->
     <div style="display:flex; gap:10px; margin-bottom:10px">
-      <button class="btn" id="orderCatFood" style="flex:1; font-weight:900">料理</button>
-      <button class="btn" id="orderCatDrink" style="flex:1; font-weight:900">ドリンク</button>
-      <button class="btn" id="orderBackMain" style="flex:1; font-weight:900">戻る</button>
+      <button class="btn" id="orderCatFood" style="flex:1">料理</button>
+      <button class="btn" id="orderCatDrink" style="flex:1">ドリンク</button>
+      <button class="btn" id="orderBackMain" style="flex:1">戻る</button>
     </div>
 
     <!-- ジャンル（3列） -->
@@ -855,7 +935,7 @@
     <!-- 商品（3列）＋戻る -->
     <div id="orderItemsWrap" style="display:none; margin-bottom:12px">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px">
-        <div style="font-weight:900; font-size:16px" id="orderPickedGenre"></div>
+        <div style="font-weight:1000; font-size:20px" id="orderPickedGenre"></div>
         <button class="btn" id="orderItemsBack">戻る</button>
       </div>
       <div class="seatGrid" id="orderItemsGrid"></div>
@@ -863,7 +943,7 @@
 
     <!-- 注文履歴（縦） -->
     <div style="margin-top:10px">
-      <div style="font-weight:900; margin-bottom:8px">注文履歴</div>
+      <div style="font-weight:1000; margin-bottom:8px; font-size:20px">注文履歴</div>
       <div id="orderHistory"></div>
     </div>
   `;
@@ -876,8 +956,8 @@
 function getOrderBucket(seat, subId){
   if(seat.merged){
     const b = ensureSub(seat, subId);
-    b.orders = b.orders || [];
-    b.orderLog = b.orderLog || [];
+    b.orders = b.orders || [];       // 集計
+    b.orderLog = b.orderLog || [];   // 履歴
     return b;
   }
   seat.orders = seat.orders || [];
@@ -946,8 +1026,10 @@ function renderOrder_v3(){
   const subId = state.order.subId || seat.id;
   $("orderSeatLabel").textContent = seat.merged ? `${seat.mergeLabel} / ${subId}` : `${seat.id}`;
 
+  // 会計入口（会計画面は別パートで実装）
   $("orderGoPay").onclick = ()=> toast("会計（別パートで実装）");
 
+  // メインへ戻る
   $("orderBackMain").onclick = ()=>{
     state.order.cat = null;
     state.order.genre = null;
@@ -992,16 +1074,17 @@ function renderOrder_v3(){
     iw.style.display = "none";
 
     if(genres.length===0){
-      gg.innerHTML = `<div style="opacity:.85">ジャンルがありません。先にメニュー登録をしてください。</div>`;
+      gg.innerHTML = `<div class="panel muted">ジャンルがありません。先にメニュー登録をしてください。</div>`;
     }else{
       genres.forEach(g=>{
         const b = document.createElement("div");
         b.className = "seatCard";
-        b.style.minHeight="56px";
+        b.style.minHeight="66px";
         b.style.display="flex";
         b.style.alignItems="center";
         b.style.justifyContent="center";
-        b.style.fontWeight="900";
+        b.style.fontWeight="1000";
+        b.style.fontSize="18px";
         b.textContent = g;
         b.onclick = ()=>{
           state.order.genre = g;
@@ -1024,18 +1107,18 @@ function renderOrder_v3(){
 
     const items = listItemsBy(state.order.cat, state.order.genre);
     if(items.length===0){
-      ig.innerHTML = `<div style="opacity:.85">このジャンルに商品がありません</div>`;
+      ig.innerHTML = `<div class="panel muted">このジャンルに商品がありません</div>`;
     }else{
       items.forEach(it=>{
         const c = document.createElement("div");
         c.className = "seatCard";
-        c.style.minHeight="86px";
+        c.style.minHeight="96px";
         c.style.display="flex";
         c.style.flexDirection="column";
         c.style.justifyContent="space-between";
         c.innerHTML = `
-          <div style="font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${it.name}</div>
-          <div style="opacity:.85; font-weight:900">${yen(it.price)}</div>
+          <div style="font-weight:1000; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:18px">${it.name}</div>
+          <div style="opacity:.9; font-weight:1000; font-size:18px">${yen(it.price)}</div>
         `;
         c.onclick = ()=> openOrderDeltaModal_v3(seat, subId, it);
         ig.appendChild(c);
@@ -1053,16 +1136,16 @@ function openOrderDeltaModal_v3(seat, subId, item){
   openModal(
     "注文",
     `
-      <div style="font-weight:900; font-size:18px; margin-bottom:10px">${item.name}</div>
-      <div style="opacity:.85; margin-bottom:14px">${yen(item.price)} / 税${item.tax}%</div>
+      <div style="font-weight:1000; font-size:20px; margin-bottom:10px">${item.name}</div>
+      <div class="muted" style="margin-bottom:14px">${yen(item.price)} / 税${item.tax}%</div>
 
       <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:14px">
-        <button class="btn" id="odMinus" style="min-width:64px">◀︎</button>
-        <div class="pill" id="odVal" style="min-width:90px; justify-content:center; font-weight:900; font-size:22px">0</div>
-        <button class="btn lime" id="odPlus" style="min-width:64px">▶︎</button>
+        <button class="btn" id="odMinus" style="min-width:72px">◀︎</button>
+        <div class="pill" id="odVal" style="min-width:120px">0</div>
+        <button class="btn lime" id="odPlus" style="min-width:72px">▶︎</button>
       </div>
 
-      <div style="opacity:.85">※ 追加する数を選んでください（0なら追加なし）</div>
+      <div class="muted">※ 追加する数を選んでください（0なら追加なし）</div>
     `,
     [
       {label:"戻る", lime:false, onClick:()=> closeModal()},
@@ -1083,6 +1166,8 @@ function openOrderDeltaModal_v3(seat, subId, item){
         }else{
           seat.total = sum;
         }
+
+        if(typeof emitEvent==="function") emitEvent("order_delta", {seatId: seat.id, subId, itemId: item.id, delta});
 
         closeModal();
         renderSeats();
@@ -1116,23 +1201,23 @@ function renderOrderHistory_v3(seat, subId){
 
   const agg = (bucket.orders || []).slice().sort((a,b)=> (b.qty||0) - (a.qty||0));
   if(agg.length===0){
-    box.innerHTML = `<div style="opacity:.85">まだありません</div>`;
+    box.innerHTML = `<div class="panel muted">まだありません</div>`;
     return;
   }
 
   agg.forEach(a=>{
     const row = document.createElement("div");
-    row.style.border="3px solid rgba(47,107,62,0.20)";
-    row.style.borderRadius="18px";
-    row.style.padding="12px";
-    row.style.background="rgba(255,255,255,0.60)";
-    row.style.marginBottom="10px";
+    row.style.border = "none";
+    row.style.borderRadius = "26px";
+    row.style.padding = "12px";
+    row.style.background = "var(--panel)";
+    row.style.marginBottom = "10px";
 
     row.innerHTML = `
       <div style="display:flex; justify-content:space-between; gap:10px; align-items:center">
         <div style="min-width:0">
-          <div style="font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${a.name} × ${a.qty}</div>
-          <div style="opacity:.8; margin-top:4px">${yen((Number(a.price||0) * Number(a.qty||0)))}</div>
+          <div style="font-weight:1000; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:18px">${a.name} × ${a.qty}</div>
+          <div class="muted" style="margin-top:4px; font-weight:1000; font-size:18px">${yen((Number(a.price||0) * Number(a.qty||0)))}</div>
         </div>
         <button class="btn" data-hfix="${a.itemId}">修正</button>
       </div>
@@ -1147,7 +1232,7 @@ function renderOrderHistory_v3(seat, subId){
 
 
 /* =========================================================
-   5) 履歴 → 確認 → 修正
+   5) 履歴 → 確認 → 修正（保持）
 ========================================================= */
 const ORDER_FIX_REASONS = ["未提供","数え間違い","注文取り違い","提供済み取消","その他"];
 
@@ -1158,21 +1243,21 @@ function openHistoryConfirm_v3(seat, subId, itemId){
 
   const logs = (bucket.orderLog || []).filter(l=> l.itemId===itemId).slice(0, 8);
   const lines = logs.map(l=>`
-    <div style="display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.08)">
-      <div style="opacity:.85">${formatHM(l.ts)}</div>
-      <div style="font-weight:900">${l.name}</div>
-      <div style="font-weight:900">${l.delta>0?`+${l.delta}`:String(l.delta)}</div>
+    <div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.08)">
+      <div class="muted">${formatHM(l.ts)}</div>
+      <div style="font-weight:1000">${l.name}</div>
+      <div style="font-weight:1000">${l.delta>0?`+${l.delta}`:String(l.delta)}</div>
     </div>
   `).join("");
 
   openModal(
     "修正確認",
     `
-      <div style="font-weight:900; font-size:16px; margin-bottom:8px">${agg.name} × ${agg.qty}</div>
-      <div style="opacity:.85; margin-bottom:10px">注文履歴</div>
-      <div>${lines || `<div style="opacity:.85">履歴がありません</div>`}</div>
+      <div style="font-weight:1000; font-size:18px; margin-bottom:8px">${agg.name} × ${agg.qty}</div>
+      <div class="muted" style="margin-bottom:10px">注文履歴</div>
+      <div>${lines || `<div class="panel muted">履歴がありません</div>`}</div>
       <div style="height:10px"></div>
-      <div style="opacity:.92; font-weight:900">修正しますか？</div>
+      <div style="font-weight:1000">修正しますか？</div>
     `,
     [
       {label:"戻る", lime:false, onClick:()=> closeModal()},
@@ -1195,23 +1280,23 @@ function openHistoryFix_v3(seat, subId, itemId){
   openModal(
     "修正",
     `
-      <div style="font-weight:900; font-size:18px; margin-bottom:8px">${agg.name}</div>
-      <div style="opacity:.85; margin-bottom:12px">現在：${agg.qty}</div>
+      <div style="font-weight:1000; font-size:20px; margin-bottom:8px">${agg.name}</div>
+      <div class="muted" style="margin-bottom:12px">現在：${agg.qty}</div>
 
-      <div style="margin-bottom:6px; font-weight:900">理由（必須）</div>
+      <div style="margin-bottom:8px; font-weight:1000">理由（必須）</div>
       <select id="ofWhy" class="btn full" style="text-align:left">
         <option value="">選択してください</option>
         ${ORDER_FIX_REASONS.map(x=> `<option value="${x}">${x}</option>`).join("")}
       </select>
 
-      <div style="margin-top:14px; font-weight:900; margin-bottom:8px">変更（差分）</div>
+      <div style="margin-top:14px; font-weight:1000; margin-bottom:8px">変更（差分）</div>
       <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:10px">
-        <button class="btn" id="ofMinus" style="min-width:64px">◀︎</button>
-        <div class="pill" id="ofVal" style="min-width:120px; justify-content:center; font-weight:900; font-size:22px">0</div>
-        <button class="btn lime" id="ofPlus" style="min-width:64px">▶︎</button>
+        <button class="btn" id="ofMinus" style="min-width:72px">◀︎</button>
+        <div class="pill" id="ofVal" style="min-width:140px">0</div>
+        <button class="btn lime" id="ofPlus" style="min-width:72px">▶︎</button>
       </div>
 
-      <div style="opacity:.85">※ 合計が0未満にはできません</div>
+      <div class="muted">※ 合計が0未満にはできません</div>
     `,
     [
       {label:"戻る", lime:false, onClick:()=> closeModal()},
@@ -1234,6 +1319,8 @@ function openHistoryFix_v3(seat, subId, itemId){
           seat.total = sum;
         }
 
+        if(typeof emitEvent==="function") emitEvent("order_fix", {seatId: seat.id, subId, itemId, delta, reason});
+
         closeModal();
         renderSeats();
         renderOrder_v3();
@@ -1246,7 +1333,7 @@ function openHistoryFix_v3(seat, subId, itemId){
   setTimeout(()=>{
     const setVal = ()=>{
       const s = delta>0 ? `+${delta}` : String(delta);
-      $("ofVal").textContent = s;
+      $("ofVal").textContent = s; // 中央寄せは pill（PART1）で保証
     };
 
     $("ofMinus").onclick = ()=>{
@@ -1266,7 +1353,7 @@ function openHistoryFix_v3(seat, subId, itemId){
 
 
 /* =========================================================
-   6) 席タップ動線
+   6) 席タップ動線（空席：来店/予約/戻る を復活）
 ========================================================= */
 function openOrderFor_v3(seatId, subId){
   state.order.seatId = seatId;
@@ -1277,10 +1364,11 @@ function openOrderFor_v3(seatId, subId){
   renderOrder_v3();
 }
 
+/* 空席：来店/予約/戻る */
 function openEmptyAction_v3(seat){
   openModal(
     "空席",
-    `<div style="opacity:.92; margin-bottom:10px">来店 / 予約 を選択してください</div>`,
+    `<div class="muted" style="margin-bottom:10px">来店 / 予約 を選択してください</div>`,
     [
       {label:"来店", lime:true, onClick:()=>{
         closeModal();
@@ -1294,6 +1382,7 @@ function openEmptyAction_v3(seat){
         seat.mergeLabel = "";
         seat.sub = null;
 
+        if(typeof emitEvent==="function") emitEvent("seat_in", {seatId: seat.id});
         renderSeats();
         openOrderFor_v3(seat.id, seat.id);
       }},
@@ -1307,17 +1396,18 @@ function openEmptyAction_v3(seat){
   );
 }
 
+/* 予約入力 */
 function openReserveInput_v3(seat){
   openModal(
     "予約入力",
     `
-      <div style="margin-bottom:8px">来店時間</div>
+      <div style="margin-bottom:8px; font-weight:1000">来店時間</div>
       <input id="rTime" class="btn full" style="text-align:left" placeholder="例：18:30" inputmode="text" autocomplete="off" />
 
-      <div style="margin-top:12px;margin-bottom:8px">名前</div>
+      <div style="margin-top:12px;margin-bottom:8px; font-weight:1000">名前</div>
       <input id="rName" class="btn full" style="text-align:left" placeholder="例：佐藤" inputmode="text" autocomplete="off" />
 
-      <div style="margin-top:12px;margin-bottom:8px">連絡先</div>
+      <div style="margin-top:12px;margin-bottom:8px; font-weight:1000">連絡先</div>
       <input id="rTel" class="btn full" style="text-align:left" placeholder="電話 / メモ" inputmode="text" autocomplete="off" />
     `,
     [
@@ -1335,6 +1425,8 @@ function openReserveInput_v3(seat){
         seat.total = 0;
         seat.bills = 0;
 
+        if(typeof emitEvent==="function") emitEvent("reserve_set", {seatId: seat.id, time, name, tel});
+
         closeModal();
         renderSeats();
         toast("予約を保存しました");
@@ -1345,14 +1437,15 @@ function openReserveInput_v3(seat){
   );
 }
 
+/* 予約カード：来店/キャンセル/戻る */
 function openReserveAction_v3(seat){
   const r = seat.reserve || {};
   openModal(
     "予約",
     `
-      <div style="margin-bottom:6px">時間：${r.time||""}</div>
-      <div style="margin-bottom:6px">名前：${r.name||""}</div>
-      <div style="opacity:.85">連絡先：${r.tel||""}</div>
+      <div style="margin-bottom:6px; font-weight:1000">時間：${r.time||""}</div>
+      <div style="margin-bottom:6px; font-weight:1000">名前：${r.name||""}</div>
+      <div class="muted" style="font-weight:1000">連絡先：${r.tel||""}</div>
     `,
     [
       {label:"来店", lime:true, onClick:()=>{
@@ -1363,6 +1456,7 @@ function openReserveAction_v3(seat){
         seat.total = Number(seat.total||0);
         seat.reserve = null;
 
+        if(typeof emitEvent==="function") emitEvent("reserve_to_in", {seatId: seat.id});
         renderSeats();
         openOrderFor_v3(seat.id, seat.id);
       }},
@@ -1371,7 +1465,7 @@ function openReserveAction_v3(seat){
         openModal(
           "キャンセル",
           `
-            <div style="color:var(--danger); font-weight:900; margin-bottom:10px">予約をキャンセルします</div>
+            <div style="color:var(--danger); font-weight:1000; margin-bottom:10px">予約をキャンセルします</div>
             <input id="rCancelSlide" class="range" type="range" min="0" max="100" value="0" />
           `,
           [{label:"戻る", lime:false, onClick:()=> closeModal()}],
@@ -1388,6 +1482,7 @@ function openReserveAction_v3(seat){
             seat.bills=0;
             seat.orders=[];
             seat.orderLog=[];
+            if(typeof emitEvent==="function") emitEvent("reserve_cancel", {seatId: seat.id});
             closeModal();
             renderSeats();
             toast("キャンセルしました");
@@ -1400,6 +1495,7 @@ function openReserveAction_v3(seat){
   );
 }
 
+/* 合流席：どれを操作？ */
 function openMergedPick_v3(seat){
   const subs = Object.values(seat.sub||{});
   if(subs.length<=1){
@@ -1417,10 +1513,10 @@ function openMergedPick_v3(seat){
   }));
   buttons.push({label:"戻る", lime:false, onClick:()=> closeModal()});
 
-  openModal("どちらの注文、会計をしますか？", `<div style="opacity:.9">席を選択してください</div>`, buttons, seat.id);
+  openModal("どちらの注文、会計をしますか？", `<div class="muted">席を選択してください</div>`, buttons, seat.id);
 }
 
-/* 席カードタップ：本体 */
+/* 席カードタップ：本体（PART1の onSeatTap を上書き） */
 onSeatTap = function(seatId){
   const seat = seatById(seatId);
   if(!seat) return;
@@ -1435,7 +1531,7 @@ onSeatTap = function(seatId){
 
 
 /* =========================================================
-   7) 注文画面に入ったら必ず描画
+   7) 注文画面に入ったら必ず描画（showScreenフック）
 ========================================================= */
 (function hookShowScreenOrder_v3(){
   if(showScreen._orderHookedV3) return;
@@ -1452,6 +1548,7 @@ onSeatTap = function(seatId){
 
 /* =========================================================
    8) 席移動（復活）：移動/合流トグル＋席セレクター＋スライド確定
+   - PART1の openMoveHome() をここで上書きして復活
 ========================================================= */
 (function reviveSeatMove_v1(){
   if(reviveSeatMove_v1._done) return;
@@ -1486,17 +1583,17 @@ onSeatTap = function(seatId){
       const label = id || "(?)";
       const st = seat.status || "empty";
       const badge =
-        st==="empty" ? `<div style="opacity:.75">空席</div>` :
-        st==="reserve" ? `<div style="opacity:.85">予約</div>` :
-        seat.merged ? `<div style="opacity:.85">合流</div>` :
-        `<div style="opacity:.85">来店</div>`;
+        st==="empty" ? `空席` :
+        st==="reserve" ? `予約` :
+        seat.merged ? `合流` :
+        `来店`;
 
       return `
         <div class="seatCard" data-${dataKey}="${id}"
-             style="min-height:78px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; font-weight:900;
-                    ${sel ? "outline:3px solid rgba(47,107,62,0.95); background:rgba(93,174,99,0.20);" : ""}">
-          <div style="font-size:20px">${label}</div>
-          <div style="font-weight:900; font-size:12px">${badge}</div>
+             style="min-height:76px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px;
+                    ${sel ? "background:rgba(100,178,108,0.18);" : ""}">
+          <div style="font-size:22px; font-weight:1000">${label}</div>
+          <div class="muted" style="font-weight:1000">${badge}</div>
         </div>
       `;
     }).join("");
@@ -1559,7 +1656,6 @@ onSeatTap = function(seatId){
       toast("移動先は空席だけにしてください");
       return false;
     }
-
     toSeat.status = payload.status;
     toSeat.people = payload.people;
     toSeat.name = payload.name;
@@ -1585,7 +1681,6 @@ onSeatTap = function(seatId){
       toast("合流元が合流席は未対応（まず分離してから）");
       return false;
     }
-
     if((toSeat.status||"empty")==="empty" || (toSeat.status||"empty")==="reserve"){
       toast("合流先は「来店中」か「合流席」を選んでください");
       return false;
@@ -1615,50 +1710,54 @@ onSeatTap = function(seatId){
       return;
     }
 
-    let mode = "move";
+    let mode = "move"; // move | merge
     let fromId = "";
     let toId = "";
 
     function renderBody(){
       const fromList = seats.filter(s=>{
         const st = s.status || "empty";
-        if(mode==="move") return st !== "empty";
+        if(mode==="move"){
+          return st !== "empty";
+        }
         return st === "in" && !s.merged;
       });
 
       const toList = seats.filter(s=>{
         const st = s.status || "empty";
-        if(mode==="move") return st === "empty";
+        if(mode==="move"){
+          return st === "empty";
+        }
         return st === "in" || !!s.merged;
       });
 
       const modeBtns = `
         <div style="display:flex; gap:10px; margin-bottom:12px">
-          <button class="btn ${mode==="move"?"lime":""}" id="mvModeMove" style="flex:1; font-weight:900">移動</button>
-          <button class="btn ${mode==="merge"?"lime":""}" id="mvModeMerge" style="flex:1; font-weight:900">合流</button>
+          <button class="btn ${mode==="move"?"lime":""}" id="mvModeMove" style="flex:1">移動</button>
+          <button class="btn ${mode==="merge"?"lime":""}" id="mvModeMerge" style="flex:1">合流</button>
         </div>
       `;
 
       const fromHtml = `
-        <div style="font-weight:900; margin-bottom:8px">どこから</div>
+        <div style="font-weight:1000; margin-bottom:8px; font-size:18px">どこから</div>
         ${pickSeatGridHtml(fromList, fromId, "mvfrom")}
       `;
 
       const toHtml = `
         <div style="height:12px"></div>
-        <div style="font-weight:900; margin-bottom:8px">どこへ</div>
+        <div style="font-weight:1000; margin-bottom:8px; font-size:18px">どこへ</div>
         ${pickSeatGridHtml(toList, toId, "mvto")}
       `;
 
       const hint = `
         <div style="height:12px"></div>
-        <div style="opacity:.85">
+        <div class="muted">
           ${mode==="move"
             ? "※ 移動：移動先は空席のみ（事故防止）"
             : "※ 合流：合流元は来店中のみ／合流先は来店中 or 合流席"}
         </div>
         <div style="height:10px"></div>
-        <div style="color:var(--danger); font-weight:900; margin-bottom:8px">スライドで確定</div>
+        <div style="color:var(--danger); font-weight:1000; margin-bottom:8px">スライドで確定</div>
         <input id="mvSlide" class="range" type="range" min="0" max="100" value="0" />
       `;
 
@@ -1673,9 +1772,9 @@ onSeatTap = function(seatId){
 
     function wire(){
       const wrap = $("mvWrap");
+      if(!wrap) return;
 
       const rerender = ()=>{
-        if(!wrap) return;
         wrap.innerHTML = renderBody();
         wire();
       };
@@ -1729,14 +1828,13 @@ onSeatTap = function(seatId){
           let ok = false;
           if(mode==="move"){
             ok = moveSeat(fromSeat, toSeat);
+            if(ok && typeof emitEvent==="function") emitEvent("seat_move", {from: fromId, to: toId});
           }else{
             ok = mergeSeat(fromSeat, toSeat);
+            if(ok && typeof emitEvent==="function") emitEvent("seat_merge", {from: fromId, to: toId});
           }
 
-          if(!ok){
-            sl.value = 0;
-            return;
-          }
+          if(!ok){ sl.value = 0; return; }
 
           closeModal();
           renderSeats();
