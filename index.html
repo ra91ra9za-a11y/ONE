@@ -527,6 +527,160 @@
       .bottomBtn{ font-size:20px; }
       .pill{ font-size:28px; }
     }
+   /* =========================
+  草原（昼）テーマ：上書きCSS（PART1のstyle末尾に追加）
+  ねらい：背景1色・ボタン太枠・丸みフォント・メリハリ
+========================= */
+
+/* 色を「昼の草原」に寄せる（絵の左寄り） */
+:root{
+  --bg:#E8F3DE;              /* 画面背景：淡い草原 */
+  --text:#1D2B1E;            /* 基本文字：濃い緑黒 */
+  --muted:#4F6B52;           /* 補助文字 */
+  --line:#2E5B36;            /* 枠線：濃い緑 */
+  --header:#6DCB88;          /* 上部バー：草原の明るい緑 */
+  --headerLine:rgba(0,0,0,0.18);
+
+  --lime:#5CAB66;            /* 押しボタン（濃い緑） */
+  --lime2:#4F9E5A;
+
+  --panel:#F7FBF2;           /* 囲いの中身（白寄り） */
+  --panelLine:rgba(46,91,54,0.25);
+
+  --radius:22px;             /* 角丸を大きめに */
+}
+
+/* 全体フォント：丸み寄り + 読みやすさ（iOSでも安全寄せ） */
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family: ui-rounded, "Hiragino Maru Gothic ProN", "Hiragino Sans", system-ui, -apple-system, sans-serif;
+}
+
+/* 上部バー */
+.topbar{
+  background:var(--header);
+  border-bottom:3px solid rgba(0,0,0,0.18);
+}
+.brand{
+  font-size:22px;
+  letter-spacing:0.5px;
+}
+
+/* ボタン：太枠＆丸み（絵の質感に寄せる） */
+.btn,
+.bottomBtn{
+  border:4px solid var(--line);
+  background:var(--panel);
+  color:var(--text);
+  border-radius:999px;
+  font-weight:1000;
+  font-size:18px;     /* ←ここが「メリハリ」 */
+  min-height:54px;
+}
+
+/* 強調ボタン（濃い緑） */
+.btn.lime,
+.bottomBtn.move{
+  background:var(--lime);
+  color:#fff;
+  border-color:rgba(0,0,0,0.22);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.16);
+}
+
+/* ゴーストは枠だけ（閉じる等） */
+.btn.ghost{
+  background:transparent;
+  border-color:transparent;
+}
+
+/* 見出し（タイトル系） */
+.hintText{
+  color:var(--text);
+  font-weight:1000;
+  font-size:18px;
+}
+
+/* 囲い（※ボタンじゃない所は囲わないルール用：必要な所だけこのクラスを使う） */
+.panel{
+  background:var(--panel);
+  border:4px solid var(--panelLine);
+  border-radius:26px;
+  padding:14px;
+}
+.muted{ color:var(--muted); }
+
+/* 席カード：太枠＆白寄り（ボタンと区別しつつ高級感） */
+.seatCard{
+  background:var(--panel);
+  border:4px solid var(--line);
+  border-radius:26px;
+  padding:14px;
+  min-height:120px;
+}
+.seatCard.empty,
+.seatCard.reserve,
+.seatCard.in{
+  background:var(--panel);        /* 状態の塗り分けは控えめに（安っぽさ回避） */
+}
+
+/* 席の文字メリハリ */
+.seatNo{ font-size:28px; font-weight:1000; }
+.seatPeople{ font-size:22px; font-weight:1000; }
+.seatMoney{ font-size:22px; font-weight:1000; color:var(--line); }
+
+/* pill（◀︎ 0 ▶︎ の真ん中用）：必ず中央に */
+.pill{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  background:var(--panel);
+  border:4px solid var(--line);
+  border-radius:999px;
+  padding:10px 14px;
+  font-weight:1000;
+  font-size:28px;        /* ←真ん中の値を大きく */
+  line-height:1;
+  color:var(--text);
+  min-height:56px;
+}
+
+/* スライダー：親指サイズ + つまみ濃い緑 */
+.range{
+  width:100%;
+  height:18px;
+  border-radius:999px;
+  background:rgba(46,91,54,0.20);
+  appearance:none;
+  -webkit-appearance:none;
+}
+.range::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:44px;            /* 親指サイズ */
+  height:44px;
+  border-radius:999px;
+  background:var(--line); /* つまみ：濃い緑 */
+  border:4px solid rgba(0,0,0,0.20);
+}
+.range::-moz-range-thumb{
+  width:44px;
+  height:44px;
+  border-radius:999px;
+  background:var(--line);
+  border:4px solid rgba(0,0,0,0.20);
+}
+
+/* 入力欄もボタンと同じ見た目にして統一 */
+input.btn, select.btn, textarea.btn{
+  background:var(--panel);
+  border:4px solid var(--line);
+  border-radius:26px;
+  font-size:18px;
+  font-weight:1000;
+  color:var(--text);
+}
   </style>
 </head>
 
