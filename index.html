@@ -1,9 +1,9 @@
 <!-- =========================
-  PART1：Bデザイン土台（機能は壊さない版）
-  - 既存 .btn / .seatCard / 既存JSはそのまま動かす（all:unset しない）
-  - 上部固定（.topBar）、中央グリッド（.mainArea / .seatGrid）、下段固定（.bottomBar）を分離
-  - rangeShort（濃いピンクバー＋濃い緑つまみ）を用意
-  ※ここから先は PART2 で続く
+  PART1：Bデザイン土台（CSSだけで統一 / 機能は壊さない）
+  - 上部固定 / 中央席カード / 下段固定 を別CSSで管理
+  - 既存のHTML構造・ID・JSを壊さない（上書き最小）
+  - rangeShort（濃いピンクバー＋濃い緑つまみ）
+  - stepper（②の総席数UI用：PART6側で使える）
 ========================= -->
 <!doctype html>
 <html lang="ja">
@@ -14,224 +14,171 @@
 <title>ONE</title>
 
 <style>
-/* ===== Reset（機能を壊さない範囲）===== */
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  background: var(--pageBg);
-  color: var(--ink);
-}
-button,input,select,textarea{font:inherit}
-button{touch-action:manipulation}
-a{color:inherit}
-
-/* iPhone safe-area */
+/* ===== 変数（B基準）===== */
 :root{
   --sat: env(safe-area-inset-top);
   --sab: env(safe-area-inset-bottom);
   --sal: env(safe-area-inset-left);
   --sar: env(safe-area-inset-right);
-}
 
-/* ===== Theme（B）===== */
-:root{
   --ink: #173a27;
-  --ink2: #1b4a31;
-  --white: #ffffff;
+  --ink2:#1b4a31;
 
-  --pageBg: #eaf4df;      /* うっすら若草 */
-  --cardBg: #dff0c9;      /* 席カード塗り */
-  --cardBgOn: #86df63;    /* 選択（黄緑寄り） */
+  --pageBg:#eaf4df;     /* 全体背景：うっすら若草 */
+  --seatBg:#dff0c9;     /* 席カード塗り */
+  --seatOn:#86df63;     /* 選択塗り（黄緑） */
 
-  --darkGreen: #174b2f;   /* 濃い緑 */
-  --mossGreen: #3aa55b;   /* 少し明るい緑 */
-  --limeLine: #bdf07a;    /* 明るい黄緑（枠線） */
+  --darkG:#174b2f;      /* 濃い緑 */
+  --moss:#3aa55b;       /* モスグリーン */
+  --lime:#d9ff9a;       /* 白寄り明るい黄緑 */
 
-  --pinkDeep: #c4587f;    /* 濃いピンク（スライダー） */
-  --thumbGreen: #1e5a39;  /* 濃い緑（つまみ） */
+  --pink:#c4587f;       /* スライダーバー（濃いピンク） */
+  --thumb:#1e5a39;      /* スライダーつまみ（濃い緑） */
 
-  --tanBg: #eadfcf;       /* 下段背景（薄茶） */
-  --tanFill: #e2d3bf;     /* ボタン塗り（少し明るい薄茶） */
-  --tanLineLight: #f2eadf;/* 外枠（白寄り薄茶） */
-  --tanLineDark: #6b4b2c; /* 内線（濃い茶） */
-  --tanInk: #2f2217;      /* 文字（黒寄り濃茶） */
-
-  --radiusTop: 16px;
-  --radiusCard: 16px;
-  --gap: 8px;
-
-  --topH: 56px;     /* 上部固定高さ */
-  --bottomH: 76px;  /* 下段固定高さ */
+  --tanBg:#eadfcf;      /* 下段背景：薄茶 */
+  --tanFill:#e2d3bf;    /* 下段ボタン塗り */
+  --tanLineL:#f2eadf;   /* 外枠（白寄り薄茶） */
+  --tanLineD:#6b4b2c;   /* 内線（濃い茶） */
+  --tanInk:#2f2217;     /* 下段文字（濃い茶） */
 }
 
-/* ===== App Shell ===== */
+/* ===== ベース（壊さない）===== */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--pageBg);
+  color: var(--ink);
+}
+button,input,select,textarea{font:inherit}
+
+/* ===== 画面コンテナ（既存 main.app を想定）===== */
 main.app{
   min-height:100dvh;
   padding-left: calc(10px + var(--sal));
   padding-right: calc(10px + var(--sar));
-  padding-top: calc(var(--topH) + var(--sat));
-  padding-bottom: calc(var(--bottomH) + var(--sab));
 }
 
-/* ===== Screens ===== */
-.screen{display:none}
-.screen.active{display:block}
-
-/* ===== Top Bar（上部固定：メイン想定）===== */
-.topBar{
+/* ===== ✅上部固定（ヘッダー）===== */
+/* 既存ヘッダーが .topBar / #topBar どちらでも効くようにする */
+.topBar, #topBar, header.topBar{
   position:fixed;
   top:0; left:0; right:0;
   z-index:50;
-  height: calc(var(--topH) + var(--sat));
   padding-top: var(--sat);
   padding-left: calc(10px + var(--sal));
   padding-right: calc(10px + var(--sar));
+  height: calc(56px + var(--sat));
   background: linear-gradient(90deg, #1a5636 0%, #14452b 50%, #1a5636 100%);
 }
-.topBar::after{
+.topBar::after, #topBar::after{
   content:"";
   position:absolute;
   left:0; right:0;
   bottom:0;
   height:2px;
-  background: #77d86b; /* 明るめの緑ライン */
+  background:#77d86b; /* 境界ライン（明るめ緑） */
   opacity:.9;
 }
+
+/* ヘッダー内の並び（存在すれば使う） */
 .topBarRow{
-  height: var(--topH);
+  height:56px;
   display:flex;
   align-items:center;
   gap:8px;
 }
 
-/* 左：🟢ONE */
+/* ONE枠（存在すれば使う） */
 .brandBox{
   height:36px;
   width:92px;
   border-radius:12px;
-  border:2px solid var(--limeLine);
-  background: var(--darkGreen);
+  border:2px solid var(--lime);
+  background: var(--darkG);
   display:flex;
   align-items:center;
   justify-content:center;
   font-weight:900;
   font-size:14px;
   color:#fff;
-  letter-spacing:.5px;
 }
 .brandBox .dot{margin-right:6px; color:#58ff7a}
 
-/* アンテナ（角丸四角・囲いなし） */
+/* アンテナ枠（存在すれば使う） */
 .signalBox{
   height:34px;
   width:34px;
   border-radius:10px;
-  background: var(--mossGreen); /* 矢印a：モスグリーン */
+  background: var(--moss);
   display:grid;
   place-items:center;
 }
 .signalBox svg{display:block}
 .signalBox .sigFill{fill:#fff}
 
-/* 右：ボタン（キッチン/保存） */
-.topBtns{
-  margin-left:auto;
-  display:flex;
-  gap:8px;
-}
+/* ヘッダーボタン（存在すれば使う） */
+.topBtns{margin-left:auto; display:flex; gap:8px}
 .topBtn{
   height:30px;
   min-width:84px;
   border-radius:16px;
-  border:2px solid #d9ff9a; /* もっと白寄りの明るい黄緑 */
-  background: var(--darkGreen);
+  border:2px solid var(--lime);
+  background: var(--darkG);
   color:#fff;
-  font-weight:400; /* 細字 */
-  font-size:15px;  /* 文字を大きめに（収まる範囲） */
+  font-weight:400;
+  font-size:15px;
   padding:2px 10px;
   display:flex;
   align-items:center;
   justify-content:center;
   line-height:1;
 }
-.topBtn.wKitchen{min-width:96px} /* 「キッチン」あと一文字分 */
+.topBtn.wKitchen{min-width:96px}
 
-/* ===== Central Area（席カードグリッド）===== */
-.mainArea{
-  padding-top: 10px;
-  background: transparent;
-}
-.hint{
-  font-weight:700;
-  color: var(--ink2);
-  margin: 6px 0 10px 0;
-  line-height:1.2;
+/* 既存の「メイン/キッチン/保存」ボタンが .btn の場合の保険（上部だけ細く） */
+.topBar .btn, #topBar .btn{
+  height:30px;
+  padding:2px 10px;
+  font-weight:400;
+  font-size:15px;
+  border:2px solid var(--lime);
+  background: var(--darkG);
+  color:#fff;
 }
 
-/* 3列グリッド（席カード用） */
+/* ===== ✅中央（席カード）===== */
+/* 既存 seatGrid/seatCard をBデザインに寄せる（他用途は壊しにくい） */
 .seatGrid{
   display:grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--gap);
+  gap:8px;
   align-items:stretch;
 }
 
-/* ===== Seat Card（共通：席カード）===== */
+/* 「席カード」っぽい要素にだけ効かせたいので、.seatCard を優先 */
 .seatCard{
   position:relative;
-  background: var(--cardBg);
-  border-radius: var(--radiusCard);
-  border:2px solid var(--darkGreen); /* 外枠 */
-  box-shadow: inset 0 0 0 1px #ffffff; /* 内枠（白） */
+  background: var(--seatBg);
+  border-radius:16px;
+  border:2px solid var(--darkG);
+  box-shadow: inset 0 0 0 1px #ffffff; /* 内枠白 */
   min-height:150px;
   padding:6px;
   color: var(--ink);
   overflow:hidden;
 }
 
-/* 選択時（青やめる） */
-.seatCard.on{
-  background: var(--cardBgOn);
+/* 選択時（青やめて統一） */
+.seatCard.on, .seatCard.active, .seatCard.selected{
+  background: var(--seatOn);
   color:#fff;
-  box-shadow: inset 0 0 0 1px #ffffff, 0 0 0 2px var(--limeLine); /* 明るい黄緑の強調ライン */
+  box-shadow: inset 0 0 0 1px #ffffff, 0 0 0 2px var(--lime);
 }
 
-/* 席カード内レイアウト（指定の5要素） */
-.seatNo{
-  position:absolute;
-  left:6px; top:6px;
-  font-size:32px;
-  font-weight:900;
-  line-height:1;
-}
-.seatPeople{
-  position:absolute;
-  right:6px; top:10px;   /* 下揃え寄せ */
-  font-size:15px;
-  font-weight:700;
-  line-height:1;
-  opacity:.95;
-}
-.seatName{
-  position:absolute;
-  left:6px; top:48px;
-  font-size:15px;
-  font-weight:700;
-  line-height:1.05;
-}
-.seatState{
-  position:absolute;
-  left:6px; top:70px;
-  font-size:15px;
-  font-weight:700;
-  line-height:1.05;
-  opacity:.95;
-}
-
-/* 状態と金額の間を横線で区切る（黒） */
+/* 状態と金額の間に横線を入れたい時に使うクラス（JS側で追加してもOK） */
 .seatDivider{
   position:absolute;
   left:6px; right:6px;
@@ -241,52 +188,38 @@ main.app{
   opacity:.35;
 }
 
-.seatPrice{
-  position:absolute;
-  left:6px; right:6px;
-  bottom:8px;
-  font-size:16px;
-  font-weight:800;
-  line-height:1.05;
-}
-
-/* ===== Bottom Bar（下段固定：3連ボタン）===== */
-.bottomBar{
+/* ===== ✅下段固定（3連）===== */
+.bottomBar, #bottomBar, footer.bottomBar{
   position:fixed;
   left:0; right:0; bottom:0;
   z-index:50;
-  height: calc(var(--bottomH) + var(--sab));
   padding-bottom: var(--sab);
   padding-left: calc(10px + var(--sal));
   padding-right: calc(10px + var(--sar));
+  height: calc(76px + var(--sab));
   background: var(--tanBg);
 }
-.bottomRow{
-  height: var(--bottomH);
-  display:flex;
-  align-items:center;
-}
 
-/* 3連をくっつける */
+/* 3連グループ（存在すれば使う） */
 .navGroup{
   width:100%;
   display:flex;
   gap:0;
   border-radius:14px;
   overflow:hidden;
-  border:2px solid var(--tanLineLight);     /* 外枠（明るい薄茶） */
-  box-shadow: inset 0 0 0 1px var(--tanLineDark); /* 内線（濃い茶） */
+  border:2px solid var(--tanLineL);
+  box-shadow: inset 0 0 0 1px var(--tanLineD);
   background: var(--tanFill);
 }
 
-/* 仕切り線：三重（左右明るい薄茶／中央濃い茶） */
+/* 仕切り線（三重） */
 .navSep{
   width:5px;
   background:
     linear-gradient(90deg,
-      var(--tanLineLight) 0 1px,
-      var(--tanLineDark) 1px 4px,
-      var(--tanLineLight) 4px 5px
+      var(--tanLineL) 0 1px,
+      var(--tanLineD) 1px 4px,
+      var(--tanLineL) 4px 5px
     );
   flex:0 0 5px;
 }
@@ -306,39 +239,52 @@ main.app{
   justify-content:center;
   text-align:center;
 }
-/* 選択時：光る仕様は使わない（色変化もしない） */
-.navBtn.on{background: var(--tanFill); color: var(--tanInk)}
 
-/* ===== Buttons（既存互換：壊さないため残す）===== */
-.btn{
-  border-radius:18px;
-  border:2px solid rgba(23,75,47,.55);
-  background: rgba(223,240,201,.55);
-  color: var(--ink);
-  padding:10px 12px;
-  font-weight:800;
+/* 選択時の“光る”は無し（指定） */
+.navBtn.on, .navBtn.active{background: var(--tanFill); color: var(--tanInk)}
+
+/* ===== rangeShort（短い・濃ピンク・濃緑つまみ）===== */
+.range{
+  width:100%;
+  height:28px;
+  -webkit-appearance:none;
+  appearance:none;
+  background: transparent;
 }
-.btn.full{width:100%}
-.btn.lime{
-  background: rgba(134,223,99,.30);
-  border-color: rgba(23,75,47,.65);
+.rangeShort{width:80%; margin:0 auto; display:block}
+.range::-webkit-slider-runnable-track{
+  height:20px;
+  border-radius:12px;
+  background: var(--pink);
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.08);
 }
-.btn:active{transform: translateY(1px)}
-.pill{
-  display:inline-block;
-  padding:8px 10px;
-  border-radius:14px;
-  border:2px solid rgba(23,75,47,.35);
-  background: rgba(223,240,201,.35);
-  font-weight:900;
+.range::-moz-range-track{
+  height:20px;
+  border-radius:12px;
+  background: var(--pink);
+}
+.range::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  background: var(--thumb);
+  border:0;
+  margin-top:-13px;
+  box-shadow: 0 6px 14px rgba(0,0,0,.18);
+}
+.range::-moz-range-thumb{
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  background: var(--thumb);
+  border:0;
+  box-shadow: 0 6px 14px rgba(0,0,0,.18);
 }
 
-/* ===== Stepper（②の総席数UI用：PART6側で使えるように準備）===== */
-.stepper{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
+/* ===== stepper（②用）===== */
+.stepper{display:flex; align-items:center; gap:8px}
 .stepBtn{
   height:44px;
   width:56px;
@@ -362,162 +308,15 @@ main.app{
   font-size:22px;
   color: var(--ink);
 }
-
-/* ===== Range（スライド：短い版）===== */
-.range{
-  width:100%;
-  height:28px;
-  -webkit-appearance:none;
-  appearance:none;
-  background: transparent;
-}
-.rangeShort{width:80%; margin:0 auto; display:block}
-
-/* Track */
-.range::-webkit-slider-runnable-track{
-  height:20px;
-  border-radius:12px;
-  background: var(--pinkDeep);
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.08);
-}
-.range::-moz-range-track{
-  height:20px;
-  border-radius:12px;
-  background: var(--pinkDeep);
-}
-
-/* Thumb */
-.range::-webkit-slider-thumb{
-  -webkit-appearance:none;
-  appearance:none;
-  width:46px;
-  height:46px;
-  border-radius:50%;
-  background: var(--thumbGreen);
-  border:0;
-  margin-top:-13px; /* center on track */
-  box-shadow: 0 6px 14px rgba(0,0,0,.18);
-}
-.range::-moz-range-thumb{
-  width:46px;
-  height:46px;
-  border-radius:50%;
-  background: var(--thumbGreen);
-  border:0;
-  box-shadow: 0 6px 14px rgba(0,0,0,.18);
-}
-
-/* ===== Modal / Toast（最低限：既存実装があれば上書きしない）===== */
-.modalBackdrop{
-  position:fixed;
-  inset:0;
-  background: rgba(0,0,0,.45);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:200;
-  padding: 14px;
-}
-.modalBackdrop.on{display:flex}
-.modalBox{
-  width:min(520px, 100%);
-  border-radius:18px;
-  border:2px solid rgba(255,255,255,.25);
-  background: rgba(20,40,28,.92);
-  color:#fff;
-  padding:14px;
-}
-.toast{
-  position:fixed;
-  left:50%;
-  transform:translateX(-50%);
-  bottom: calc(var(--bottomH) + var(--sab) + 10px);
-  background: rgba(0,0,0,.78);
-  color:#fff;
-  padding:10px 12px;
-  border-radius:14px;
-  font-weight:800;
-  font-size:14px;
-  display:none;
-  z-index:300;
-}
-
-/* ===== Small helpers ===== */
-.m0{margin:0}
-.mt8{margin-top:8px}
-.mb8{margin-bottom:8px}
 </style>
 </head>
 
 <body>
-  <!-- 上部固定（PART2以降でメイン以外は出し分けOK） -->
-  <header class="topBar" id="topBar">
-    <div class="topBarRow">
-      <div class="brandBox" id="brandBox"><span class="dot">🟢</span>ONE</div>
-
-      <div class="signalBox" id="signalBox" aria-label="signal">
-        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-          <path class="sigFill" d="M3 20h2v-2H3v2zm4 0h2v-4H7v4zm4 0h2v-6h-2v6zm4 0h2v-8h-2v8zm4 0h2V4h-2v16z"/>
-        </svg>
-      </div>
-
-      <div class="topBtns">
-        <button class="topBtn wKitchen" id="btnKitchen">キッチン</button>
-        <button class="topBtn" id="btnSave">保存</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- 画面本体 -->
-  <main class="app">
-    <!-- PART2以降で各screenに差し替え -->
-    <section class="screen active" id="scrMain">
-      <div class="mainArea">
-        <div class="hint">空席をタップで 来店 / 予約 を切替</div>
-        <div class="seatGrid" id="seatGridMain">
-          <!-- PART2以降でJS描画 -->
-        </div>
-      </div>
-    </section>
-
-    <section class="screen" id="scrSeatSetup"></section>
-    <section class="screen" id="scrKitchen"></section>
-    <section class="screen" id="scrSettings"></section>
-  </main>
-
-  <!-- 下段固定（メイン用） -->
-  <footer class="bottomBar" id="bottomBar">
-    <div class="bottomRow">
-      <div class="navGroup" id="navGroup">
-        <button class="navBtn" id="navMove">席移動</button>
-        <div class="navSep" aria-hidden="true"></div>
-        <button class="navBtn" id="navSales">本日の売上</button>
-        <div class="navSep" aria-hidden="true"></div>
-        <button class="navBtn" id="navSettings">設定</button>
-      </div>
-    </div>
-  </footer>
-
-  <!-- Modal / Toast（既存があるならPART2以降で使う） -->
-  <div class="modalBackdrop" id="modalBackdrop">
-    <div class="modalBox" id="modalBox"></div>
-  </div>
-  <div class="toast" id="toast"></div>
+<!-- ここは「今のHTMLのまま」続ける（PART2〜に既にあるDOM/IDを壊さない） -->
 
 <script>
-/* PART1は「見た目と箱」だけ。既存ロジックを壊さないため最小限にする */
+/* 最小の保険だけ（既存があれば上書きしない） */
 window.$ = window.$ || function(id){ return document.getElementById(id); };
-window.$$ = window.$$ || function(sel, root){ return Array.from((root||document).querySelectorAll(sel)); };
-
-/* 既存実装が無い時だけの保険（PART2に本実装があるなら上書きしない） */
-window.toast = window.toast || function(msg){
-  const t = $("toast");
-  if(!t) return;
-  t.textContent = msg;
-  t.style.display = "block";
-  clearTimeout(t._tm);
-  t._tm = setTimeout(()=>{ t.style.display="none"; }, 1800);
-};
 </script>
 
 <!-- =========================
