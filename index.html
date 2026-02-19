@@ -1,9 +1,8 @@
 <!-- =========================
-  ONE レジアプリ（無料版）完全フル：PART1（Bデザイン統一・共通CSS/骨格/メイン）
-  役割：HTML骨格 / 共通CSS / 共通UI / メイン画面UI / 最低限JS（状態・描画）
+  ONE レジアプリ（無料版）完全フル：PART1（Bデザイン基準・3レイアウト分離版）
+  役割：HTML骨格 / CSS（上部固定・席カード・下段固定を完全分離）/ 共通定義 / メインUI / 最低限JS
   保存KEY：ONE_FREE_FULL_V2
-  仕様：上部バー統一（ONE・📶・中央ボタン・保存）/ 下段はメインのみ
-  ※重要：PART1の末尾に </body></html> を入れない（後続PARTにある）
+  ※重要：PART1の末尾に </body></html> を入れない（PART8にある）
 ========================= -->
 <!doctype html>
 <html lang="ja">
@@ -13,48 +12,46 @@
   <title>ONE FREE</title>
 
   <style>
-    /* =========================================================
-      Bデザイン統一（配色・形・余白の基準）
-      - 枠：濃い緑（太枠）
-      - 塗り：薄い緑～白緑
-      - タイトル前：🔵（全ページ共通）
-      - 説明文：小さめ（折り返しは“不自然に”しない）
-      - スライド：親指サイズ／バー短め／バー色=濃いピンク
-    ========================================================= */
-
     :root{
-      /* 背景（和紙柄は後で。今は“明るめ単色”で揃える） */
-      --bg:#EEF6E9;
+      /* ===== Bデザイン：共通色 ===== */
+      --bg:#EAF6DF;                 /* うっすら若草（画面背景） */
+      --text:#173224;               /* 黒に近い緑（基本文字） */
+      --muted:#2d4a39;
 
-      /* 基本色 */
-      --text:#143323;
-      --muted:rgba(20,51,35,0.78);
+      --darkGreen:#1F5A3A;          /* 濃い緑（塗り） */
+      --lightGreen:#8EEA7B;         /* 明るい黄緑（強調ライン） */
+      --softGreen:#DFF2D0;          /* 薄い若草（カード/ボタン塗り） */
 
-      /* 枠（濃い緑） */
-      --line:#214E35;
-      --stroke:7px;
-      --radius:28px;
+      --white:#ffffff;
+      --pink:#D64B7A;               /* 濃いめピンク（削除スライドのバー） */
 
-      /* 塗り（薄い緑） */
-      --fill:#E9F4E4;
-      --fill2:#F6FBF3;
+      /* ===== 数字（固定） ===== */
+      --headerH:56px;
+      --bottomH:76px;
 
-      /* ヘッダー */
-      --header:#7ED5A6;
-      --headerH:62px;
+      /* ===== 枠（二重） ===== */
+      --outerW:2px;                 /* 外枠：濃い緑 */
+      --innerW:1px;                 /* 内枠：白 */
+      --radiusHeader:12px;
+      --radiusSignal:10px;
+      --radiusTopBtn:16px;
+      --radiusSeat:16px;
+      --radiusNav:14px;
 
-      /* 下段 */
-      --bottomH:84px;
+      /* ===== 席カード文字サイズ（指定どおり） ===== */
+      --fzSeatNo:32px;
+      --fzSeatPeople:15px;
+      --fzSeatName:15px;
+      --fzSeatState:15px;
+      --fzSeatMoney:16px;
 
-      /* アクセント */
-      --blueDot:#0B63D9;     /* 🔵の色味に近い */
-      --pink:#C86286;        /* 濃いめピンク（バー） */
-      --thumb:#275E3F;       /* 濃い緑（丸ボタン） */
+      /* ===== ヘッダー文字 ===== */
+      --fzBrand:14px;
+      --fzTopBtn:13px;
     }
 
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
-
     body{
       margin:0;
       background:var(--bg);
@@ -69,13 +66,11 @@
       -webkit-font-smoothing:antialiased;
       text-rendering:optimizeLegibility;
 
-      /* 画面ズレ対策（基本） */
       touch-action:pan-y;
       overscroll-behavior-y:contain;
       -webkit-text-size-adjust:100%;
     }
 
-    /* モーダル表示中に背景固定（入力ズレ対策の核） */
     body.modalLock{
       position:fixed;
       width:100%;
@@ -83,7 +78,7 @@
     }
 
     input, textarea, select{
-      font-size:16px; /* iOS拡大抑止 */
+      font-size:16px;
       -webkit-appearance:none;
       appearance:none;
       color:var(--text);
@@ -95,284 +90,273 @@
       padding-bottom:calc(var(--bottomH) + env(safe-area-inset-bottom));
     }
 
-    /* =========================
-      Header
-    ========================= */
-    .topbar{
+    /* =========================================================
+      1) 上部固定（ヘッダー）専用CSS：.topBar系だけ
+    ========================================================= */
+    .topBar{
       position:fixed;
       left:0; right:0; top:0;
       padding-top:env(safe-area-inset-top);
       height:calc(var(--headerH) + env(safe-area-inset-top));
-      background:var(--header);
+      background:transparent;
       z-index:50;
       display:flex;
       align-items:flex-end;
-      border-bottom:3px solid rgba(0,0,0,0.10);
     }
-    .topbarInner{
+    .topBarInner{
       height:var(--headerH);
       width:100%;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:0 12px 10px;
-      gap:10px;
+      padding:6px 10px;
+      gap:8px;
     }
 
-    .brandWrap{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-width:104px;
-    }
-    .brand{
-      font-weight:1000;
-      letter-spacing:0.5px;
-      font-size:28px;
-      line-height:1;
-    }
-
-    /* アンテナ（復活・常時表示） */
-    .antennaWrap{
-      position:relative;
-      width:46px;
-      height:46px;
+    /* 左：🟢ONE（枠付き） */
+    .brandBox{
+      height:36px;
+      width:92px;
+      border-radius:var(--radiusHeader);
+      border:2px solid var(--lightGreen);
+      background:var(--darkGreen);
       display:flex;
       align-items:center;
       justify-content:center;
+      flex:0 0 auto;
+    }
+    .brandText{
+      font-size:var(--fzBrand);
+      font-weight:900;
+      color:var(--white);
+      letter-spacing:0.2px;
+      line-height:1;
+      white-space:nowrap;
+    }
+    .brandDot{
+      color:var(--lightGreen);
+      margin-right:4px;
+    }
+
+    /* アンテナ（角丸四角、囲い無し） */
+    .signalBtn{
+      width:34px;
+      height:34px;
+      border-radius:var(--radiusSignal);
       border:none;
+      background:#5DD98B; /* 少し明るい緑 */
+      display:flex;
+      align-items:center;
+      justify-content:center;
       padding:0;
       margin:0;
-      background:rgba(255,255,255,0.22);
-      border-radius:999px;
-      box-shadow: inset 0 0 0 3px rgba(33,78,53,0.18);
-      touch-action:manipulation;
-    }
-    .antennaIcon{
-      font-size:24px;
-      line-height:1;
-    }
-    .antennaX{
-      position:absolute;
-      top:6px;
-      right:6px;
-      font-size:15px;
-      line-height:1;
-      color:#C33B2E;
-      display:none;
-      font-weight:1000;
-      text-shadow:0 1px 0 rgba(255,255,255,0.25);
-    }
-    .antennaWrap.off .antennaX{ display:block; }
-
-    .topCenter{
-      flex:1;
-      display:flex;
-      justify-content:center;
-    }
-
-    /* ヘッダーボタン（濃い緑・丸） */
-    .topBtn{
-      border:var(--stroke) solid var(--line);
-      background:var(--thumb);
-      color:#fff;
-      border-radius:999px;
-      padding:14px 26px;
-      font-size:22px;
-      font-weight:1000;
-      line-height:1;
-      min-height:52px;
-      box-shadow: inset 0 -6px 0 rgba(0,0,0,0.10);
-      user-select:none;
-      -webkit-user-select:none;
-      touch-action:manipulation;
-      white-space:nowrap;
-    }
-
-    /* =========================
-      共通：ボタン / カード
-    ========================= */
-    .btn{
-      border:var(--stroke) solid var(--line);
-      background:var(--fill2);
-      color:var(--text);
-      border-radius:999px;
-      padding:14px 18px;
-      font-size:20px;
-      line-height:1.1;
-      min-height:56px;
-      font-weight:1000;
-      user-select:none;
-      -webkit-user-select:none;
-      touch-action:manipulation;
-      white-space:nowrap;
-    }
-    .btn.lime{
-      background:var(--thumb);
-      color:#fff;
-      box-shadow: inset 0 -6px 0 rgba(0,0,0,0.10);
-    }
-    .btn.ghost{
-      background:transparent;
-      border-color:transparent;
-      min-height:44px;
-      padding:10px 12px;
-      font-size:16px;
-    }
-    .btn.full{ width:100%; }
-
-    /* “非ボタン箱”は囲わない方針でも、Bデザイン寄せで必要箇所は軽く */
-    .panel{
-      background:transparent;
-      border:none;
-      padding:0;
-    }
-
-    /* =========================
-      タイトル/説明（全ページ共通）
-    ========================= */
-    .titleRow{
-      display:flex;
-      align-items:baseline;
-      gap:10px;
-      margin:14px 0 10px;
-      font-weight:1000;
-      font-size:30px;
-      letter-spacing:0.2px;
-    }
-    .titleRow .dot{
-      width:22px;
-      height:22px;
-      border-radius:999px;
-      background:var(--blueDot);
       flex:0 0 auto;
-      box-shadow: inset 0 -3px 0 rgba(0,0,0,0.18);
+      touch-action:manipulation;
+      position:relative;
     }
-    .descSmall{
-      font-size:13px;     /* 説明文はもっと小さく */
+    .signalBtn .signalIcon{
+      font-size:18px;
+      line-height:1;
+      color:var(--white);
+      filter: drop-shadow(0 1px 0 rgba(0,0,0,0.15));
+    }
+    .signalBtn .signalX{
+      position:absolute;
+      right:2px;
+      top:1px;
+      font-size:12px;
+      line-height:1;
+      color:#fff;
+      display:none;
       font-weight:900;
-      color:var(--muted);
-      line-height:1.55;
-      margin:6px 0 10px;
-      word-break:keep-all;         /* “変な折り返し”を減らす */
-      overflow-wrap:normal;
+      text-shadow:0 1px 0 rgba(0,0,0,0.25);
+    }
+    .signalBtn.off .signalX{ display:block; }
+
+    /* 右：ボタン（キッチン/保存） */
+    .topRight{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex:0 0 auto;
+    }
+    .topBtn{
+      height:30px;
+      width:84px;
+      border-radius:var(--radiusTopBtn);
+      border:2px solid var(--lightGreen);
+      background:var(--darkGreen);
+      color:var(--white);
+      font-size:var(--fzTopBtn);
+      font-weight:400; /* 細字 */
+      padding:2px 8px;
+      line-height:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      touch-action:manipulation;
+      user-select:none;
+      -webkit-user-select:none;
+      white-space:nowrap;
     }
 
-    /* =========================
-      Screens
-    ========================= */
+    /* =========================================================
+      2) 中央席カード（グリッド）専用CSS：.seatGrid/.seatCard系だけ
+    ========================================================= */
     .screen{
       display:none;
-      padding:14px;
+      padding:10px;              /* “余白ほぼ無し”寄り */
       max-width:980px;
       margin:0 auto;
     }
     .screen.active{ display:block; }
 
-    /* =========================
-      Main / Seat grid
-    ========================= */
     .hintText{
-      font-size:14px;     /* 説明は小さめ */
-      font-weight:900;
-      color:var(--text);
-      margin:6px 0 10px;
-      word-break:keep-all;
+      font-size:12px;            /* 説明文は小さく */
+      font-weight:700;
+      color:rgba(23,50,36,0.75);
+      margin:0 0 6px 0;
+      padding:0;
+      user-select:none;
     }
 
     .seatGrid{
       display:grid;
       grid-template-columns:repeat(3, minmax(0, 1fr));
-      gap:14px;
+      gap:8px;                   /* 今の半分寄り */
     }
 
-    /* 席カード：4段固定（空白でも詰めない） */
+    /* 二重枠：外枠（濃い緑）＋内枠（白） */
     .seatCard{
-      border:var(--stroke) solid var(--line);  /* 濃い緑の枠のみ */
-      background:var(--fill);
-      border-radius:30px;
-      padding:12px;                 /* 枠に付かない最小余白 */
-      height:178px;                 /* ★4段の高さを固定（ここが超重要） */
-      display:grid;
-      grid-template-rows: 40px 26px 26px 32px; /* 4段固定 */
-      row-gap:6px;
-      touch-action:manipulation;
+      border-radius:var(--radiusSeat);
+      background:var(--softGreen);
+      position:relative;
+      min-height:150px;          /* 固定：4段が潰れない */
+      padding:6px;               /* ほぼ無し */
       overflow:hidden;
+      touch-action:manipulation;
+      color:var(--text);
+    }
+    .seatCard::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:var(--radiusSeat);
+      border:var(--outerW) solid var(--darkGreen);
+      pointer-events:none;
+    }
+    .seatCard::after{
+      content:"";
+      position:absolute;
+      inset:2px; /* 外枠の内側へ */
+      border-radius:calc(var(--radiusSeat) - 2px);
+      border:var(--innerW) solid var(--white);
+      pointer-events:none;
+      opacity:0.95;
     }
 
-    /* 状態で薄く変える（必要なら） */
-    .seatCard.reserve{ background:#EAF2FF; }
-    .seatCard.empty{ background:var(--fill); }
-    .seatCard.in{ background:var(--fill); }
+    /* 状態別の薄い差（必要最小限） */
+    .seatCard.empty{ background:var(--softGreen); }
+    .seatCard.reserve{ background:#E6F6FF; }
+    .seatCard.in{ background:var(--softGreen); }
 
-    /* 1段目：席番号(左) / 人数(右) — 間に空白を作る */
-    .seatNoLine{
+    /* 選択時（統一：明るい黄緑の強調ライン＋濃いめ黄緑塗り＋文字白） */
+    .seatCard.selected{
+      background:#7EDB70; /* 濃いめ黄緑 */
+      color:#fff;
+    }
+    .seatCard.selected::before{ border-color:var(--darkGreen); }
+    .seatCard.selected::after{ border-color:var(--white); }
+    .seatCard.selected{
+      outline:2px solid var(--lightGreen);
+      outline-offset:0;
+    }
+
+    /* ===== 席カード内：4段固定（空でも詰めない） ===== */
+    .seatInner{
+      position:relative;
+      z-index:1; /* 枠より上 */
+      height:100%;
       display:flex;
-      align-items:flex-end;
+      flex-direction:column;
+      gap:0;                  /* 行間は詰める */
+      line-height:1.05;
+    }
+
+    /* 1段目：席番号（左）＋人数（右）→間は必ず空白ができる */
+    .seatRowTop{
+      display:flex;
       justify-content:space-between;
-      gap:12px;  /* “離れて見える”最低ギャップ */
-      min-width:0;
+      align-items:flex-start;
+      gap:10px;
+      min-height:40px;        /* 空でも高さ確保 */
     }
     .seatNo{
-      font-size:32px;   /* 指定：32px */
-      font-weight:1000;
+      font-size:var(--fzSeatNo);
+      font-weight:900;
       line-height:1;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
     .seatPeople{
-      font-size:15px;   /* 名前と同サイズ */
-      font-weight:1000;
+      font-size:var(--fzSeatPeople);
+      font-weight:700;        /* 強調しない */
       line-height:1;
       white-space:nowrap;
+      margin-top:6px;         /* “右上固定”感 */
       opacity:0.95;
     }
 
-    /* 2段目：名前（15px） */
-    .seatName{
-      font-size:15px;
-      font-weight:1000;
-      line-height:1.1;
+    /* 2段目：名前 */
+    .seatRowName{
+      min-height:22px;        /* 空でも詰めない */
+      display:flex;
+      align-items:flex-start;
+      font-size:var(--fzSeatName);
+      font-weight:700;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
 
-    /* 3段目：状態（15px/補助） */
-    .seatInfo{
-      font-size:15px;
-      font-weight:900;
-      line-height:1.1;
-      color:var(--muted);
+    /* 3段目：状態 */
+    .seatRowState{
+      min-height:22px;        /* 空でも詰めない */
+      display:flex;
+      align-items:flex-start;
+      font-size:var(--fzSeatState);
+      font-weight:700;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      opacity:0.9;
+    }
+
+    /* 4段目：金額（下段固定） */
+    .seatRowMoney{
+      margin-top:auto;        /* 下に固定 */
+      min-height:22px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:flex-start;
+      font-size:var(--fzSeatMoney);
+      font-weight:800;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
 
-    /* 4段目：金額（16px） */
-    .seatMoney{
-      font-size:16px;
-      font-weight:1000;
-      line-height:1;
-      color:var(--line);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      align-self:end;
-    }
-
-    /* =========================
-      Bottom bar (Main only)
-    ========================= */
+    /* =========================================================
+      3) 下段固定（3連ボタン）専用CSS：.bottomBar/.navBtn系だけ
+    ========================================================= */
     .bottomBar{
       position:fixed;
       left:0; right:0;
       bottom:0;
       padding-bottom:env(safe-area-inset-bottom);
       height:calc(var(--bottomH) + env(safe-area-inset-bottom));
-      background:rgba(238,246,233,0.96);
-      border-top:3px solid rgba(0,0,0,0.10);
+      background:var(--bg);
       z-index:45;
       display:flex;
       align-items:center;
@@ -381,249 +365,232 @@
       width:100%;
       max-width:980px;
       margin:0 auto;
-      padding:0 12px;
-      display:grid;
-      grid-template-columns:1fr 1fr 1fr;
-      gap:12px;
-      align-items:center;
+      padding:8px 10px;    /* 上下8 / 左右10 */
       height:var(--bottomH);
     }
-    .bottomBtn{
-      border:var(--stroke) solid var(--line);
-      background:var(--fill2);
-      border-radius:999px;
-      min-height:64px;
-      font-size:22px;
-      font-weight:1000;
-      color:var(--text);
-      touch-action:manipulation;
+
+    /* 3連を“くっつける”：gap 0 */
+    .navGroup{
+      width:100%;
+      height:100%;
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:0;
+      border-radius:var(--radiusNav);
+      position:relative;
+      overflow:hidden;
+      background:var(--softGreen);
+    }
+    .navGroup::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:var(--radiusNav);
+      border:var(--outerW) solid var(--darkGreen);
+      pointer-events:none;
+    }
+    .navGroup::after{
+      content:"";
+      position:absolute;
+      inset:2px;
+      border-radius:calc(var(--radiusNav) - 2px);
+      border:var(--innerW) solid var(--white);
+      pointer-events:none;
+      opacity:0.95;
     }
 
-    /* =========================
-      Modal
-    ========================= */
+    .navBtn{
+      position:relative;
+      z-index:1;
+      background:transparent;
+      border:none;
+      color:var(--text);
+      font-size:16px;
+      font-weight:800;
+      padding:2px 6px;   /* ほぼ無し */
+      line-height:1.05;
+      touch-action:manipulation;
+      user-select:none;
+      -webkit-user-select:none;
+    }
+    /* 仕切り線（中央2本） */
+    .navBtn + .navBtn{
+      border-left:var(--outerW) solid rgba(31,90,58,0.35);
+    }
+
+    .navBtn.selected{
+      background:#7EDB70;
+      color:#fff;
+    }
+    .navBtn.selected{
+      outline:2px solid var(--lightGreen);
+      outline-offset:-2px;
+    }
+
+    /* =========================================================
+      モーダル / トースト（最低限：後で各パートで詰める）
+    ========================================================= */
     .backdrop{
       position:fixed;
       inset:0;
-      background:rgba(0,0,0,0.42);
+      background:rgba(0,0,0,0.35);
       z-index:80;
       display:none;
       align-items:center;
       justify-content:center;
-      padding:12px;
-      padding-top:calc(12px + env(safe-area-inset-top));
-      padding-bottom:calc(12px + env(safe-area-inset-bottom));
+      padding:10px;
+      padding-top:calc(10px + env(safe-area-inset-top));
+      padding-bottom:calc(10px + env(safe-area-inset-bottom));
     }
     .backdrop.show{ display:flex; }
-
     .modal{
       width:min(560px, 100%);
-      background:var(--fill2);
-      border:var(--stroke) solid var(--line);
-      border-radius:30px;
+      background:var(--white);
+      border-radius:16px;
+      border:2px solid rgba(31,90,58,0.25);
       overflow:hidden;
       max-height:calc(100vh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
       display:flex;
       flex-direction:column;
     }
     .modalHead{
-      padding:14px 14px 12px;
-      border-bottom:3px solid rgba(0,0,0,0.08);
-      font-weight:1000;
+      padding:10px;
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
-      background:rgba(255,255,255,0.30);
+      background:#F3FFE9;
+      border-bottom:1px solid rgba(31,90,58,0.18);
+      flex:0 0 auto;
     }
-    .modalTitleL{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-width:0;
-    }
-    .modalSeatId{
-      font-weight:1000;
-      font-size:18px;
-      white-space:nowrap;
-      color:var(--line);
-    }
-    .modalTitleText{
-      font-size:18px;
-      font-weight:1000;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+    .modalTitleL{ display:flex; align-items:center; gap:8px; min-width:0; }
+    .modalSeatId{ font-weight:900; font-size:14px; color:var(--darkGreen); white-space:nowrap; }
+    .modalTitleText{ font-size:14px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .modalBody{
-      padding:14px;
+      padding:10px;
+      font-size:14px;
       color:var(--text);
-      font-size:16px;
-      font-weight:900;
-      line-height:1.65;
       overflow:auto;
       -webkit-overflow-scrolling:touch;
       flex:1 1 auto;
       min-height:0;
     }
     .modalActions{
-      padding:12px 14px 14px;
+      padding:10px;
       display:flex;
-      gap:12px;
+      gap:8px;
       justify-content:flex-end;
       flex-wrap:wrap;
+      background:#F3FFE9;
+      border-top:1px solid rgba(31,90,58,0.18);
       flex:0 0 auto;
-      background:rgba(255,255,255,0.30);
     }
-    .bigBtn{
-      min-height:58px;
-      padding:14px 18px;
-      font-weight:1000;
-      border-radius:999px;
-      font-size:18px;
-    }
-    .backdrop.kbOpen{ align-items:flex-start; }
 
-    /* =========================
-      Stepper（A→Bの囲い方：左右ボタン＋中央値を一体化）
-    ========================= */
-    .stepper{
-      border:var(--stroke) solid var(--line);
-      border-radius:999px;
-      background:rgba(255,255,255,0.22);
-      display:flex;
-      align-items:center;
-      overflow:hidden;
-      min-height:74px;
-    }
-    .stepBtn{
-      width:78px;
-      min-height:74px;
-      border:none;
-      background:rgba(255,255,255,0.40);
-      font-size:26px;
-      font-weight:1000;
-      color:var(--line);
-      touch-action:manipulation;
-    }
-    .stepVal{
-      flex:1;
-      text-align:center;
-      font-size:34px;
-      font-weight:1000;
+    /* “ボタン”はヘッダー/下段と別物：モーダル用だけ */
+    .mBtn{
+      min-height:38px;
+      padding:6px 10px;
+      border-radius:12px;
+      border:2px solid rgba(31,90,58,0.25);
+      background:#fff;
       color:var(--text);
-      line-height:1;
-      padding:8px 0;
-      background:rgba(255,255,255,0.10);
-    }
-
-    /* =========================
-      Slide（親指サイズ／バー短め／枠なし／文字なし）
-    ========================= */
-    .range{
-      -webkit-appearance:none;
-      appearance:none;
-      width:100%;
-      height:56px;               /* 親指サイズ */
-      background:transparent;
+      font-weight:800;
       touch-action:manipulation;
-      display:block;
     }
-    .range:focus{ outline:none; }
+    .mBtn.primary{
+      background:var(--darkGreen);
+      border-color:var(--lightGreen);
+      color:#fff;
+      font-weight:900;
+    }
+    .mBtn.full{ width:100%; }
 
-    /* バー短め（中央寄せ） */
-    .rangeShort{
-      max-width:520px;           /* ★短くする */
-      margin:0 auto;
-    }
-
-    /* iOS track */
-    .range::-webkit-slider-runnable-track{
-      height:22px;
-      background:var(--pink);    /* 濃いピンク */
-      border-radius:999px;
-      border:none;               /* ★枠なし */
-    }
-    .range::-webkit-slider-thumb{
-      -webkit-appearance:none;
-      appearance:none;
-      width:54px;
-      height:54px;
-      border-radius:999px;
-      background:var(--thumb);   /* 濃い緑の丸 */
-      border:none;               /* ★枠なし */
-      margin-top:-16px;
-      box-shadow: 0 10px 0 rgba(0,0,0,0.12);
-    }
-
-    /* Firefox */
-    .range::-moz-range-track{
-      height:22px;
-      background:var(--pink);
-      border:none;
-      border-radius:999px;
-    }
-    .range::-moz-range-thumb{
-      width:54px;
-      height:54px;
-      border-radius:999px;
-      background:var(--thumb);
-      border:none;
-      box-shadow: 0 10px 0 rgba(0,0,0,0.12);
-    }
-
-    /* Toast */
     .toast{
       position:fixed;
       left:50%;
       transform:translateX(-50%);
-      bottom:calc(var(--bottomH) + 18px + env(safe-area-inset-bottom));
-      background:rgba(33,78,53,0.92);
+      bottom:calc(var(--bottomH) + 12px + env(safe-area-inset-bottom));
+      background:rgba(31,90,58,0.92);
       color:#fff;
-      padding:10px 12px;
+      padding:8px 10px;
       border-radius:999px;
-      font-size:14px;
-      font-weight:1000;
+      font-size:12px;
+      font-weight:900;
       z-index:90;
       display:none;
-      max-width:min(90vw, 860px);
+      max-width:min(92vw, 860px);
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
     .toast.show{ display:block; }
 
-    /* 小画面微調整 */
+    /* =========================================================
+      スライド（後続パート用：短く・バー濃いピンク・丸ボタン濃い緑）
+    ========================================================= */
+    .range{ width:100%; }
+    .rangeShort{
+      width:min(280px, 78vw);   /* “短い” */
+      display:block;
+      margin:0 auto;
+      height:46px;
+      -webkit-appearance:none;
+      appearance:none;
+      background:transparent;
+      touch-action:manipulation;
+    }
+    .rangeShort:focus{ outline:none; }
+    .rangeShort::-webkit-slider-runnable-track{
+      height:18px;
+      background:rgba(214,75,122,0.35); /* 濃いピンク系 */
+      border-radius:999px;
+      border:1px solid rgba(214,75,122,0.50);
+    }
+    .rangeShort::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width:44px;
+      height:44px;
+      border-radius:999px;
+      background:var(--darkGreen);   /* 濃い緑（文字なし） */
+      border:none;
+      margin-top:-13px;
+      box-shadow:0 3px 0 rgba(0,0,0,0.18);
+    }
+
+    /* 小画面調整 */
     @media (max-width: 360px){
-      .brand{ font-size:26px; }
-      .topBtn{ font-size:20px; padding:14px 22px; }
-      .seatCard{ height:170px; }
-      .seatNo{ font-size:30px; }
-      .stepVal{ font-size:32px; }
+      .brandBox{ width:86px; }
+      .topBtn{ width:78px; }
+      .seatCard{ min-height:146px; }
+      .navBtn{ font-size:15px; }
     }
   </style>
 </head>
 
 <body>
-  <!-- ===== Header ===== -->
-  <header class="topbar" id="topbar">
-    <div class="topbarInner">
-      <!-- 左：ONE + 📶 -->
-      <div class="brandWrap">
-        <div class="brand">ONE</div>
-        <button class="antennaWrap" id="btnAntenna" aria-label="同期状態">
-          <span class="antennaIcon">📶</span>
-          <span class="antennaX">❌</span>
+  <!-- ===== 上部固定（ヘッダー） ===== -->
+  <header class="topBar" id="topbar">
+    <div class="topBarInner">
+      <!-- 左：🟢ONE（枠付き）＋アンテナ -->
+      <div style="display:flex; align-items:center; gap:8px; flex:0 0 auto;">
+        <div class="brandBox" aria-label="ブランド">
+          <div class="brandText"><span class="brandDot">🟢</span>ONE</div>
+        </div>
+
+        <!-- アンテナ（IDはそのまま維持） -->
+        <button class="signalBtn" id="btnAntenna" aria-label="同期状態">
+          <span class="signalIcon">📶</span>
+          <span class="signalX">❌</span>
         </button>
       </div>
 
-      <!-- 中央：キッチン/メイン -->
-      <div class="topCenter">
-        <button class="topBtn" id="navSecond">メイン</button>
-      </div>
+      <!-- 中央：空（将来ここに状態表示したいなら入れる） -->
+      <div style="flex:1"></div>
 
-      <!-- 右：保存 -->
-      <div style="min-width:104px; display:flex; justify-content:flex-end">
+      <!-- 右：キッチン / 保存（ID維持） -->
+      <div class="topRight">
+        <button class="topBtn" id="navSecond">キッチン</button>
         <button class="topBtn" id="btnSave">保存</button>
       </div>
     </div>
@@ -638,33 +605,35 @@
     </section>
 
     <!-- キッチン -->
-    <section class="screen" id="scrKitchen"><div class="panel" style="opacity:.75">（PART3で実装）</div></section>
+    <section class="screen" id="scrKitchen"><div style="opacity:.65; font-size:12px;">（PART3で実装）</div></section>
 
-    <!-- 売上 -->
-    <section class="screen" id="scrSales"><div class="panel" style="opacity:.75">（PART4で実装）</div></section>
+    <!-- 本日の売上/売上 -->
+    <section class="screen" id="scrSales"><div style="opacity:.65; font-size:12px;">（PART4で実装）</div></section>
 
     <!-- 訂正伝票 -->
-    <section class="screen" id="scrFix"><div class="panel" style="opacity:.75">（PART5で実装）</div></section>
+    <section class="screen" id="scrFix"><div style="opacity:.65; font-size:12px;">（PART5で実装）</div></section>
 
     <!-- 席登録 -->
-    <section class="screen" id="scrSeatSetup"><div class="panel" style="opacity:.75">（PART6で実装）</div></section>
+    <section class="screen" id="scrSeatSetup"><div style="opacity:.65; font-size:12px;">（PART6で実装）</div></section>
 
     <!-- 設定 -->
-    <section class="screen" id="scrSettings"><div class="panel" style="opacity:.75">（設定は後で単独修正）</div></section>
+    <section class="screen" id="scrSettings"><div style="opacity:.65; font-size:12px;">（PART8で実装）</div></section>
 
     <!-- メニュー登録 -->
-    <section class="screen" id="scrMenu"><div class="panel" style="opacity:.75">（PART8で実装）</div></section>
+    <section class="screen" id="scrMenu"><div style="opacity:.65; font-size:12px;">（PART8で実装）</div></section>
 
     <!-- 注文 -->
-    <section class="screen" id="scrOrder"><div class="panel" style="opacity:.75">（PART2で実装）</div></section>
+    <section class="screen" id="scrOrder"><div style="opacity:.65; font-size:12px;">（PART2で実装）</div></section>
   </main>
 
-  <!-- ===== Bottom (Main only) ===== -->
+  <!-- ===== 下段固定（3連ボタン） ===== -->
   <div class="bottomBar" id="bottomBar">
     <div class="bottomInner">
-      <button class="bottomBtn" id="goMove">席移動</button>
-      <button class="bottomBtn" id="goTodaySales">本日の売上</button>
-      <button class="bottomBtn" id="goSettings">設定</button>
+      <div class="navGroup" role="navigation" aria-label="メイン操作">
+        <button class="navBtn" id="goMove">席移動</button>
+        <button class="navBtn" id="goTodaySales">本日の売上</button>
+        <button class="navBtn" id="goSettings">設定</button>
+      </div>
     </div>
   </div>
 
@@ -676,7 +645,7 @@
           <div class="modalSeatId" id="modalSeatId" style="display:none"></div>
           <div class="modalTitleText" id="modalTitle"> </div>
         </div>
-        <button class="btn ghost" id="modalClose">閉じる</button>
+        <button class="mBtn" id="modalClose">閉じる</button>
       </div>
       <div class="modalBody" id="modalBody"> </div>
       <div class="modalActions" id="modalActions"></div>
@@ -689,7 +658,6 @@
     /* =========================
       Common / State (PART1)
     ========================= */
-
     const KEY = "ONE_FREE_FULL_V2";
     const $ = (id)=> document.getElementById(id);
 
@@ -722,22 +690,6 @@
       window.scrollTo(0, y);
     }
 
-    /* キーボードでモーダルが見切れにくいようにする */
-    (function modalKeyboardAssist(){
-      const bd = $("modalBackdrop");
-      document.addEventListener("focusin", (e)=>{
-        if(!bd.classList.contains("show")) return;
-        const t = e.target;
-        if(t && (t.tagName==="INPUT" || t.tagName==="TEXTAREA" || t.tagName==="SELECT")){
-          bd.classList.add("kbOpen");
-        }
-      });
-      document.addEventListener("focusout", ()=>{
-        if(!bd.classList.contains("show")) return;
-        setTimeout(()=> bd.classList.remove("kbOpen"), 50);
-      });
-    })();
-
     function openModal(title, bodyHtml, actions, seatId=null){
       $("modalTitle").textContent = title || "";
       $("modalBody").innerHTML = bodyHtml || "";
@@ -754,7 +706,7 @@
       box.innerHTML = "";
       (actions||[]).forEach(a=>{
         const b = document.createElement("button");
-        b.className = "btn bigBtn" + (a.lime ? " lime" : "");
+        b.className = "mBtn" + (a.lime ? " primary" : "") + (a.full ? " full" : "");
         b.textContent = a.label;
         b.onclick = ()=> a.onClick && a.onClick();
         box.appendChild(b);
@@ -765,7 +717,6 @@
     }
     function closeModal(){
       $("modalBackdrop").classList.remove("show");
-      $("modalBackdrop").classList.remove("kbOpen");
       unlockBody();
     }
 
@@ -779,17 +730,20 @@
     function showScreen(id){
       screens.forEach(s=> $(s).classList.toggle("active", s===id));
 
-      // 上部中央ボタン文言
+      // 上部右ボタン文言（共通ルール：ID維持）
       if(id==="scrMain"){
         $("navSecond").textContent = "キッチン";
       }else if(id==="scrKitchen"){
-        $("navSecond").textContent = "メイン";
+        $("navSecond").textContent = "ホール";
       }else{
         $("navSecond").textContent = "メイン";
       }
 
       // 下段はメインだけ
       $("bottomBar").style.display = (id==="scrMain") ? "flex" : "none";
+
+      // 下段の選択ハイライト（今はメイン固定なので全部OFF）
+      document.querySelectorAll(".navBtn").forEach(b=> b.classList.remove("selected"));
 
       window.scrollTo(0,0);
     }
@@ -815,6 +769,14 @@
     /* ===== Seat helpers ===== */
     function seatById(id){ return state.seats.find(s=> s.id===id); }
 
+    function ensureSub(seat, subId){
+      seat.sub = seat.sub || {};
+      if(!seat.sub[subId]){
+        seat.sub[subId] = { seatId: subId, people:0, name:"", total:0, orders:[], reserve:null };
+      }
+      return seat.sub[subId];
+    }
+
     function calcSeatTotal(seat){
       if(!seat.merged){
         return Number(seat.total||0);
@@ -823,50 +785,41 @@
       return subs.reduce((a,b)=> a + Number(b.total||0), 0);
     }
 
-    /* ===== Seed（見本） ===== */
+    function calcOrdersTotal(orders){
+      return (orders||[]).reduce((sum, o)=> sum + (Number(o.price||0) * Number(o.qty||0)), 0);
+    }
+
+    /* ===== Seed ===== */
     function seedSeatsIfEmpty(){
       if(state.seats.length) return;
 
       state.seats = [
-        {id:"A", status:"in", people:1, name:"井上", total:6100, bills:1},
-        {id:"B", status:"in", merged:true, mergeLabel:"→", people:2, name:"", total:7800, bills:1, sub:{A:{total:0},B:{total:0}}},
-        {id:"C", status:"reserve", people:1, name:"", reserve:{time:"", name:""}, total:0, bills:0},
-        {id:"1", status:"in", people:1, name:"", total:1400, bills:1},
-        {id:"2", status:"empty"},
-        {id:"3", status:"empty"},
-        {id:"4", status:"in", people:1, name:"作動", total:0, bills:1},
-        {id:"は1", status:"empty"},
-        {id:"ひ2", status:"empty"},
-        {id:"ふ3", status:"empty"},
+        {id:"A1", status:"empty"},
+        {id:"A2", status:"empty"},
+        {id:"A3", status:"empty"},
+        {id:"D3", status:"in", people:2, name:"田中", total:6100, bills:1},
+        {id:"B1", status:"empty"},
+        {id:"C2", status:"reserve", people:3, reserve:{time:"18:30", name:"佐藤", tel:"", note:""}, total:0, bills:0},
       ].map(s=>{
         s.people = Number(s.people||0);
         s.name = s.name || "";
         s.total = Number(s.total||0);
         s.bills = Number(s.bills||0);
-        s.merged = !!s.merged;
-        s.mergeLabel = s.mergeLabel || "";
-        s.sub = s.sub || null;
+        s.merged = false;
+        s.mergeLabel = "";
+        s.sub = null;
         return s;
       });
     }
 
-    /* ===== Render seats（4段固定） ===== */
-    function seatInfoText(seat){
-      // ④席情報（空席/予約/使用中/合流）
-      if(seat.status==="reserve") return "予約";
-      if(seat.status==="empty") return "空席";
+    function seatStateLabel(seat){
       if(seat.merged) return "合流";
-      return "使用中";
+      if(seat.status==="reserve") return "予約";
+      if(seat.status==="in") return "使用中";
+      return "空席";
     }
 
-    function seatNameText(seat){
-      // ③名前（空白でも詰めない＝空文字を返す）
-      if(seat.merged) return "";            // 合流カードは名前無し運用
-      if(seat.status==="in") return seat.name || "";
-      if(seat.status==="reserve") return ""; // 予約カードはここ空でもOK
-      return "";
-    }
-
+    /* ===== Render seats（4段固定） ===== */
     function renderSeats(){
       const grid = $("seatGrid");
       grid.innerHTML = "";
@@ -876,28 +829,45 @@
         card.className = "seatCard " + (seat.status==="empty" ? "empty" : seat.status==="reserve" ? "reserve" : "in");
         card.dataset.seatId = seat.id;
 
-        const seatLabel = seat.merged ? (seat.mergeLabel || "→") : seat.id;
+        const seatLabel = seat.merged ? (seat.mergeLabel || seat.id) : seat.id;
 
-        // 人数：15px、名前と同サイズ、強調なし
-        const people = (seat.status==="in" || seat.status==="reserve") ? Number(seat.people||0) : 0;
-        const peopleTxt = (seat.status==="in" || seat.status==="reserve") ? `${people}名` : "";
+        const people =
+          (seat.status==="in" || seat.status==="reserve")
+            ? Number(seat.people||0)
+            : 0;
 
-        // 金額：使用中だけ
-        const moneyTxt = (seat.status==="in") ? yen(calcSeatTotal(seat)) : "";
+        // 2段目：名前（空でも詰めない）
+        let nameLine = "";
+        if(seat.merged){
+          nameLine = (seat.mergeLabel || "");
+        }else if(seat.status==="in"){
+          nameLine = seat.name || "";
+        }else{
+          nameLine = ""; // 空席/予約はここを空でもOK（詰めないのがルール）
+        }
 
-        // 4段（空白でも段は残す）
-        const nameLine = seatNameText(seat);
-        const infoLine = seatInfoText(seat);
+        // 3段目：状態（固定）
+        const stateLine = seatStateLabel(seat);
+
+        // 4段目：金額（来店のみ）
+        const money = (seat.status==="in") ? yen(calcSeatTotal(seat)) : "";
+
+        // 人数表示（空なら空でOK、詰めない）
+        const peopleTxt = (seat.status==="in" || seat.status==="reserve") ? (people ? `${people}名` : "") : "";
+
+        // 空でも高さ維持用の NBSP
+        const nb = "&nbsp;";
 
         card.innerHTML = `
-          <div class="seatNoLine">
-            <div class="seatNo">${seatLabel}</div>
-            <div class="seatPeople">${peopleTxt}</div>
+          <div class="seatInner">
+            <div class="seatRowTop">
+              <div class="seatNo">${seatLabel || nb}</div>
+              <div class="seatPeople">${peopleTxt || nb}</div>
+            </div>
+            <div class="seatRowName">${(nameLine ? escapeHtml(nameLine) : nb)}</div>
+            <div class="seatRowState">${stateLine || nb}</div>
+            <div class="seatRowMoney">${money || nb}</div>
           </div>
-
-          <div class="seatName">${nameLine || "&nbsp;"}</div>
-          <div class="seatInfo">${infoLine || "&nbsp;"}</div>
-          <div class="seatMoney">${moneyTxt || "&nbsp;"}</div>
         `;
 
         card.onclick = ()=> onSeatTap(seat.id);
@@ -905,24 +875,51 @@
       });
     }
 
-    /* ===== Seat tap entry ===== */
-    function onSeatTap(seatId){
-      toast("（PART2で来店/予約/注文に繋ぐ）");
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
     }
 
-    /* ===== Header center button ===== */
+    /* ===== Seat tap entry ===== */
+    function onSeatTap(seatId){
+      toast("読み込み中…");
+    }
+
+    /* ===== Header buttons ===== */
     $("navSecond").onclick = ()=>{
       const current = screens.find(s=> $(s).classList.contains("active")) || "scrMain";
-      if(current==="scrMain") showScreen("scrKitchen");
-      else showScreen("scrMain");
+      if(current==="scrMain"){
+        showScreen("scrKitchen");
+      }else{
+        showScreen("scrMain");
+      }
     };
 
-    /* Bottom buttons */
-    $("goMove").onclick = ()=> openMoveHome();
-    $("goTodaySales").onclick = ()=> showScreen("scrSales");
-    $("goSettings").onclick = ()=> showScreen("scrSettings");
+    $("btnSave").onclick = ()=> toast("保存（PART8で実装）");
 
-    /* placeholders */
+    /* Bottom buttons */
+    $("goMove").onclick = ()=>{
+      document.querySelectorAll(".navBtn").forEach(b=> b.classList.remove("selected"));
+      $("goMove").classList.add("selected");
+      openMoveHome();
+    };
+    $("goTodaySales").onclick = ()=>{
+      document.querySelectorAll(".navBtn").forEach(b=> b.classList.remove("selected"));
+      $("goTodaySales").classList.add("selected");
+      state._salesFromMain = true;
+      showScreen("scrSales");
+    };
+    $("goSettings").onclick = ()=>{
+      document.querySelectorAll(".navBtn").forEach(b=> b.classList.remove("selected"));
+      $("goSettings").classList.add("selected");
+      showScreen("scrSettings");
+    };
+
+    /* placeholders (PART2で実装) */
     function openMoveHome(){ toast("席移動（PART2で実装）"); }
 
     /* 起動 */
