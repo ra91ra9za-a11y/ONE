@@ -226,7 +226,7 @@ main{
   </div>
 </footer>
 
-<script>
+
 /* ここでは閉じない。PART2へ続く */
 /* =========================
   PART2：注文（本来の構成に復元）＋席タップ動線（空席/予約/来店/合流）＋席移動（復活）
@@ -241,6 +241,7 @@ main{
    0) 軽いズーム抑止（dblclickのみ）
    ※ touchend preventDefault はクリックが死ぬ事があるのでやらない
 ========================================================= */
+<script>
 (function preventDoubleTapZoomSafe(){
   if(preventDoubleTapZoomSafe._done) return;
   preventDoubleTapZoomSafe._done = true;
