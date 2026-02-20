@@ -1,152 +1,926 @@
 <!-- =========================
-  PART1：Bデザイン土台（DOM/IDを壊さない・SCRIPTなし）
-  - 既存JS（PART6等）が参照するIDを変更しない
-  - PART1に<script>は置かない（PART2先頭の1つだけ）
-  ※ここから先は PART2 で続く
+  ONE レジアプリ（無料版）完全フル：PART1（B配色・共通デザイン統一版）
+  役割：HTML骨格 / CSS / 共通定義 / 共通UI / メイン画面UI / 最低限JS
+  保存KEY：ONE_FREE_FULL_V2
+  ※重要：PART1の末尾に </body></html> を入れない（PART8にある）
 ========================= -->
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#174b2f" />
-<title>ONE</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ONE FREE</title>
 
-<style>
-*{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;background:var(--pageBg);color:var(--ink)}
-button,input,select,textarea{font:inherit}
-button{touch-action:manipulation}
-:root{--sat:env(safe-area-inset-top);--sab:env(safe-area-inset-bottom);--sal:env(safe-area-inset-left);--sar:env(safe-area-inset-right)}
-:root{
---ink:#173a27;--ink2:#1b4a31;--white:#fff;
---pageBg:#eaf4df;
---darkGreen:#174b2f;--mossGreen:#3aa55b;--limeLine:#d9ff9a;
---cardBg:#dff0c9;--cardBgOn:#86df63;
---pinkDeep:#c4587f;--thumbGreen:#1e5a39;
---tanBg:#eadfcf;--tanFill:#e2d3bf;--tanLineLight:#f2eadf;--tanLineDark:#6b4b2c;--tanInk:#2f2217;
---topH:56px;--bottomH:76px;--gap:8px;--radiusCard:16px
-}
+  <style>
+    /* =========================================================
+      Bデザイン（白寄り・フラット・太い緑枠）
+      ルール：
+      - 見た目は「style直書き禁止」：class で統一する
+      - 選択状態は .isSelected
+      - タイトルは 🔵 + 小さい説明文
+      - スライドは rangeWrap で短くする
+    ========================================================= */
+    :root{
+      /* 背景：白寄りで明るく */
+      --bg:#F3FAEE;
 
-/* 画面の土台（上/下固定ぶん避ける） */
-main.app{min-height:100dvh;padding-left:calc(10px + var(--sal));padding-right:calc(10px + var(--sar));padding-top:calc(var(--topH) + var(--sat));padding-bottom:calc(var(--bottomH) + var(--sab))}
-.screen{display:none}
-.screen.active{display:block}
+      /* “面”の薄緑 */
+      --surface:#ECF6E6;
+      --surface2:#E6F2DE;
 
-/* =========================
-   上部固定（ヘッダー）
-========================= */
-.topBar{position:fixed;top:0;left:0;right:0;z-index:50;height:calc(var(--topH) + var(--sat));padding-top:var(--sat);padding-left:calc(10px + var(--sal));padding-right:calc(10px + var(--sar));background:linear-gradient(90deg,#1a5636 0%,#14452b 50%,#1a5636 100%)}
-.topBar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:#77d86b;opacity:.9}
-.topBarRow{height:var(--topH);display:flex;align-items:center;gap:8px}
+      /* 文字 */
+      --text:#183225;
+      --muted:rgba(24,50,37,0.72);
 
-/* 🟢ONE */
-.brandBox{height:36px;width:92px;border-radius:12px;border:2px solid var(--limeLine);background:var(--darkGreen);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;letter-spacing:.5px}
-.brandBox .dot{margin-right:6px;color:#58ff7a}
+      /* 緑（枠） */
+      --line:#214F33;
+      --stroke:6px;
+      --radius:26px;
 
-/* アンテナ（囲い無し・角丸四角） */
-.signalBox{height:34px;width:34px;border-radius:10px;background:var(--mossGreen);display:grid;place-items:center}
-.signalBox svg{display:block}
-.signalBox .sigFill{fill:#fff}
+      /* 上部バー */
+      --header:#73D19A;
+      --headerLine:rgba(0,0,0,0.14);
 
-/* 右ボタン（IDは既存のまま） */
-.topBtns{margin-left:auto;display:flex;gap:8px}
-.topBtns button{height:30px;min-width:84px;border-radius:16px;border:2px solid var(--limeLine);background:var(--darkGreen);color:#fff;font-weight:400;font-size:15px;padding:2px 10px;display:flex;align-items:center;justify-content:center;line-height:1}
-.topBtns .wKitchen{min-width:96px}
+      /* ボタン */
+      --btnFill:#F6FBF2;
+      --btnFill2:#EEF7E8;
+      --btnGreen:#2E6B43;     /* 濃い緑（メイン） */
+      --btnGreen2:#235A37;    /* さらに濃い */
 
-/* =========================
-   中央（席カードグリッド）
-========================= */
-.mainArea{padding-top:10px}
-.hint{font-weight:700;color:var(--ink2);margin:6px 0 10px 0;line-height:1.2}
+      /* 状態色 */
+      --danger:#C33B2E;
+      --select:#7AA7FF;
 
-/* 既存が .seatGrid / .seatCard を使ってる前提で上書き */
-.seatGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap);align-items:stretch}
+      /* 席カード */
+      --seatBg:#E6F2DE;       /* 薄い緑（指定） */
+      --seatReserve:#EAF4FF;
 
-/* 既存が button.seatCard を量産してる想定 */
-.seatCard{position:relative;background:var(--cardBg);border-radius:var(--radiusCard);border:2px solid var(--darkGreen);box-shadow:inset 0 0 0 1px #fff;min-height:150px;padding:6px;color:var(--ink);overflow:hidden}
-.seatCard.on{background:var(--cardBgOn);color:#fff;box-shadow:inset 0 0 0 1px #fff,0 0 0 2px var(--limeLine)}
+      /* スライド（バー色） */
+      --slideTrack:#CBD9C9;   /* 薄緑グレー */
+      --slideTrackPink:#C86A8D; /* 濃いめピンク（要望） */
 
-/* 席カード内の“余白整理”用（PART側で要素がある時だけ効く） */
-.seatDivider{position:absolute;left:6px;right:6px;bottom:32px;height:2px;background:#000;opacity:.35}
+      --headerH:58px;
+      --bottomH:70px;
+    }
 
-/* =========================
-   下段固定（3連ボタン）
-========================= */
-.bottomBar{position:fixed;left:0;right:0;bottom:0;z-index:50;height:calc(var(--bottomH) + var(--sab));padding-bottom:var(--sab);padding-left:calc(10px + var(--sal));padding-right:calc(10px + var(--sar));background:var(--tanBg)}
-.bottomRow{height:var(--bottomH);display:flex;align-items:center}
-.navGroup{width:100%;display:flex;gap:0;border-radius:14px;overflow:hidden;border:2px solid var(--tanLineLight);box-shadow:inset 0 0 0 1px var(--tanLineDark);background:var(--tanFill)}
-.navSep{width:5px;background:linear-gradient(90deg,var(--tanLineLight) 0 1px,var(--tanLineDark) 1px 4px,var(--tanLineLight) 4px 5px);flex:0 0 5px}
-.navBtn{flex:1;height:60px;background:var(--tanFill);color:var(--tanInk);border:none;padding:2px 6px;font-weight:800;font-size:18px;line-height:1.05;display:flex;align-items:center;justify-content:center;text-align:center}
-.navBtn.on{background:var(--tanFill);color:var(--tanInk)} /* 光る仕様なし */
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
 
-/* =========================
-   Stepper（PART6用の準備）
-========================= */
-.stepper{display:flex;align-items:center;gap:8px}
-.stepBtn{height:44px;width:56px;border-radius:16px;border:2px solid rgba(23,75,47,.6);background:rgba(223,240,201,.55);color:var(--ink);font-weight:900;font-size:18px}
-.stepVal{flex:1;height:44px;border-radius:16px;border:2px solid rgba(23,75,47,.35);background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:var(--ink)}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
 
-/* =========================
-   rangeShort（濃いピンクバー＋濃い緑つまみ）
-========================= */
-.range{width:100%;height:28px;-webkit-appearance:none;appearance:none;background:transparent}
-.rangeShort{width:80%;margin:0 auto;display:block}
-.range::-webkit-slider-runnable-track{height:20px;border-radius:12px;background:var(--pinkDeep);box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
-.range::-moz-range-track{height:20px;border-radius:12px;background:var(--pinkDeep)}
-.range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:46px;height:46px;border-radius:50%;background:var(--thumbGreen);border:0;margin-top:-13px;box-shadow:0 6px 14px rgba(0,0,0,.18)}
-.range::-moz-range-thumb{width:46px;height:46px;border-radius:50%;background:var(--thumbGreen);border:0;box-shadow:0 6px 14px rgba(0,0,0,.18)}
-</style>
+      font-family:
+        "M PLUS Rounded 1c",
+        "Hiragino Maru Gothic ProN",
+        "Hiragino Sans",
+        -apple-system, BlinkMacSystemFont,
+        system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+
+      overflow-x:hidden;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+
+      touch-action:pan-y;
+      overscroll-behavior-y:contain;
+      -webkit-text-size-adjust:100%;
+    }
+
+    /* モーダル表示中に背景固定 */
+    body.modalLock{
+      position:fixed;
+      width:100%;
+      overflow:hidden;
+    }
+
+    /* iOS入力ズーム抑止（16pxルール） */
+    input, textarea, select{
+      font-size:16px;
+      -webkit-appearance:none;
+      appearance:none;
+      color:var(--text);
+    }
+
+    .app{
+      min-height:100%;
+      padding-top:calc(var(--headerH) + env(safe-area-inset-top));
+      padding-bottom:calc(var(--bottomH) + env(safe-area-inset-bottom));
+    }
+
+    /* ===== Header ===== */
+    .topbar{
+      position:fixed;
+      left:0; right:0; top:0;
+      padding-top:env(safe-area-inset-top);
+      height:calc(var(--headerH) + env(safe-area-inset-top));
+      background:var(--header);
+      border-bottom:3px solid var(--headerLine);
+      z-index:50;
+      display:flex;
+      align-items:flex-end;
+    }
+    .topbarInner{
+      height:var(--headerH);
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 12px 8px;
+      gap:10px;
+    }
+    .brandWrap{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:110px;
+    }
+    .brand{
+      font-weight:1000;
+      letter-spacing:0.5px;
+      font-size:22px;
+      line-height:1;
+    }
+
+    /* アンテナ（復活） */
+    .antennaWrap{
+      position:relative;
+      width:44px;
+      height:44px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(255,255,255,0.18);
+      border-radius:999px;
+      border:none;
+      padding:0;
+      margin:0;
+      touch-action:manipulation;
+    }
+    .antennaIcon{
+      font-size:22px;
+      line-height:1;
+    }
+    .antennaX{
+      position:absolute;
+      top:6px;
+      right:6px;
+      font-size:15px;
+      line-height:1;
+      color:var(--danger);
+      display:none;
+      font-weight:1000;
+      text-shadow:0 1px 0 rgba(255,255,255,0.3);
+    }
+    .antennaWrap.off .antennaX{ display:block; }
+
+    .topCenter{
+      flex:1;
+      display:flex;
+      justify-content:center;
+    }
+
+    /* ===== 共通ボタン ===== */
+    .btn{
+      border:var(--stroke) solid var(--line);
+      background:var(--btnFill);
+      color:var(--text);
+      border-radius:var(--radius);
+      padding:12px 16px;
+      font-size:18px;
+      line-height:1.1;
+      min-height:52px;
+      font-weight:1000;
+      user-select:none;
+      -webkit-user-select:none;
+      touch-action:manipulation;
+    }
+    .btn.full{ width:100%; }
+
+    /* “濃い緑 塗り”ボタン（Bの主役ボタン） */
+    .btn.lime{
+      background:linear-gradient(to bottom, var(--btnGreen), var(--btnGreen2));
+      border-color:var(--line);
+      color:#fff;
+      text-shadow:
+        -1px 0 0 rgba(0,0,0,0.55),
+        1px 0 0 rgba(0,0,0,0.55),
+        0 -1px 0 rgba(0,0,0,0.55),
+        0 1px 0 rgba(0,0,0,0.55);
+    }
+
+    .btn.ghost{
+      background:transparent;
+      border-color:transparent;
+      padding:10px 10px;
+      min-height:42px;
+      font-size:16px;
+    }
+
+    /* ===== タイトル / 説明（全ページ統一） ===== */
+    .pageTitle{
+      font-size:22px;
+      font-weight:1000;
+      margin:6px 0 10px;
+    }
+    .pageTitle::before{ content:"🔵 "; }
+
+    .stepTitle{
+      font-size:18px;
+      font-weight:1000;
+      margin:10px 0 8px;
+    }
+    .stepTitle::before{ content:"🔵 "; }
+
+    .pageDesc, .stepDesc{
+      font-size:13px;
+      font-weight:900;
+      color:var(--muted);
+      line-height:1.6;
+      margin:0 0 10px;
+    }
+
+    /* ===== Screens ===== */
+    .screen{
+      display:none;
+      padding:14px;
+      max-width:980px;
+      margin:0 auto;
+    }
+    .screen.active{ display:block; }
+
+    /* ===== Main ===== */
+    .hintText{
+      color:var(--text);
+      font-size:13px;     /* ←説明文を小さく */
+      font-weight:900;
+      user-select:none;
+    }
+
+    .seatGrid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:12px;
+    }
+
+    /* 席カード：濃い緑の枠のみ + 薄い緑塗り */
+    .seatCard{
+      border:var(--stroke) solid var(--line);
+      border-radius:26px;
+      padding:12px;
+      min-height:132px;              /* 4段固定の高さ */
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-start;    /* 詰めない */
+      gap:8px;                       /* 各段の余白 */
+      touch-action:manipulation;
+      overflow:hidden;
+      background:var(--seatBg);
+    }
+    .seatCard.reserve{ background:var(--seatReserve); }
+    .seatCard.empty{ background:var(--seatBg); }
+    .seatCard.in{ background:var(--seatBg); }
+
+    /* 選択状態（青枠直書き禁止：これだけ） */
+    .isSelected{
+      outline:4px solid rgba(122,167,255,0.55);
+      outline-offset:2px;
+      background:rgba(122,167,255,0.12) !important;
+    }
+
+    /* 1段目：席番号（左） 人数（右） */
+    .seatNoLine{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between; /* ←左右に離す */
+      gap:18px;                      /* 間に空白 */
+      min-width:0;
+    }
+    .seatNo{
+      font-size:32px; /* 指定 */
+      font-weight:1000;
+      letter-spacing:0.5px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      text-align:left;
+    }
+    .seatPeople{
+      font-size:15px; /* 名前と同サイズ */
+      font-weight:900;
+      white-space:nowrap;
+      color:var(--text);
+      text-align:right;
+    }
+
+    /* 2〜4段（名前/情報/補助） */
+    .seatLines{
+      font-size:15px; /* 名前と同サイズ */
+      font-weight:900;
+      color:var(--text);
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
+    .seatLines .muted{ color:var(--muted); }
+
+    /* 金額：16px（指定） */
+    .seatMoney{
+      margin-top:auto; /* 下段固定 */
+      font-size:16px;
+      font-weight:1000;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      color:var(--line);
+    }
+
+    /* ===== Bottom Bar (Main only) ===== */
+    .bottomBar{
+      position:fixed;
+      left:0; right:0;
+      bottom:0;
+      padding-bottom:env(safe-area-inset-bottom);
+      height:calc(var(--bottomH) + env(safe-area-inset-bottom));
+      background:rgba(243,250,238,0.96);
+      border-top:3px solid rgba(0,0,0,0.12);
+      z-index:45;
+      display:flex;
+      align-items:center;
+    }
+    .bottomInner{
+      width:100%;
+      max-width:980px;
+      margin:0 auto;
+      padding:0 12px;
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:12px;
+      align-items:center;
+      height:var(--bottomH);
+    }
+    .bottomBtn{
+      border-radius:26px;
+      min-height:58px;
+      font-weight:1000;
+      border:var(--stroke) solid var(--line);
+      background:var(--btnFill);
+      color:var(--text);
+      touch-action:manipulation;
+      font-size:22px;
+    }
+    .bottomBtn.move{
+      background:var(--btnFill2);
+    }
+
+    /* ===== Modal ===== */
+    .backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.42);
+      z-index:80;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:12px;
+      padding-top:calc(12px + env(safe-area-inset-top));
+      padding-bottom:calc(12px + env(safe-area-inset-bottom));
+    }
+    .backdrop.show{ display:flex; }
+
+    .modal{
+      width:min(560px, 100%);
+      background:var(--surface);
+      border:var(--stroke) solid var(--line);
+      border-radius:26px;
+      overflow:hidden;
+      max-height:calc(100vh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      display:flex;
+      flex-direction:column;
+    }
+    .modalHead{
+      padding:14px 14px 12px;
+      border-bottom:3px solid rgba(0,0,0,0.08);
+      font-weight:1000;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex:0 0 auto;
+      background:var(--surface2);
+    }
+    .modalTitleL{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .modalSeatId{
+      font-weight:1000;
+      font-size:18px;
+      white-space:nowrap;
+      color:var(--line);
+    }
+    .modalTitleText{
+      font-size:18px;
+      font-weight:1000;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .modalBody{
+      padding:14px;
+      color:var(--text);
+      font-size:16px;
+      font-weight:900;
+      line-height:1.65;
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+      flex:1 1 auto;
+      min-height:0;
+      background:var(--surface);
+    }
+    .modalActions{
+      padding:12px 14px 14px;
+      display:flex;
+      gap:12px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+      flex:0 0 auto;
+      background:var(--surface2);
+    }
+    .bigBtn{
+      min-height:56px;
+      padding:14px 16px;
+      font-weight:1000;
+      border-radius:26px;
+      font-size:18px;
+    }
+    .backdrop.kbOpen{ align-items:flex-start; }
+
+    /* ===== SeatSetup: ②カウンター（A→B統一） ===== */
+    .counterRow{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-bottom:14px;
+    }
+    .counterBtn{
+      width:64px;
+      height:64px;
+      border:var(--stroke) solid var(--line);
+      border-radius:22px;
+      background:var(--btnFill);
+      font-size:26px;
+      font-weight:1000;
+    }
+    .counterVal{
+      flex:1;
+      height:64px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:var(--stroke) solid var(--line);
+      border-radius:22px;
+      background:rgba(33,79,51,0.14);
+      font-size:30px;
+      font-weight:1000;
+      color:var(--text);
+    }
+
+    /* ===== Slide confirm（短く・親指サイズ） ===== */
+    .rangeWrap{
+      width:100%;
+      display:flex;
+      justify-content:center;  /* 中央寄せ */
+      margin:0 0 10px;
+    }
+    .range{
+      width:min(520px, 92%);   /* ←短くする（最重要） */
+      height:52px;             /* 親指サイズ */
+      -webkit-appearance:none;
+      appearance:none;
+      background:transparent;
+      touch-action:manipulation;
+    }
+    .range:focus{ outline:none; }
+
+    .range::-webkit-slider-runnable-track{
+      height:20px;
+      background:var(--slideTrack);
+      border-radius:999px;
+      border:none;             /* 枠なし */
+    }
+
+    /* “濃い緑の丸ボタンのみ” ＋ 枠なし */
+    .range::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width:56px;
+      height:56px;
+      border-radius:999px;
+      background:var(--btnGreen);
+      border:none;             /* 枠なし（要望） */
+      margin-top:-18px;
+      box-shadow:0 6px 0 rgba(0,0,0,0.14);
+    }
+
+    /* トラックを濃いめピンクにしたい時（要望） */
+    .rangeTrackPink::-webkit-slider-runnable-track{
+      background:var(--slideTrackPink);
+    }
+
+    /* ===== Toast ===== */
+    .toast{
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:calc(var(--bottomH) + 18px + env(safe-area-inset-bottom));
+      background:rgba(33,79,51,0.92);
+      color:#fff;
+      padding:10px 12px;
+      border-radius:999px;
+      font-size:14px;
+      font-weight:1000;
+      z-index:90;
+      display:none;
+      max-width:min(90vw, 860px);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .toast.show{ display:block; }
+
+    /* 小画面 */
+    @media (max-width: 360px){
+      .brand{ font-size:20px; }
+      .btn{ font-size:17px; min-height:50px; }
+      .seatNo{ font-size:30px; }
+      .seatPeople{ font-size:14px; }
+      .seatLines{ font-size:14px; }
+      .seatMoney{ font-size:15px; }
+      .bottomBtn{ font-size:20px; }
+      .counterBtn{ width:60px; height:60px; }
+      .counterVal{ height:60px; font-size:28px; }
+    }
+  </style>
 </head>
 
 <body>
+  <!-- ===== Header ===== -->
+  <header class="topbar" id="topbar">
+    <div class="topbarInner">
+      <!-- 左：ONE + 📶 -->
+      <div class="brandWrap">
+        <div class="brand">ONE</div>
+        <button class="antennaWrap" id="btnAntenna" aria-label="同期状態">
+          <span class="antennaIcon">📶</span>
+          <span class="antennaX">❌</span>
+        </button>
+      </div>
 
-<header class="topBar">
-  <div class="topBarRow">
-    <div class="brandBox"><span class="dot">🟢</span>ONE</div>
-    <div class="signalBox" aria-label="signal">
-      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-        <path class="sigFill" d="M3 20h2v-2H3v2zm4 0h2v-4H7v4zm4 0h2v-6h-2v6zm4 0h2v-8h-2v8zm4 0h2V4h-2v16z"/>
-      </svg>
+      <!-- 中央：キッチン/ホール/メイン -->
+      <div class="topCenter">
+        <button class="btn lime" id="navSecond">キッチン</button>
+      </div>
+
+      <!-- 右：保存 -->
+      <div style="min-width:96px; display:flex; justify-content:flex-end">
+        <button class="btn lime" id="btnSave">保存</button>
+      </div>
     </div>
-    <div class="topBtns">
-      <!-- ここ重要：既存JSが参照してるIDのままにする -->
-      <button class="wKitchen" id="btnKitchen">キッチン</button>
-      <button id="btnSave">保存</button>
+  </header>
+
+  <!-- ===== App ===== -->
+  <main class="app">
+    <!-- メイン -->
+    <section class="screen active" id="scrMain">
+      <div class="hintText" id="mainHint">空席をタップで 来店 / 予約 を切替</div>
+      <div style="height:10px"></div>
+      <div class="seatGrid" id="seatGrid"></div>
+    </section>
+
+    <!-- キッチン -->
+    <section class="screen" id="scrKitchen"><div class="pageDesc">（PART3で実装）</div></section>
+
+    <!-- 本日の売上/売上 -->
+    <section class="screen" id="scrSales"><div class="pageDesc">（PART4で実装）</div></section>
+
+    <!-- 訂正伝票 -->
+    <section class="screen" id="scrFix"><div class="pageDesc">（PART5で実装）</div></section>
+
+    <!-- 席登録 -->
+    <section class="screen" id="scrSeatSetup"><div class="pageDesc">（PART6で実装）</div></section>
+
+    <!-- 設定 -->
+    <section class="screen" id="scrSettings"><div class="pageDesc">（後で単独修正）</div></section>
+
+    <!-- メニュー登録 -->
+    <section class="screen" id="scrMenu"><div class="pageDesc">（PART8で実装）</div></section>
+
+    <!-- 注文 -->
+    <section class="screen" id="scrOrder"><div class="pageDesc">（PART2で実装）</div></section>
+  </main>
+
+  <!-- ===== Bottom (Main only) ===== -->
+  <div class="bottomBar" id="bottomBar">
+    <div class="bottomInner">
+      <button class="bottomBtn move" id="goMove">席移動</button>
+      <button class="bottomBtn" id="goTodaySales">本日の売上</button>
+      <button class="bottomBtn" id="goSettings">設定</button>
     </div>
   </div>
-</header>
 
-<main class="app">
-  <!-- ここ重要：既存JSが showScreen("scrMain") 等を使ってる前提 -->
-  <section class="screen active" id="scrMain">
-    <div class="mainArea">
-      <div class="hint">空席をタップで 来店 / 予約 を切替</div>
-      <!-- ここ重要：既存JSが描画するIDのままにする（あなたの過去画面は seatGridMain を使ってた） -->
-      <div class="seatGrid" id="seatGridMain"></div>
-    </div>
-  </section>
-  <section class="screen" id="scrKitchen"></section>
-  <section class="screen" id="scrSettings"></section>
-</main>
-
-<footer class="bottomBar">
-  <div class="bottomRow">
-    <div class="navGroup">
-      <!-- スクショで存在確認できたID（ここを変えると100%死ぬ） -->
-      <button class="navBtn" id="navMove">席移動</button>
-      <div class="navSep"></div>
-      <button class="navBtn" id="navSales">本日の売上</button>
-      <div class="navSep"></div>
-      <button class="navBtn" id="navSettings">設定</button>
+  <!-- ===== Modal ===== -->
+  <div class="backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modalHead">
+        <div class="modalTitleL">
+          <div class="modalSeatId" id="modalSeatId" style="display:none"></div>
+          <div class="modalTitleText" id="modalTitle"> </div>
+        </div>
+        <button class="btn ghost" id="modalClose">閉じる</button>
+      </div>
+      <div class="modalBody" id="modalBody"> </div>
+      <div class="modalActions" id="modalActions"></div>
     </div>
   </div>
-</footer>
 
-<!-- =========================
-  ここから先は PART2 で続く
-========================= -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /* =========================
+      Common / State (PART1)
+    ========================= */
+
+    const KEY = "ONE_FREE_FULL_V2";
+    const $ = (id)=> document.getElementById(id);
+
+    function nowTs(){ return Date.now(); }
+    function pad2(n){ return String(n).padStart(2,"0"); }
+    function yen(n){
+      const x = Number(n||0);
+      return "¥" + x.toLocaleString("ja-JP");
+    }
+
+    function toast(msg, ms=1800){
+      const t = $("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      clearTimeout(toast._tm);
+      toast._tm = setTimeout(()=> t.classList.remove("show"), ms);
+    }
+
+    /* モーダル（背景固定） */
+    function lockBody(){
+      const y = window.scrollY;
+      document.body.dataset.scrollY = String(y);
+      document.body.classList.add("modalLock");
+      document.body.style.top = `-${y}px`;
+    }
+    function unlockBody(){
+      const y = Number(document.body.dataset.scrollY || "0");
+      document.body.classList.remove("modalLock");
+      document.body.style.top = "";
+      window.scrollTo(0, y);
+    }
+
+    /* キーボードで見切れにくく */
+    (function modalKeyboardAssist(){
+      const bd = $("modalBackdrop");
+      document.addEventListener("focusin", (e)=>{
+        if(!bd.classList.contains("show")) return;
+        const t = e.target;
+        if(t && (t.tagName==="INPUT" || t.tagName==="TEXTAREA" || t.tagName==="SELECT")){
+          bd.classList.add("kbOpen");
+        }
+      });
+      document.addEventListener("focusout", ()=>{
+        if(!bd.classList.contains("show")) return;
+        setTimeout(()=> bd.classList.remove("kbOpen"), 50);
+      });
+    })();
+
+    function openModal(title, bodyHtml, actions, seatId=null){
+      $("modalTitle").textContent = title || "";
+      $("modalBody").innerHTML = bodyHtml || "";
+
+      if(seatId){
+        $("modalSeatId").style.display = "block";
+        $("modalSeatId").textContent = seatId;
+      }else{
+        $("modalSeatId").style.display = "none";
+        $("modalSeatId").textContent = "";
+      }
+
+      const box = $("modalActions");
+      box.innerHTML = "";
+      (actions||[]).forEach(a=>{
+        const b = document.createElement("button");
+        b.className = "btn bigBtn" + (a.lime ? " lime" : "");
+        b.textContent = a.label;
+        b.onclick = ()=> a.onClick && a.onClick();
+        box.appendChild(b);
+      });
+
+      $("modalBackdrop").classList.add("show");
+      lockBody();
+    }
+    function closeModal(){
+      $("modalBackdrop").classList.remove("show");
+      $("modalBackdrop").classList.remove("kbOpen");
+      unlockBody();
+    }
+
+    $("modalClose").onclick = ()=> closeModal();
+    $("modalBackdrop").addEventListener("click", (e)=>{
+      if(e.target === $("modalBackdrop")) closeModal();
+    });
+
+    /* 画面遷移 */
+    const screens = ["scrMain","scrKitchen","scrSales","scrFix","scrSeatSetup","scrSettings","scrMenu","scrOrder"];
+    function showScreen(id){
+      screens.forEach(s=> $(s).classList.toggle("active", s===id));
+
+      // 上部中央ボタン文言（共通ルール）
+      if(id==="scrMain"){
+        $("navSecond").textContent = "キッチン";
+      }else if(id==="scrKitchen"){
+        $("navSecond").textContent = "ホール";
+      }else{
+        $("navSecond").textContent = "メイン";
+      }
+
+      // 下段はメインだけ
+      $("bottomBar").style.display = (id==="scrMain") ? "flex" : "none";
+
+      window.scrollTo(0,0);
+    }
+
+    /* ===== State ===== */
+    const state = {
+      syncOk: true,
+      seats: [],
+      order: { seatId:null, subId:null, catView:"all" },
+      sales: null,
+      kitchen: null,
+      fix: null,
+      seatSetup: null,
+      sync: null,
+      menu: null,
+    };
+
+    function setSync(ok){
+      state.syncOk = !!ok;
+      $("btnAntenna").classList.toggle("off", !ok);
+    }
+
+    /* ===== Seat helpers ===== */
+    function seatById(id){ return state.seats.find(s=> s.id===id); }
+
+    function ensureSub(seat, subId){
+      seat.sub = seat.sub || {};
+      if(!seat.sub[subId]){
+        seat.sub[subId] = { seatId: subId, people:0, name:"", total:0, orders:[], reserve:null };
+      }
+      return seat.sub[subId];
+    }
+
+    function calcSeatTotal(seat){
+      if(!seat.merged){
+        return Number(seat.total||0);
+      }
+      const subs = Object.values(seat.sub||{});
+      return subs.reduce((a,b)=> a + Number(b.total||0), 0);
+    }
+
+    function calcOrdersTotal(orders){
+      return (orders||[]).reduce((sum, o)=> sum + (Number(o.price||0) * Number(o.qty||0)), 0);
+    }
+
+    /* ===== Seed ===== */
+    function seedSeatsIfEmpty(){
+      if(state.seats.length) return;
+
+      state.seats = [
+        {id:"A", status:"empty"},
+        {id:"B", status:"empty"},
+        {id:"C", status:"reserve", people:1, reserve:{time:"", name:"", tel:"", note:""}, total:0, bills:0},
+        {id:"D", status:"in", people:3, name:"井上", total:6100, bills:1},
+        {id:"E", status:"in", people:2, name:"", total:7800, bills:2, merged:true, mergeLabel:"➡︎A,B"},
+        {id:"F", status:"empty"},
+        {id:"1", status:"empty"},
+        {id:"2", status:"empty"},
+        {id:"3", status:"empty"},
+      ].map(s=>{
+        s.people = Number(s.people||0);
+        s.name = s.name || "";
+        s.total = Number(s.total||0);
+        s.bills = Number(s.bills||0);
+        s.merged = !!s.merged;
+        s.mergeLabel = s.mergeLabel || "";
+        s.sub = null;
+        return s;
+      });
+    }
+
+    /* ===== Render seats ===== */
+    function renderSeats(){
+      const grid = $("seatGrid");
+      grid.innerHTML = "";
+
+      state.seats.forEach(seat=>{
+        const card = document.createElement("div");
+        card.className = "seatCard " + (seat.status==="reserve" ? "reserve" : seat.status==="in" ? "in" : "empty");
+        card.dataset.seatId = seat.id;
+
+        const seatLabel = seat.merged ? (seat.mergeLabel || seat.id) : seat.id;
+        const people = (seat.status==="in" || seat.status==="reserve") ? Number(seat.people||0) : 0;
+
+        const bills = Number(seat.bills||0);
+        const billsLine = (seat.status==="in" && bills>=2) ? `別会計${bills}件` : "";
+
+        let line2 = "";
+        let line3 = "";
+
+        // 4段固定：
+        // 1) 席番号/人数
+        // 2) 名前（or 予約/空席）
+        // 3) 補助（空席/予約/使用中/合流など）←今は最低限
+        // 4) 金額（使用中のみ）
+        if(seat.merged){
+          line2 = "合流";
+          line3 = seat.mergeLabel || "";
+        }else if(seat.status==="in"){
+          line2 = seat.name || "";
+          line3 = "使用中";
+        }else if(seat.status==="reserve"){
+          line2 = "予約";
+          line3 = "";
+        }else{
+          line2 = "空席";
+          line3 = "";
+        }
+
+        const money = (seat.status==="in") ? yen(calcSeatTotal(seat)) : "";
+
+        card.innerHTML = `
+          <div class="seatNoLine">
+            <div class="seatNo">${seatLabel}</div>
+            <div class="seatPeople">${(seat.status==="in"||seat.status==="reserve") ? `${people}名` : ""}</div>
+          </div>
+
+          <div class="seatLines">
+            <div>${line2 || " "}</div>
+            <div class="muted">${line3 || " "}</div>
+            ${billsLine ? `<div class="muted">${billsLine}</div>` : `<div class="muted"> </div>`}
+          </div>
+
+          <div class="seatMoney">${money || " "}</div>
+        `;
+
+        card.onclick = ()=> onSeatTap(seat.id);
+        grid.appendChild(card);
+      });
+    }
+
+    /* ===== Seat tap entry ===== */
+    function onSeatTap(seatId){
+      toast("読み込み中…");
+    }
+
+    /* ===== Header center button ===== */
+    $("navSecond").onclick = ()=>{
+      const current = screens.find(s=> $(s).classList.contains("active")) || "scrMain";
+      if(current==="scrMain"){
+        showScreen("scrKitchen");
+      }else if(current==="scrKitchen"){
+        showScreen("scrMain");
+      }else{
+        showScreen("scrMain");
+      }
+    };
+
+    /* Bottom buttons */
+    $("goMove").onclick = ()=> openMoveHome();
+    $("goTodaySales").onclick = ()=> { state._salesFromMain = true; showScreen("scrSales"); };
+    $("goSettings").onclick = ()=> showScreen("scrSettings");
+
+    /* placeholders (PART2で実装) */
+    function openMoveHome(){ toast("席移動（PART2で実装）"); }
+
+    /* 起動 */
+    (function init(){
+      seedSeatsIfEmpty();
+      setSync(true);     // アンテナ復活
+      renderSeats();
+      showScreen("scrMain");
+    })();
+
+    /* =========================
+      ここから先は PART2 で続く
+    ========================= */
 /* =========================
   PART2：注文（本来の構成に復元）＋席タップ動線（空席/予約/来店/合流）＋席移動（復活）
   重要：
@@ -160,7 +934,6 @@ main.app{min-height:100dvh;padding-left:calc(10px + var(--sal));padding-right:ca
    0) 軽いズーム抑止（dblclickのみ）
    ※ touchend preventDefault はクリックが死ぬ事があるのでやらない
 ========================================================= */
-<script>
 (function preventDoubleTapZoomSafe(){
   if(preventDoubleTapZoomSafe._done) return;
   preventDoubleTapZoomSafe._done = true;
@@ -1127,6 +1900,722 @@ onSeatTap = function(seatId){
 
 /* =========================
   ここから先は PART3 で続く
+========================= */
+/* =========================
+  PART3：キッチン（完成版）
+  役割：未調理一覧 / 同一メニューまとめ / スライド完了 / 提供済折りたたみ
+  追加：注文からキッチンへ積む（料理/ドリンク）
+========================= */
+
+/* ===== UI差し替え ===== */
+(function buildKitchenUI(){
+  const scr = $("scrKitchen");
+  scr.innerHTML = `
+    <div style="font-weight:900; margin-bottom:10px">キッチン</div>
+
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px">
+      <div style="opacity:.9">表示：</div>
+      <button class="btn" id="kFilterFood">料理</button>
+      <button class="btn" id="kFilterDrink">ドリンク</button>
+      <button class="btn ghost" id="kToggleDone">提供済を表示</button>
+    </div>
+
+    <div id="kList"></div>
+
+    <div style="height:12px"></div>
+
+    <div id="kDoneWrap" style="display:none">
+      <div style="font-weight:900; margin-bottom:10px">提供済</div>
+      <div id="kDoneList"></div>
+    </div>
+  `;
+})();
+
+/* ===== State ===== */
+state.kitchen = state.kitchen || {
+  showDone:false,
+  showFood:true,
+  showDrink:true,
+  items: [] // {kid, ts, seatId, subId, name, qty, cat, status}
+};
+
+/* ===== 注文→キッチンへ積む ===== */
+function addKitchenFromOrder(seat, subId, item){
+  // item.cat: "food" | "drink"
+  const cat = item.cat || "food";
+  const key = `${seat.id}__${subId}__${item.id}`;
+
+  // 同一商品は qty をまとめる（キッチンもまとめやすく）
+  let found = state.kitchen.items.find(x=> x._key===key && x.status==="todo");
+  if(!found){
+    found = {
+      kid: "k_" + Math.random().toString(36).slice(2),
+      _key: key,
+      ts: nowTs(),
+      seatId: seat.id,
+      subId,
+      name: item.name,
+      qty: 1,
+      cat,
+      status:"todo"
+    };
+    state.kitchen.items.push(found);
+  }else{
+    found.qty += 1;
+  }
+}
+
+/* ===== CSS（キッチン専用） ===== */
+(function injectPart3Css(){
+  const css = `
+    .kRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px;
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:14px;
+      background:rgba(255,255,255,0.04);
+      margin-bottom:10px;
+    }
+    .kLeft{
+      min-width:0;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex:1;
+    }
+    .kTime{ font-weight:900; width:56px; }
+    .kSeat{ font-weight:900; width:52px; }
+    .kName{
+      min-width:0;
+      font-weight:900;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .kQty{
+      font-weight:900;
+      opacity:.85;
+      margin-left:6px;
+    }
+
+    .kChild{ margin-left:18px; position:relative; }
+    .kChild::before{
+      content:"";
+      position:absolute;
+      left:-10px; top:0; bottom:0;
+      width:2px;
+      background:rgba(122,167,255,0.45);
+      border-radius:99px;
+    }
+    .kChild .kRow{ background:rgba(122,167,255,0.08); }
+
+    .kSlide{
+      width:25vw;
+      max-width:160px;
+      min-width:110px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      justify-content:flex-end;
+    }
+    .kRange{ width:100%; accent-color: var(--accent); }
+    .kDoneBadge{ font-size:12px; color:var(--ok); font-weight:900; }
+  `;
+  const st = document.createElement("style");
+  st.textContent = css;
+  document.head.appendChild(st);
+})();
+
+/* ===== Helpers ===== */
+function hhmm(ts){
+  const d = new Date(ts);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function passCategory(item){
+  if(item.cat==="food" && !state.kitchen.showFood) return false;
+  if(item.cat==="drink" && !state.kitchen.showDrink) return false;
+  return true;
+}
+
+/* 同一メニューまとめ：親＝最古 */
+function buildKitchenGroups(list){
+  const map = new Map();
+  list.forEach(it=>{
+    const key = `${it.name}__${it.cat}`;
+    if(!map.has(key)) map.set(key, []);
+    map.get(key).push(it);
+  });
+
+  const groups = [];
+  map.forEach(arr=>{
+    arr.sort((a,b)=> a.ts-b.ts);
+    groups.push(arr);
+  });
+  groups.sort((ga,gb)=> ga[0].ts - gb[0].ts);
+  return groups;
+}
+
+/* ===== Render ===== */
+function renderKitchen(){
+  const todo = state.kitchen.items.filter(it=> it.status==="todo").filter(passCategory);
+  const done = state.kitchen.items.filter(it=> it.status==="done").filter(passCategory);
+
+  const listBox = $("kList");
+  const doneWrap = $("kDoneWrap");
+  const doneBox  = $("kDoneList");
+
+  listBox.innerHTML = "";
+  doneBox.innerHTML = "";
+
+  const groups = buildKitchenGroups(todo);
+  if(groups.length===0){
+    listBox.innerHTML = `<div style="opacity:.85">未調理はありません</div>`;
+  }else{
+    groups.forEach(arr=>{
+      listBox.appendChild(kRowEl(arr[0], false));
+      arr.slice(1).forEach(ch=>{
+        const wrap = document.createElement("div");
+        wrap.className = "kChild";
+        wrap.appendChild(kRowEl(ch, false));
+        listBox.appendChild(wrap);
+      });
+    });
+  }
+
+  doneWrap.style.display = state.kitchen.showDone ? "block" : "none";
+  if(state.kitchen.showDone){
+    const groupsD = buildKitchenGroups(done);
+    if(groupsD.length===0){
+      doneBox.innerHTML = `<div style="opacity:.85">提供済はありません</div>`;
+    }else{
+      groupsD.forEach(arr=>{
+        doneBox.appendChild(kRowEl(arr[0], true));
+        arr.slice(1).forEach(ch=>{
+          const wrap = document.createElement("div");
+          wrap.className = "kChild";
+          wrap.appendChild(kRowEl(ch, true));
+          doneBox.appendChild(wrap);
+        });
+      });
+    }
+  }
+}
+
+function kRowEl(item, isDone){
+  const row = document.createElement("div");
+  row.className = "kRow";
+
+  const qtyText = (Number(item.qty||0) >= 2) ? `×${item.qty}` : "";
+  const seatLabel = item.subId && item.subId!==item.seatId ? `${item.seatId}/${item.subId}` : `${item.seatId}`;
+
+  row.innerHTML = `
+    <div class="kLeft">
+      <div class="kTime">${hhmm(item.ts)}</div>
+      <div class="kSeat">${seatLabel}</div>
+      <div class="kName">${item.name}<span class="kQty">${qtyText}</span></div>
+    </div>
+    <div class="kSlide">
+      ${isDone ? `<span class="kDoneBadge">完了</span>` : ``}
+      <input class="kRange" type="range" min="0" max="100" value="0" aria-label="スライドで完了" />
+    </div>
+  `;
+
+  const range = row.querySelector(".kRange");
+  const TH = 88;
+
+  range.addEventListener("change", ()=>{
+    const v = Number(range.value||0);
+    if(v >= TH){
+      item.status = isDone ? "todo" : "done";
+      range.value = 0;
+      renderKitchen();
+    }else{
+      range.value = 0;
+    }
+  });
+
+  return row;
+}
+
+/* ===== Buttons ===== */
+$("kToggleDone").onclick = ()=>{
+  state.kitchen.showDone = !state.kitchen.showDone;
+  $("kToggleDone").textContent = state.kitchen.showDone ? "提供済を隠す" : "提供済を表示";
+  renderKitchen();
+};
+
+$("kFilterFood").onclick = ()=>{
+  state.kitchen.showFood = !state.kitchen.showFood;
+  $("kFilterFood").classList.toggle("lime", state.kitchen.showFood);
+  renderKitchen();
+};
+$("kFilterDrink").onclick = ()=>{
+  state.kitchen.showDrink = !state.kitchen.showDrink;
+  $("kFilterDrink").classList.toggle("lime", state.kitchen.showDrink);
+  renderKitchen();
+};
+
+/* 初期 */
+$("kFilterFood").classList.add("lime");
+$("kFilterDrink").classList.add("lime");
+
+/* showScreen hook */
+(function hookShowScreenForKitchen(){
+  if(showScreen._kHooked) return;
+  const _show = showScreen;
+  showScreen = function(id){
+    _show(id);
+    if(id==="scrKitchen") renderKitchen();
+  };
+  showScreen._kHooked = true;
+})();
+
+renderKitchen();
+
+/* =========================
+  ここから先は PART4 で続く
+========================= */
+/* =========================
+  PART4：売上（本日／日別／月／年）
+  役割：閲覧（無料版で全部見る）＋修正導線（PART5へ）
+  方針：軽く・不安を煽らない・修正はPART5へ分離（訂正伝票方式）
+  追加（確定対応）：
+    - 本日／日別／月／年 を無料版で閲覧可能
+    - 本日／日別 の一覧は「入店/退店/席(名前)/金額/支払/修正」
+    - 修正差分（訂正伝票）は “対象行の直下” に追加表示（上書きなし）
+========================= */
+
+/* ===== UI差し替え（プレースホルダ置換） ===== */
+(function buildSalesUI(){
+  const scr = $("scrSales");
+  scr.innerHTML = `
+    <div class="pill" style="margin-bottom:10px">売上</div>
+
+    <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap">
+      <button class="btn primary" id="tabToday">本日</button>
+      <button class="btn" id="tabDaily">日別</button>
+      <button class="btn" id="tabMonth">月</button>
+      <button class="btn" id="tabYear">年</button>
+    </div>
+
+    <div id="salesToday"></div>
+    <div id="salesDaily" style="display:none"></div>
+    <div id="salesMonth" style="display:none"></div>
+    <div id="salesYear" style="display:none"></div>
+  `;
+})();
+
+/* ===== PART4 State ===== */
+state.sales = state.sales || {
+  list: [],
+  tab: "today",
+  dailyYmd: null, // 日別で選択中の日付（YYYY-MM-DD）
+};
+
+/* ===== Helpers ===== */
+function ymd(d){
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+function sameDay(a,b){
+  return a.getFullYear()===b.getFullYear()
+      && a.getMonth()===b.getMonth()
+      && a.getDate()===b.getDate();
+}
+function fmtHM(ts){
+  if(!ts) return "--:--";
+  const d = new Date(ts);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function safeNum(n){ n=Number(n); return Number.isFinite(n)?n:0; }
+
+/* ===== Demo Seed（inTs/outTsも付ける） ===== */
+(function seedSalesIfEmpty(){
+  if(state.sales.list.length) return;
+
+  const now = new Date();
+  const mk = (inH,inM,outH,outM,seat,name,pay,amt)=>{
+    const inD  = new Date(now.getFullYear(), now.getMonth(), now.getDate(), inH, inM);
+    const outD = new Date(now.getFullYear(), now.getMonth(), now.getDate(), outH, outM);
+    return {
+      saleId: "s"+Math.random().toString(36).slice(2),
+      ts: outD.getTime(),      // 会計時刻（退店寄りでOK）
+      inTs: inD.getTime(),
+      outTs: outD.getTime(),
+      seatId: seat,
+      name: name||"",
+      pay,
+      amount: amt,
+      receipt: true,
+      items: [
+        {name:"生ビール", qty:2, price:600, tax:10},
+        {name:"唐揚げ", qty:1, price:800, tax:10},
+      ],
+      corrections: [] // 訂正伝票（差分）をここに積む
+    };
+  };
+
+  state.sales.list.push(
+    mk(12,10,12,35,"D","田中","カード",4800),
+    mk(13,00,13,10,"A","","現金",1800),
+    mk(13,40,14, 5,"B","佐藤","QR",2200),
+  );
+
+  // 日別の初期日付：今日
+  state.sales.dailyYmd = ymd(new Date());
+})();
+
+/* ===== Aggregation ===== */
+function filterByYmd(targetYmd){
+  const rows = state.sales.list.filter(s=>{
+    const d = new Date(s.ts);
+    return ymd(d) === targetYmd;
+  });
+  return rows;
+}
+
+function aggByRows(rows){
+  const sum = rows.reduce((a,b)=> a + safeNum(b.amount), 0);
+  const cnt = rows.length;
+
+  const payCnt = {現金:0, カード:0, QR:0};
+  const paySum = {現金:0, カード:0, QR:0};
+
+  rows.forEach(s=>{
+    const p = s.pay || "現金";
+    if(!(p in payCnt)) payCnt[p]=0;
+    if(!(p in paySum)) paySum[p]=0;
+    payCnt[p] += 1;
+    paySum[p] += safeNum(s.amount);
+  });
+
+  return {sum,cnt,payCnt,paySum};
+}
+
+function aggToday(){
+  const today = ymd(new Date());
+  const rows = filterByYmd(today);
+  return { ymd: today, rows, ...aggByRows(rows) };
+}
+
+function aggDaily(targetYmd){
+  const rows = filterByYmd(targetYmd);
+  return { ymd: targetYmd, rows, ...aggByRows(rows) };
+}
+
+function aggMonth(){
+  const d = new Date();
+  const y=d.getFullYear(), m=d.getMonth();
+  const rows = state.sales.list.filter(s=>{
+    const x=new Date(s.ts);
+    return x.getFullYear()===y && x.getMonth()===m;
+  });
+  const sum = rows.reduce((a,b)=> a+safeNum(b.amount), 0);
+  return {sum, cnt: rows.length};
+}
+
+function aggYear(){
+  const y=new Date().getFullYear();
+  const rows = state.sales.list.filter(s=> new Date(s.ts).getFullYear()===y);
+  const sum = rows.reduce((a,b)=> a+safeNum(b.amount), 0);
+  return {sum, cnt: rows.length};
+}
+
+/* ===== 修正導線（PART5へ） ===== */
+function goFix(saleId){
+  // PART5差し替え版：window.ONE_openFixForSaleId がある想定
+  if(typeof window.ONE_openFixForSaleId === "function"){
+    window.ONE_openFixForSaleId(saleId);
+    return;
+  }
+  toast("修正機能が見つかりません（PART5を反映してください）");
+}
+
+/* ===== 訂正伝票表示（対象行の直下） ===== */
+function renderCorrectionsInline(s){
+  const list = (s.corrections || []);
+  if(!list.length) return "";
+
+  // 新しい順に見せる（直下に複数並ぶ）
+  const html = list.slice().sort((a,b)=> (b.ts||0)-(a.ts||0)).map(c=>{
+    const beforePay = c.payBefore || s.pay || "";
+    const afterPay  = c.payAfter  || "";
+
+    // 商品差分（左：前 / 右：後）
+    const before = c.itemsBefore || [];
+    const after  = c.itemsAfter  || [];
+
+    // 名前集合で並べる
+    const map = new Map();
+    before.forEach(it=>{
+      const k = it.name || "";
+      if(!k) return;
+      if(!map.has(k)) map.set(k, {name:k, b:0, a:0});
+      map.get(k).b += safeNum(it.qty);
+    });
+    after.forEach(it=>{
+      const k = it.name || "";
+      if(!k) return;
+      if(!map.has(k)) map.set(k, {name:k, b:0, a:0});
+      map.get(k).a += safeNum(it.qty);
+    });
+    const diffs = Array.from(map.values()).sort((x,y)=> x.name.localeCompare(y.name,"ja"));
+
+    const diffRows = diffs.map(x=>`
+      <div style="display:flex; justify-content:space-between; gap:10px; margin:4px 0">
+        <div style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${x.name}</div>
+        <div style="display:flex; gap:8px; font-weight:900">
+          <span>${x.b}</span><span style="color:var(--muted)">→</span><span>${x.a}</span>
+        </div>
+      </div>
+    `).join("");
+
+    return `
+      <div class="pill" style="margin:8px 0 10px; color:var(--muted)">
+        訂正：${fmtHM(c.ts)} ／ ${c.who||""} ／ ${c.why||""}<br>
+        支払：${beforePay}${afterPay?` → ${afterPay}`:""}<br>
+        ${diffRows || "（数量変更なし）"}
+      </div>
+    `;
+  }).join("");
+
+  return html;
+}
+
+/* ===== List Row ===== */
+function saleRowEl(s){
+  const row = document.createElement("div");
+  row.className = "kRow";
+  row.dataset.saleId = s.saleId;
+
+  const inT  = fmtHM(s.inTs);
+  const outT = fmtHM(s.outTs);
+  const seatLabel = `${s.seatId || ""}${s.name ? `（${s.name}）` : ""}`;
+
+  row.innerHTML = `
+    <div class="kLeft" style="align-items:flex-start">
+      <div style="width:64px; font-weight:900">${inT}</div>
+      <div style="width:64px; font-weight:900">${outT}</div>
+      <div class="kName" style="font-weight:900">${seatLabel}</div>
+    </div>
+
+    <div class="kSlide" style="gap:10px; width:auto">
+      <div style="font-weight:900">${yen(s.amount)}</div>
+      <div class="pill">${s.pay || "現金"}</div>
+      <button class="btn" data-fix="${s.saleId}">修正</button>
+    </div>
+  `;
+
+  // 行タップ：詳細（既存の openSaleDetail があれば）
+  row.onclick = (e)=>{
+    if(e && e.target && e.target.getAttribute && e.target.getAttribute("data-fix")) return;
+    if(typeof openSaleDetail === "function") openSaleDetail(s);
+  };
+
+  return row;
+}
+
+/* ===== Render ===== */
+function renderSales(){
+  const t = $("salesToday");
+  const d = $("salesDaily");
+  const m = $("salesMonth");
+  const y = $("salesYear");
+
+  t.style.display = state.sales.tab==="today" ? "block":"none";
+  d.style.display = state.sales.tab==="daily" ? "block":"none";
+  m.style.display = state.sales.tab==="month" ? "block":"none";
+  y.style.display = state.sales.tab==="year"  ? "block":"none";
+
+  if(state.sales.tab==="today") renderToday();
+  if(state.sales.tab==="daily") renderDaily();
+  if(state.sales.tab==="month") renderMonth();
+  if(state.sales.tab==="year")  renderYear();
+}
+
+function renderToday(){
+  const box = $("salesToday");
+  const a = aggToday();
+
+  const payTxt = `現金 ${a.payCnt["現金"]||0} / カード ${a.payCnt["カード"]||0} / QR ${a.payCnt["QR"]||0}`;
+
+  box.innerHTML = `
+    <div class="pill" style="margin-bottom:8px">
+      合計 ${yen(a.sum)} ／ 会計 ${a.cnt}件 ／ ${payTxt}
+    </div>
+
+    <div id="todayList"></div>
+  `;
+
+  const list = box.querySelector("#todayList");
+  if(a.rows.length===0){
+    list.innerHTML = `<div class="pill">本日の会計はありません</div>`;
+    return;
+  }
+
+  a.rows
+    .slice()
+    .sort((x,y)=> x.ts - y.ts)
+    .forEach(s=>{
+      // 元行
+      const row = saleRowEl(s);
+      list.appendChild(row);
+
+      // 直下：訂正伝票（差分）
+      const inline = renderCorrectionsInline(s);
+      if(inline){
+        const wrap = document.createElement("div");
+        wrap.innerHTML = inline;
+        list.appendChild(wrap);
+      }
+    });
+
+  // 修正ボタン
+  list.querySelectorAll("[data-fix]").forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const id = btn.getAttribute("data-fix");
+      goFix(id);
+    };
+  });
+}
+
+function renderDaily(){
+  const box = $("salesDaily");
+  const todayY = ymd(new Date());
+  const cur = state.sales.dailyYmd || todayY;
+
+  const a = aggDaily(cur);
+
+  box.innerHTML = `
+    <div class="pill" style="margin-bottom:8px">日付</div>
+    <input id="dailyPick" class="btn" style="width:100%; text-align:left; margin-bottom:10px" value="${cur}" />
+
+    <div class="pill" style="margin-bottom:8px">
+      本日の総売上 ${yen(a.sum)} ／ 総会計数 ${a.cnt}件
+    </div>
+
+    <div class="pill" style="margin-bottom:10px; color:var(--muted)">
+      現金：${a.payCnt["現金"]||0}件／${yen(a.paySum["現金"]||0)}<br>
+      カード：${a.payCnt["カード"]||0}件／${yen(a.paySum["カード"]||0)}<br>
+      QR：${a.payCnt["QR"]||0}件／${yen(a.paySum["QR"]||0)}
+    </div>
+
+    <div id="dailyList"></div>
+  `;
+
+  const list = box.querySelector("#dailyList");
+  if(a.rows.length===0){
+    list.innerHTML = `<div class="pill">この日の会計はありません</div>`;
+  }else{
+    a.rows
+      .slice()
+      .sort((x,y)=> x.ts - y.ts)
+      .forEach(s=>{
+        const row = saleRowEl(s);
+        list.appendChild(row);
+
+        const inline = renderCorrectionsInline(s);
+        if(inline){
+          const wrap = document.createElement("div");
+          wrap.innerHTML = inline;
+          list.appendChild(wrap);
+        }
+      });
+
+    list.querySelectorAll("[data-fix]").forEach(btn=>{
+      btn.onclick = (e)=>{
+        e.stopPropagation();
+        const id = btn.getAttribute("data-fix");
+        goFix(id);
+      };
+    });
+  }
+
+  // 日付変更
+  $("dailyPick").onchange = ()=>{
+    const v = ($("dailyPick").value||"").trim();
+    if(!v){ state.sales.dailyYmd = todayY; }
+    else state.sales.dailyYmd = v;
+    renderDaily();
+  };
+}
+
+function renderMonth(){
+  const box = $("salesMonth");
+  const a = aggMonth();
+  box.innerHTML = `
+    <div class="pill">月合計 ${yen(a.sum)} ／ 会計 ${a.cnt}件</div>
+    <div style="height:8px"></div>
+    <div class="pill">無料版：月の内訳（グラフ等）は今後の有料版で強化</div>
+  `;
+}
+
+function renderYear(){
+  const box = $("salesYear");
+  const a = aggYear();
+  box.innerHTML = `
+    <div class="pill">年合計 ${yen(a.sum)} ／ 会計 ${a.cnt}件</div>
+    <div style="height:8px"></div>
+    <div class="pill">無料版：年の内訳（グラフ等）は今後の有料版で強化</div>
+  `;
+}
+
+/* ===== Detail（修正はPART5へ） ===== */
+function openSaleDetail(s){
+  const items = (s.items||[]).map(it=>`${it.name} ×${it.qty}`).join("<br>");
+  openModal(
+    "会計詳細",
+    `
+      <div>入店：${fmtHM(s.inTs)}</div>
+      <div>退店：${fmtHM(s.outTs)}</div>
+      <div>席：${s.seatId}${s.name?`（${s.name}）`:""}</div>
+      <div>支払：${s.pay}</div>
+      <div style="margin-top:8px">${items}</div>
+      <div style="margin-top:8px;font-weight:900">${yen(s.amount)}</div>
+    `,
+    [
+      {label:"修正", primary:true, onClick:()=>{ closeModal(); goFix(s.saleId); }},
+      {label:"戻る", onClick:()=> closeModal()},
+    ]
+  );
+}
+
+/* ===== Tabs ===== */
+function setTab(t){
+  state.sales.tab = t;
+
+  $("tabToday").classList.toggle("primary", t==="today");
+  $("tabDaily").classList.toggle("primary", t==="daily");
+  $("tabMonth").classList.toggle("primary", t==="month");
+  $("tabYear").classList.toggle("primary", t==="year");
+
+  renderSales();
+}
+
+$("tabToday").onclick=()=> setTab("today");
+$("tabDaily").onclick=()=> setTab("daily");
+$("tabMonth").onclick=()=> setTab("month");
+$("tabYear").onclick =()=> setTab("year");
+
+/* ===== showScreen拡張 ===== */
+(function hookShowScreenForSales(){
+  if(showScreen._sHooked2) return;
+  const _show = showScreen;
+  showScreen = function(id){
+    _show(id);
+    if(id==="scrSales") renderSales();
+  };
+  showScreen._sHooked2 = true;
+})();
+
+/* 初期描画 */
+renderSales();
+
+/* =========================
+  ここから先は PART5 で続く
 ========================= */
 /* =========================
   PART3：キッチン（完成版）
