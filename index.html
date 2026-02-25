@@ -566,7 +566,6 @@
     <section class="screen" id="scrMenu"><div class="pageDesc">（PART8で実装）</div></section>
     <section class="screen" id="scrOrder"><div class="pageDesc">（PART2で実装）</div></section>
 <section class="screen" id="scrCheckout">
-  <div class="pageDesc"> <section class="screen" id="scrCheckout">
   <div class="panel">
     <div style="font-weight:900; font-size:20px; margin-bottom:10px;">会計</div>
 
@@ -574,7 +573,7 @@
       合計：<span id="coTotal">¥0</span>
     </div>
 
-    <!-- 支払い方法：横並び -->
+    <!-- 支払い方法 -->
     <div style="display:flex; gap:10px; margin:10px 0;">
       <button class="btn full" id="coPayCash">現金</button>
       <button class="btn full" id="coPayCard">カード</button>
@@ -597,23 +596,37 @@
       </div>
     </div>
 
-    <!-- 電子レシート（無料版は送信不可） -->
+    <!-- 電子レシート -->
     <div class="panel" style="margin:12px 0;">
       <div style="font-weight:900; margin-bottom:8px;">電子レシート</div>
       <div class="muted" style="font-weight:800; margin-bottom:8px;">
         ※席番号・人数は記載しない（内部管理のみ）
       </div>
-      <input id="coEmail" type="email" placeholder="メールアドレス（任意）" style="width:100%; padding:12px; border-radius:14px; border:1px solid rgba(0,0,0,.12);" />
-      <button class="btn full" id="coSendReceipt" style="margin-top:10px;" disabled>送る（有料版）</button>
-      <div class="muted" style="font-weight:800; margin-top:6px;">無料版は送信できません（有料版で解放）</div>
 
+      <input id="coEmail" type="email"
+        placeholder="メールアドレス（任意）"
+        style="width:100%; padding:12px; border-radius:14px; border:1px solid rgba(0,0,0,.12);" />
+
+      <button class="btn full"
+        id="coSendReceipt"
+        style="margin-top:10px;"
+        disabled>
+        送る（有料版）
+      </button>
+
+      <div class="muted" style="font-weight:800; margin-top:6px;">
+        無料版は送信できません（有料版で解放）
+      </div>
+    </div>
+
+    <!-- 下部ボタン -->
     <div style="display:flex; gap:10px; margin-top:14px;">
       <button class="btn full" id="coBack">戻る</button>
       <button class="btn full lime" id="coConfirm">会計確定</button>
-</div>
-
     </div>
+  </div>
 </section>
+
 </main>
 
   <!-- ===== Bottom (Main only) ===== -->
