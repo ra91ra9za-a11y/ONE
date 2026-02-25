@@ -1118,7 +1118,7 @@ function renderOrder_v3(){
   $("orderSeatLabel").textContent = seat.merged ? `${seat.mergeLabel} / ${subId}` : `${seat.id}`;
 
   // 会計入口（会計画面は別パートで実装）
-  $("orderGoPay").onclick = ()=>showScreen("scrCheckout");
+　$("orderGoPay").onclick = ()=> openCheckout();
 
   // メインへ戻る
   $("orderBackMain").onclick = ()=>{
