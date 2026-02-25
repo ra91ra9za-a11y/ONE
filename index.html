@@ -565,7 +565,10 @@
     <section class="screen" id="scrSettings"><div class="pageDesc">（後で単独修正）</div></section>
     <section class="screen" id="scrMenu"><div class="pageDesc">（PART8で実装）</div></section>
     <section class="screen" id="scrOrder"><div class="pageDesc">（PART2で実装）</div></section>
-  </main>
+<section class="screen" id="scrCheckout">
+  <div class="pageDesc">（会計はここに実装）</div>
+</section>
+</main>
 
   <!-- ===== Bottom (Main only) ===== -->
   <div class="bottomBar" id="bottomBar">
@@ -690,7 +693,8 @@
       Screen system (stable)
       - showScreen 上書き禁止（各PARTはフック登録のみ）
     ========================= */
-    const screens = ["scrMain","scrKitchen","scrSales","scrFix","scrSeatSetup","scrSettings","scrMenu","scrOrder"];
+
+const screens = ["scrMain","scrKitchen","scrSales","scrFix","scrSeatSetup","scrSettings","scrMenu","scrOrder","scrCheckout"];
 
     const SCREEN_HOOKS = Object.create(null);
     function registerScreenHook(id, fn){
@@ -1059,7 +1063,7 @@ function renderOrder_v3(){
   $("orderSeatLabel").textContent = seat.merged ? `${seat.mergeLabel} / ${subId}` : `${seat.id}`;
 
   // 会計入口（会計画面は別パートで実装）
-  $("orderGoPay").onclick = ()=> toast("会計（別パートで実装）");
+  $("orderGoPay").onclick = ()=>showScreen("scrCheckout");
 
   // メインへ戻る
   $("orderBackMain").onclick = ()=>{
