@@ -566,7 +566,53 @@
     <section class="screen" id="scrMenu"><div class="pageDesc">（PART8で実装）</div></section>
     <section class="screen" id="scrOrder"><div class="pageDesc">（PART2で実装）</div></section>
 <section class="screen" id="scrCheckout">
-  <div class="pageDesc">（会計はここに実装）</div>
+  <div class="pageDesc"> <section class="screen" id="scrCheckout">
+  <div class="panel">
+    <div style="font-weight:900; font-size:20px; margin-bottom:10px;">会計</div>
+
+    <div class="pill" style="margin-bottom:10px;">
+      合計：<span id="coTotal">¥0</span>
+    </div>
+
+    <!-- 支払い方法：横並び -->
+    <div style="display:flex; gap:10px; margin:10px 0;">
+      <button class="btn full" id="coPayCash">現金</button>
+      <button class="btn full" id="coPayCard">カード</button>
+      <button class="btn full" id="coPayQR">QR</button>
+    </div>
+    <div class="muted" style="font-weight:800; margin-bottom:12px;">
+      選択中：<span id="coPaySelected">未選択</span>
+    </div>
+
+    <!-- 割り勘 -->
+    <div class="panel" style="margin:12px 0;">
+      <div style="font-weight:900; margin-bottom:8px;">割り勘</div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="btn" id="coSplitMinus">−</button>
+        <div class="pill" style="flex:1;">
+          <span id="coSplitN">1</span> 人
+          ／ 1人あたり：<span id="coPer">¥0</span>
+        </div>
+        <button class="btn" id="coSplitPlus">＋</button>
+      </div>
+    </div>
+
+    <!-- 電子レシート（無料版は送信不可） -->
+    <div class="panel" style="margin:12px 0;">
+      <div style="font-weight:900; margin-bottom:8px;">電子レシート</div>
+      <div class="muted" style="font-weight:800; margin-bottom:8px;">
+        ※席番号・人数は記載しない（内部管理のみ）
+      </div>
+      <input id="coEmail" type="email" placeholder="メールアドレス（任意）" style="width:100%; padding:12px; border-radius:14px; border:1px solid rgba(0,0,0,.12);" />
+      <button class="btn full" id="coSendReceipt" style="margin-top:10px;" disabled>送る（有料版）</button>
+      <div class="muted" style="font-weight:800; margin-top:6px;">無料版は送信できません（有料版で解放）</div>
+
+    <div style="display:flex; gap:10px; margin-top:14px;">
+      <button class="btn full" id="coBack">戻る</button>
+      <button class="btn full lime" id="coConfirm">会計確定</button>
+</div>
+
+    </div>
 </section>
 </main>
 
@@ -1574,6 +1620,169 @@ registerScreenHook("scrOrder", ()=>{
   try{ renderOrder_v3(); }
   catch(e){ console.warn(e); }
 });
+
+/* =========================
+  Checkout (PART2)
+  - 支払い：現金/カード/QR（横並び・ハイライト）
+  - 割り勘
+  - 電子レシート：無料版は送信不可（UIのみ）
+  - 会計確定：自動空席
+  - 訂正伝票方式：削除せず sales に記録（簡易）
+========================= */
+
+state.checkout = state.checkout || { method:null, splitN:1 };
+
+function moneyText(n){
+  return "¥" + Number(n||0).toLocaleString("ja-JP");
+}
+
+function getCheckoutTarget(){
+  // 注文画面から来る前提：state.order.seatId / subId を使う
+  const seat = seatById(state.order.seatId);
+  if(!seat) return null;
+
+  // 合流（merged）でも「どの席として会計するか」を subId で持つ設計に合わせる
+  let target = seat;
+  if(seat.merged){
+    const subId = state.order.subId || seat.id;
+    target = ensureSub(seat, subId);
+    target._parentSeat = seat;   // 親参照（後で空席化する時に使う）
+  }
+  return target;
+}
+
+function calcTargetTotal(target){
+  // 既存の order 実装がどうであっても、まず total を信じる（安全）
+  // merged の sub は target.total、それ以外は seat.total
+  return Number(target.total || 0);
+}
+
+function setPayBtnHL(){
+  const m = state.checkout.method;
+  const on = (id, flag)=> $(id).classList.toggle("lime", !!flag);
+
+  on("coPayCash", m==="cash");
+  on("coPayCard", m==="card");
+  on("coPayQR",   m==="qr");
+
+  $("coPaySelected").textContent =
+    m==="cash" ? "現金" : m==="card" ? "カード" : m==="qr" ? "QR" : "未選択";
+}
+
+function renderCheckout(){
+  const target = getCheckoutTarget();
+  if(!target){ toast("会計対象が見つかりません"); showScreen("scrMain"); return; }
+
+  const total = calcTargetTotal(target);
+  $("coTotal").textContent = moneyText(total);
+
+  const n = Math.max(1, Number(state.checkout.splitN||1));
+  state.checkout.splitN = n;
+  $("coSplitN").textContent = String(n);
+  $("coPer").textContent = moneyText(Math.ceil(total / n));
+
+  setPayBtnHL();
+
+  // 無料版：送信は不可（ボタン無効）
+  $("coSendReceipt").disabled = true;
+}
+
+function openCheckout(){
+  // 画面表示
+  showScreen("scrCheckout");
+}
+
+function finalizeCheckout(){
+  const target = getCheckoutTarget();
+  if(!target){ toast("会計対象が見つかりません"); showScreen("scrMain"); return; }
+
+  if(!state.checkout.method){
+    toast("支払い方法を選んでください");
+    return;
+  }
+
+  const total = calcTargetTotal(target);
+  const splitN = Math.max(1, Number(state.checkout.splitN||1));
+  const method = state.checkout.method;
+
+  // 訂正伝票方式（簡易）：sales に「会計確定の記録」を追加（削除しない）
+  state.sales = state.sales || [];
+  state.sales.push({
+    ts: nowTs(),
+    type: "checkout",
+    seatId: target.seatId || target.id || state.order.seatId,
+    parentSeatId: (target._parentSeat && target._parentSeat.id) ? target._parentSeat.id : null,
+    total,
+    splitN,
+    method,
+    // 電子レシート：席番号/人数は入れない（仕様）
+    receiptEmail: ($("coEmail") && $("coEmail").value) ? $("coEmail").value.trim() : ""
+  });
+
+  // 自動空席化（target が sub の場合は親 seat を空席化）
+  if(target._parentSeat){
+    const seat = target._parentSeat;
+    // 合流していた場合：親の合流情報も含めて初期化（安全に “空席” へ）
+    seat.status = "empty";
+    seat.people = 0;
+    seat.name = "";
+    seat.total = 0;
+    seat.bills = 0;
+    seat.merged = false;
+    seat.mergeLabel = "";
+    seat.sub = null;
+    seat.reserve = null;
+  }else{
+    const seat = target;
+    seat.status = "empty";
+    seat.people = 0;
+    seat.name = "";
+    seat.total = 0;
+    seat.bills = 0;
+    seat.reserve = null;
+    // orders 等は PART2側の設計に合わせる（消すならここで）
+    // seat.orders = [];
+  }
+
+  // 状態リセット
+  state.checkout.method = null;
+  state.checkout.splitN = 1;
+
+  persistAll && persistAll();
+  renderSeats();
+  toast("会計を確定しました");
+  showScreen("scrMain");
+}
+
+/* ===== Checkout hook ===== */
+registerScreenHook("scrCheckout", ()=>{
+  try{ renderCheckout(); }catch(e){ console.warn(e); }
+});
+
+/* ===== Checkout events ===== */
+(function bindCheckoutOnce(){
+  if(bindCheckoutOnce._done) return;
+
+  $("coPayCash").onclick = ()=>{ state.checkout.method="cash"; setPayBtnHL(); };
+  $("coPayCard").onclick = ()=>{ state.checkout.method="card"; setPayBtnHL(); };
+  $("coPayQR").onclick   = ()=>{ state.checkout.method="qr";   setPayBtnHL(); };
+
+  $("coSplitMinus").onclick = ()=>{
+    state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) - 1);
+    renderCheckout();
+  };
+  $("coSplitPlus").onclick = ()=>{
+    state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) + 1);
+    renderCheckout();
+  };
+
+  $("coBack").onclick = ()=> showScreen("scrOrder");
+  $("coConfirm").onclick = ()=> finalizeCheckout();
+
+  $("coSendReceipt").onclick = ()=> toast("無料版は送信できません（有料版）");
+
+  bindCheckoutOnce._done = true;
+})();
 
 /* =========================================================
    8) 席移動（復活）：移動/合流トグル＋席セレクター＋スライド確定
@@ -3039,135 +3248,86 @@ registerScreenHook("scrFix", ()=>{
   ここから先は PART6 で続く
 ========================= */
 /* =========================
-  PART6：席登録（最新仕様：②を触ったら即確定）【BデザインUI調整版】
-  - ロジックはそのまま
-  - UI変更点：
-    1) タイトルを 🔵 付き（.titleRow）
-    2) ② 総席数/総卓数 を stepper（A→B見た目）へ
-    3) スライドを rangeShort（短め）＋バー濃ピンク＋丸ボタン濃緑（文字なし）
+  PART6：席登録（最大着席人数 完全廃止）※完成版（あなたの最新仕様）
+  手順：名称 → 総席/総卓 → 席番号 → 保存 → 作った席（名称ごと）
+  ※「入力取消」「全席初期化」はここに置かない（要求）
 ========================= */
-
-(function ensureSeatSetupSubScreens(){
-  const app = document.querySelector("main.app");
-  if(!app) return;
-
-  function ensureScreen(id){
-    if(document.getElementById(id)) return;
-    const sec = document.createElement("section");
-    sec.className = "screen";
-    sec.id = id;
-    sec.innerHTML = `<div style="opacity:.8">（PART6で実装）</div>`;
-    app.appendChild(sec);
-    try{ screens.push(id); }catch(e){}
-  }
-
-  ensureScreen("scrNameCreate");
-  ensureScreen("scrNameDelete");
-})();
 
 (function buildSeatSetupUI(){
   const scr = $("scrSeatSetup");
   scr.innerHTML = `
-    <!-- 🔵タイトル -->
-    <div class="titleRow"><span class="dot"></span><span>席登録</span></div>
-
-    <!-- 追加ボタン（タイトルの下） -->
-    <div style="display:flex; gap:12px; margin-bottom:14px">
-      <button class="btn lime" id="goNameCreate" style="flex:1; font-weight:1000">名称の作成</button>
-      <button class="btn" id="goNameDelete" style="flex:1; font-weight:1000">名称と席の削除</button>
-    </div>
+    <div style="font-weight:900; margin-bottom:10px">席登録</div>
 
     <!-- ① 名称 -->
-    <div class="hintText" style="font-weight:1000; margin-bottom:8px">
-      <span style="color:var(--blueDot)">🔵</span> ① 名称（タップで選択 / 解除）
-    </div>
-    <div id="ssNameGrid" class="seatGrid" style="margin-bottom:14px"></div>
+    <div style="font-weight:900; margin-bottom:8px">① 名称</div>
+    <div id="ssNameGrid" class="seatGrid" style="margin-bottom:8px"></div>
+    <button class="btn lime full" id="ssNameCommit" style="margin-bottom:14px">決定</button>
 
-    <!-- ② 総席数／総卓数（stepper） -->
-    <div class="hintText" style="font-weight:1000; margin-bottom:8px">
-      <span style="color:var(--blueDot)">🔵</span> ② 総席数 / 総卓数
-    </div>
-
-    <div class="stepper" style="margin-bottom:14px">
-      <button class="stepBtn" id="ssCntMinus" aria-label="減らす">◀︎</button>
-      <div class="stepVal" id="ssCntVal">0</div>
-      <button class="stepBtn" id="ssCntPlus" aria-label="増やす">▶︎</button>
+    <!-- ② 総席数／総卓数 -->
+    <div style="font-weight:900; margin-bottom:8px">② 総席数 / 総卓数</div>
+    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px">
+      <button class="btn" id="ssCntMinus">◀︎</button>
+      <div style="flex:1; text-align:center; font-weight:900; border:1px solid rgba(255,255,255,0.10); border-radius:14px; padding:10px; background:rgba(255,255,255,0.04)" id="ssCntVal">0</div>
+      <button class="btn" id="ssCntPlus">▶︎</button>
     </div>
 
     <!-- ③ 席番号 -->
-    <div class="hintText" style="font-weight:1000; margin-bottom:8px">
-      <span style="color:var(--blueDot)">🔵</span> ③ 席番号（自動で次が入ります）
-    </div>
-    <input class="btn full" id="ssStartLabel" placeholder="開始文字（例：A / 1 / あ / ア / A1）" style="text-align:left; margin-bottom:6px" />
-    <div class="descSmall">入力が1文字のみの場合は自動で連番になります</div>
+    <div style="font-weight:900; margin-bottom:8px">③ 席番号（自動で次が入ります）</div>
+    <input class="btn full" id="ssStartLabel" placeholder="開始文字（例：A / 1 / あ / ア）" style="text-align:left; margin-bottom:6px" />
+    <div style="opacity:.85; margin-bottom:14px">入力が1文字のみの場合は自動で連番になります</div>
 
-    <!-- 作成予定の席 -->
-    <div class="hintText" style="font-weight:1000; margin-bottom:8px">
-      <span style="color:var(--blueDot)">🔵</span> 作成予定の席（タップで編集）
-    </div>
-    <div id="ssPreviewGrid" class="seatGrid" style="margin-bottom:14px"></div>
+    <!-- ⑤ 保存 -->
+    <button class="btn lime full" id="ssSave" style="padding:14px 12px; font-weight:900; margin-bottom:14px">保存</button>
 
-    <!-- 保存 -->
-    <button class="btn lime full" id="ssSave" style="padding:16px 12px; font-weight:1000; margin-bottom:14px">保存</button>
-
-    <!-- 作った席 -->
-    <div class="hintText" style="font-weight:1000; margin-bottom:8px">
-      <span style="color:var(--blueDot)">🔵</span> 作った席
-    </div>
+    <!-- ⑥ 作った席（名称ごと） -->
+    <div style="font-weight:900; margin-bottom:8px">作った席</div>
     <div id="ssGroups"></div>
   `;
 })();
 
-/* ===== State ===== */
 state.seatSetup = state.seatSetup || {
-  baseNames: ["カウンター","テーブル","座敷","個室","立ち"],
+  baseNames: ["カウンター","テーブル","座敷","個室","立ち","その他"],
   customNames: [],
-  selectedName: null,      // いま選択中（タップ状態）
-  committedName: null,     // 確定扱い（この仕様では selectedName と同義でOK）
+  selectedName: null,
+  committedName: null,
   count: 0,
-  preview: [],             // 作成予定の席（文字列配列）
-  editMap: {},             // {index: "編集後の席番号"}
-  groups: []               // {name, seatIds:[]}
+  groups: [] // {name, seatIds:[]}
 };
 
 function allNameButtons(){
-  return state.seatSetup.baseNames.concat(state.seatSetup.customNames);
+  const arr = [];
+  const othersIdx = state.seatSetup.baseNames.indexOf("その他");
+  state.seatSetup.baseNames.forEach((n,i)=>{
+    if(i===othersIdx){
+      state.seatSetup.customNames.forEach(c=> arr.push(c));
+    }
+    arr.push(n);
+  });
+  return arr;
 }
 
-/* ===== ① 名称 ===== */
 function renderNameGrid(){
   const grid = $("ssNameGrid");
   grid.innerHTML = "";
-
   allNameButtons().forEach(n=>{
     const b = document.createElement("div");
     b.className = "seatCard in";
     b.style.minHeight="56px";
-    b.style.height="auto";
     b.style.display="flex";
     b.style.alignItems="center";
     b.style.justifyContent="center";
-    b.style.fontWeight="1000";
+    b.style.fontWeight="900";
     b.textContent = n;
 
     const on = (state.seatSetup.selectedName===n);
     if(on){
-      b.style.outline = "3px solid rgba(11,99,217,0.45)";
-      b.style.background = "rgba(11,99,217,0.10)";
+      b.style.outline = "2px solid rgba(122,167,255,0.9)";
+      b.style.background = "rgba(122,167,255,0.14)";
     }
 
     b.onclick = ()=>{
-      // タップで選択/解除
       state.seatSetup.selectedName = (state.seatSetup.selectedName===n) ? null : n;
-      state.seatSetup.committedName = state.seatSetup.selectedName;
-
-      // 名称に応じてデフォルト席数も即適用（解除なら触らない）
-      if(state.seatSetup.committedName){
-        applyDefaultCountByName(state.seatSetup.committedName);
-      }
-
       renderNameGrid();
-      renderSeatPreview();
     };
 
     grid.appendChild(b);
@@ -3176,45 +3336,56 @@ function renderNameGrid(){
 
 function applyDefaultCountByName(name){
   if(name==="テーブル" || name==="座敷" || name==="個室"){
-    state.seatSetup.count = Math.max(1, Number(state.seatSetup.count||0) || 4);
+    state.seatSetup.count = 4;
   }else{
-    state.seatSetup.count = Math.max(1, Number(state.seatSetup.count||0) || 1);
+    state.seatSetup.count = 1;
   }
   $("ssCntVal").textContent = String(state.seatSetup.count);
 }
 
-/* ===== ② 総席数（stepper） ===== */
-function clampCount(n){
-  n = Number(n||0);
-  if(!Number.isFinite(n)) n = 0;
-  return Math.max(0, Math.min(200, n));
-}
+$("ssNameCommit").onclick = ()=>{
+  const pick = state.seatSetup.selectedName;
+  if(!pick){ toast("名称を選択してください"); return; }
+
+  if(pick==="その他"){
+    openModal(
+      "名称追加（その他）",
+      `<input id="ssNewName" class="btn full" style="text-align:left" placeholder="例：中庭テラスA1" />`,
+      [
+        {label:"追加", lime:true, onClick:()=>{
+          const v = ($("ssNewName").value||"").trim();
+          if(!v){ toast("名称を入力してください"); return; }
+          if(allNameButtons().includes(v)){ toast("同じ名称があります"); return; }
+          state.seatSetup.customNames.push(v);
+          state.seatSetup.selectedName = v;
+          state.seatSetup.committedName = v;
+          closeModal();
+          renderNameGrid();
+          applyDefaultCountByName(v);
+          toast("名称を追加しました");
+        }},
+        {label:"戻る", lime:false, onClick:()=> closeModal()},
+      ]
+    );
+    return;
+  }
+
+  state.seatSetup.committedName = pick;
+  applyDefaultCountByName(pick);
+  toast(`名称：${pick}`);
+};
 
 $("ssCntMinus").onclick = ()=>{
-  state.seatSetup.count = clampCount(state.seatSetup.count - 1);
+  state.seatSetup.count = Math.max(0, state.seatSetup.count - 1);
   $("ssCntVal").textContent = String(state.seatSetup.count);
-  renderSeatPreview();
 };
 $("ssCntPlus").onclick = ()=>{
-  state.seatSetup.count = clampCount(state.seatSetup.count + 1);
+  state.seatSetup.count = state.seatSetup.count + 1;
   $("ssCntVal").textContent = String(state.seatSetup.count);
-  renderSeatPreview();
 };
 
-/* ===== ③ 開始文字（入力した瞬間にプレビュー更新） ===== */
-(function hookStartLabelInput(){
-  const el = $("ssStartLabel");
-  if(!el || el._hooked) return;
-  el._hooked = true;
-
-  el.addEventListener("input", ()=>{
-    renderSeatPreview();
-  });
-})();
-
-/* ===== 連番（強化版） ===== */
+/* 連番 */
 function isSingleChar(str){ return (str||"").length===1; }
-
 function nextLabelOneChar(ch){
   if(ch>="0" && ch<="9"){ const n=Number(ch); if(Number.isFinite(n)) return String(n+1); }
   if(ch>="a" && ch<="z"){ return ch==="z" ? "a" : String.fromCharCode(ch.charCodeAt(0)+1); }
@@ -3228,120 +3399,25 @@ function nextLabelOneChar(ch){
   if(ka!==-1) return kata[(ka+1)%kata.length];
   return null;
 }
-
-function incTrailingNumber(str){
-  const m = String(str||"").match(/^(.*?)(\d+)$/);
-  if(!m) return null;
-  const pre = m[1];
-  const num = m[2];
-  const width = num.length;
-  const n = Number(num);
-  if(!Number.isFinite(n)) return null;
-  const nn = String(n+1).padStart(width, "0");
-  return pre + nn;
-}
-
-function buildSeatIdsSmart(start, count){
+function buildSeatIds(start, count){
   const ids = [];
-  const s = (start||"").trim();
-  const c = Math.max(0, Number(count||0));
-  if(!s || c<=0) return ids;
+  const s=(start||"").trim();
+  if(!s || count<=0) return ids;
 
   if(isSingleChar(s)){
-    let cur = s;
-    for(let i=0;i<c;i++){
+    let cur=s;
+    for(let i=0;i<count;i++){
       ids.push(cur);
       const nx = nextLabelOneChar(cur);
-      if(!nx && i < c-1){ break; }
-      cur = nx || cur;
+      if(!nx) break;
+      cur = nx;
     }
     return ids;
+  }else{
+    // 自動入力しない：1席のみ
+    return [s];
   }
-
-  const inc = incTrailingNumber(s);
-  if(inc){
-    let cur = s;
-    for(let i=0;i<c;i++){
-      ids.push(cur);
-      const nx = incTrailingNumber(cur);
-      if(!nx && i < c-1) break;
-      cur = nx || cur;
-    }
-    return ids;
-  }
-
-  for(let i=0;i<c;i++) ids.push(s);
-  return ids;
 }
-
-/* ===== 作成予定席（プレビュー） ===== */
-function renderSeatPreview(){
-  const grid = $("ssPreviewGrid");
-  if(!grid) return;
-
-  const cnt = clampCount(state.seatSetup.count);
-  const start = ($("ssStartLabel").value||"").trim();
-
-  const base = buildSeatIdsSmart(start, cnt);
-
-  const preview = base.map((v, idx)=>{
-    const over = state.seatSetup.editMap?.[idx];
-    const ov = (over==null) ? "" : String(over).trim();
-    return ov ? ov : v;
-  });
-
-  state.seatSetup.preview = preview;
-
-  grid.innerHTML = "";
-
-  if(cnt<=0){
-    grid.innerHTML = `<div class="descSmall">②で席数を決めると、ここに席が出ます</div>`;
-    return;
-  }
-  if(!start){
-    grid.innerHTML = `<div class="descSmall">③に開始文字を入れると、ここに席が出ます</div>`;
-    return;
-  }
-  if(preview.length===0){
-    grid.innerHTML = `<div class="descSmall">作成予定の席を生成できません</div>`;
-    return;
-  }
-
-  preview.forEach((label, idx)=>{
-    const c = document.createElement("div");
-    c.className = "seatCard in";
-    c.style.minHeight="56px";
-    c.style.height="auto";
-    c.style.display="flex";
-    c.style.alignItems="center";
-    c.style.justifyContent="center";
-    c.style.fontWeight="1000";
-    c.textContent = label || "—";
-
-    c.onclick = ()=>{
-      openModal(
-        "席番号を編集",
-        `
-          <div class="descSmall" style="margin-bottom:10px">席番号を入力してください</div>
-          <input id="ssEditSeat" class="btn full" style="text-align:left" value="${label||""}" autocomplete="off" />
-        `,
-        [
-          {label:"戻る", lime:false, onClick:()=> closeModal()},
-          {label:"保存", lime:true, onClick:()=>{
-            const v = ($("ssEditSeat").value||"").trim();
-            state.seatSetup.editMap[idx] = v;
-            closeModal();
-            renderSeatPreview();
-          }},
-        ]
-      );
-    };
-
-    grid.appendChild(c);
-  });
-}
-
-/* ===== 席生成/保存 ===== */
 function ensureSeatExists(id){
   if(state.seats.some(s=> s.id===id)) return;
   state.seats.push({
@@ -3354,41 +3430,23 @@ function ensureSeatExists(id){
     merged:false,
     mergeLabel:"",
     sub:null,
-    orders:[],
-    orderLog:[]
+    orders:[]
   });
 }
 
 $("ssSave").onclick = ()=>{
   const name = state.seatSetup.committedName;
-  const cnt = clampCount(state.seatSetup.count);
+  const cnt = Number(state.seatSetup.count||0);
   const start = ($("ssStartLabel").value||"").trim();
 
-  if(!name){ toast("名称を選択してください"); return; }
+  if(!name){ toast("名称を決定してください"); return; }
   if(cnt<=0){ toast("総席/総卓数を入力してください"); return; }
   if(!start){ toast("開始文字を入力してください"); return; }
 
-  if(!Array.isArray(state.seatSetup.preview) || state.seatSetup.preview.length!==cnt){
-    renderSeatPreview();
-  }
-  const planned = (state.seatSetup.preview||[]).map(x=> String(x||"").trim());
-
-  if(planned.some(x=> !x)){
-    toast("空の席番号があります（タップして編集してください）");
-    return;
-  }
-
-  const set = new Set();
-  for(const x of planned){
-    if(set.has(x)){
-      toast("席番号が重複しています（編集してください）");
-      return;
-    }
-    set.add(x);
-  }
+  const seatIds = buildSeatIds(start, cnt);
 
   const unique = [];
-  planned.forEach(id=>{
+  seatIds.forEach(id=>{
     if(state.seats.some(s=> s.id===id)) return;
     unique.push(id);
     ensureSeatExists(id);
@@ -3401,28 +3459,27 @@ $("ssSave").onclick = ()=>{
 
   state.seatSetup.groups.push({ name, seatIds: unique });
 
+  // 即反映
   renderSeats();
   renderGroups();
 
+  // 二重登録防止：商品と同じ思想
   $("ssStartLabel").value = "";
-  state.seatSetup.editMap = {};
-  state.seatSetup.preview = [];
-
-  renderSeatPreview();
 
   if(typeof emitEvent==="function") emitEvent("seat_setup_save", {name, seatIds: unique});
+
   toast("保存しました");
 };
 
-/* ===== 作った席（名称ごと） ===== */
 function renderGroups(){
   const box = $("ssGroups");
   box.innerHTML = "";
   if(state.seatSetup.groups.length===0){
-    box.innerHTML = `<div class="descSmall">まだ作成されていません</div>`;
+    box.innerHTML = `<div style="opacity:.85">まだ作成されていません</div>`;
     return;
   }
 
+  // 名称ごとにまとめる
   const byName = {};
   state.seatSetup.groups.forEach(g=>{
     if(!byName[g.name]) byName[g.name]=[];
@@ -3433,12 +3490,13 @@ function renderGroups(){
     const wrap = document.createElement("div");
     wrap.style.marginBottom="14px";
 
+    // 名称タップで編集（戻る/名称変更/削除 + 席一覧（番号変更/削除スライド））
     const head = document.createElement("button");
     head.className="btn full";
     head.style.textAlign="left";
-    head.style.fontWeight="1000";
+    head.style.fontWeight="900";
     head.textContent=name;
-    head.onclick = ()=> toast("名称の変更は「名称と席の削除」から行います");
+    head.onclick = ()=> openSeatGroupEditor(name);
     wrap.appendChild(head);
 
     const grid = document.createElement("div");
@@ -3450,11 +3508,10 @@ function renderGroups(){
       const c=document.createElement("div");
       c.className="seatCard in";
       c.style.minHeight="56px";
-      c.style.height="auto";
       c.style.display="flex";
       c.style.alignItems="center";
       c.style.justifyContent="center";
-      c.style.fontWeight="1000";
+      c.style.fontWeight="900";
       c.textContent=id;
       grid.appendChild(c);
     });
@@ -3464,284 +3521,185 @@ function renderGroups(){
   });
 }
 
-/* =========================
-  名称の作成画面（scrNameCreate）
-========================= */
-function buildNameCreateUI(){
-  const scr = $("scrNameCreate");
-  scr.innerHTML = `
-    <div class="titleRow"><span class="dot"></span><span>名称の作成</span></div>
+function openSeatGroupEditor(name){
+  openModal(
+    "名称",
+    `
+      <div style="font-weight:900; margin-bottom:10px">${name}</div>
+      <div style="display:flex; gap:10px; margin-bottom:10px">
+        <button class="btn" id="geBack">戻る</button>
+        <button class="btn lime" id="geRename">名称変更</button>
+        <button class="btn" id="geDelete">削除</button>
+      </div>
 
-    <div class="descSmall">名称を入力して作成します</div>
-    <input id="ncInput" class="btn full" style="text-align:left; margin-bottom:12px" placeholder="名称" />
+      <div style="font-weight:900; margin-bottom:8px">席一覧</div>
+      <div id="geSeats"></div>
+    `,
+    [{label:"閉じる", lime:false, onClick:()=> closeModal()}]
+  );
 
-    <div style="display:flex; gap:12px">
-      <button class="btn full" id="ncBack">戻る</button>
-      <button class="btn lime full" id="ncCreate">作成</button>
-    </div>
-  `;
+  setTimeout(()=>{
+    $("geBack").onclick = ()=> closeModal();
 
-  $("ncBack").onclick = ()=> showScreen("scrSeatSetup");
-  $("ncCreate").onclick = ()=>{
-    const v = ($("ncInput").value||"").trim();
-    if(!v){ toast("名称を入力してください"); return; }
-    if(allNameButtons().includes(v)){ toast("同じ名称があります"); return; }
-
-    state.seatSetup.customNames.push(v);
-
-    state.seatSetup.selectedName = v;
-    state.seatSetup.committedName = v;
-
-    if(typeof persistAll==="function") persistAll();
-    toast("名称を作成しました");
-    showScreen("scrSeatSetup");
-    renderNameGrid();
-    applyDefaultCountByName(v);
-    renderSeatPreview();
-  };
-}
-
-/* =========================
-  名称と席の削除画面（scrNameDelete）
-  - スライド：rangeShort（短め）＋文字なし
-========================= */
-function buildNameDeleteUI(){
-  const scr = $("scrNameDelete");
-  scr.innerHTML = `
-    <div class="titleRow"><span class="dot"></span><span>名称または席を削除します</span></div>
-
-    <div class="hintText" style="font-weight:1000; margin-bottom:8px">
-      <span style="color:var(--blueDot)">🔵</span> 名称一覧（タップで選択）
-    </div>
-    <div id="ndNameGrid" class="seatGrid" style="margin-bottom:10px"></div>
-
-    <div class="hintText" style="font-weight:1000; margin-bottom:8px">
-      <span style="color:var(--blueDot)">🔵</span> 選択した名称ごと席を削除
-    </div>
-    <div class="descSmall" style="margin-bottom:10px">
-      名称内の全席が空席の場合のみ削除できます
-    </div>
-    <input id="ndDelNameSlide" class="range rangeShort" type="range" min="0" max="100" value="0" />
-
-    <div style="height:18px"></div>
-
-    <div class="hintText" style="font-weight:1000; margin-bottom:8px">
-      <span style="color:var(--blueDot)">🔵</span> 席一覧（複数選択）
-    </div>
-    <div id="ndSeatGrid" class="seatGrid" style="margin-bottom:10px"></div>
-
-    <input id="ndDelSeatSlide" class="range rangeShort" type="range" min="0" max="100" value="0" />
-
-    <div style="height:14px"></div>
-    <button class="btn full" id="ndBack">戻る</button>
-  `;
-
-  let pickedName = null;
-  let pickedSeats = new Set();
-
-  function namesWithSeats(){
-    const map = new Map();
-    (state.seatSetup.groups||[]).forEach(g=>{
-      if(!map.has(g.name)) map.set(g.name, []);
-      g.seatIds.forEach(id=> map.get(g.name).push(id));
-    });
-    allNameButtons().forEach(n=>{
-      if(!map.has(n)) map.set(n, []);
-    });
-    return map;
-  }
-
-  function seatIsEmpty(id){
-    const s = seatById(id);
-    return !s || s.status==="empty";
-  }
-
-  function renderNameGrid(){
-    const grid = $("ndNameGrid");
-    grid.innerHTML = "";
-    const map = namesWithSeats();
-
-    Array.from(map.keys()).forEach(n=>{
-      const b = document.createElement("div");
-      b.className = "seatCard in";
-      b.style.minHeight="56px";
-      b.style.height="auto";
-      b.style.display="flex";
-      b.style.alignItems="center";
-      b.style.justifyContent="center";
-      b.style.fontWeight="1000";
-      b.textContent = n;
-
-      const on = (pickedName===n);
-      if(on){
-        b.style.outline = "3px solid rgba(11,99,217,0.45)";
-        b.style.background = "rgba(11,99,217,0.10)";
-      }
-      b.onclick = ()=>{
-        pickedName = (pickedName===n) ? null : n;
-        pickedSeats = new Set();
-        renderNameGrid();
-        renderSeatGrid();
-      };
-      grid.appendChild(b);
-    });
-  }
-
-  function renderSeatGrid(){
-    const grid = $("ndSeatGrid");
-    grid.innerHTML = "";
-    if(!pickedName){
-      grid.innerHTML = `<div class="descSmall">名称を選択してください</div>`;
-      return;
-    }
-
-    const ids = (state.seatSetup.groups||[])
-      .filter(g=> g.name===pickedName)
-      .flatMap(g=> g.seatIds);
-
-    if(ids.length===0){
-      grid.innerHTML = `<div class="descSmall">この名称には席がありません</div>`;
-      return;
-    }
+    const ids = state.seatSetup.groups.filter(g=> g.name===name).flatMap(g=> g.seatIds);
+    const list = $("geSeats");
+    list.innerHTML = "";
 
     ids.forEach(id=>{
-      const c = document.createElement("div");
-      c.className = "seatCard in";
-      c.style.minHeight="56px";
-      c.style.height="auto";
-      c.style.display="flex";
-      c.style.alignItems="center";
-      c.style.justifyContent="center";
-      c.style.fontWeight="1000";
-      c.textContent = id;
+      const seat = seatById(id);
+      const inUse = seat && seat.status!=="empty";
+      const row = document.createElement("div");
+      row.className="kRow";
+      row.innerHTML = `
+        <div class="kLeft">
+          <div class="kSeat">${id}</div>
+          <div class="kName" style="color:${inUse ? "var(--danger)" : "var(--text)"}">${inUse ? "使用中のため削除不可" : ""}</div>
+        </div>
+        <div class="kSlide" style="flex-direction:column; align-items:flex-end; gap:6px">
+          <button class="btn" data-rename-seat="${id}">番号変更</button>
+          <input class="kRange" data-del-seat="${id}" type="range" min="0" max="100" value="0" ${inUse ? "disabled" : ""}/>
+        </div>
+      `;
+      list.appendChild(row);
+    });
 
-      const on = pickedSeats.has(id);
-      if(on){
-        c.style.outline = "3px solid rgba(11,99,217,0.45)";
-        c.style.background = "rgba(11,99,217,0.10)";
-      }
+    // 名称変更
+    $("geRename").onclick = ()=>{
+      openModal(
+        "名称変更",
+        `<input id="geNewName" class="btn full" style="text-align:left" value="${name}" />`,
+        [
+          {label:"変更", lime:true, onClick:()=>{
+            const v = ($("geNewName").value||"").trim();
+            if(!v){ toast("名称を入力してください"); return; }
+            const exists = state.seatSetup.groups.some(g=> g.name===v);
+            if(exists && v!==name){ toast("同じ名称があります"); return; }
 
-      if(!seatIsEmpty(id)){
-        c.style.opacity = "0.75";
-        c.style.borderColor = "rgba(255,107,107,0.55)";
-      }
+            state.seatSetup.groups.forEach(g=>{ if(g.name===name) g.name=v; });
+            state.seatSetup.customNames = state.seatSetup.customNames.map(x=> x===name ? v : x);
 
-      c.onclick = ()=>{
-        if(!seatIsEmpty(id)){
-          toast("使用中の席は削除できません");
+            closeModal();
+            renderNameGrid();
+            renderGroups();
+            toast("名称を変更しました");
+          }},
+          {label:"戻る", lime:false, onClick:()=> closeModal()},
+        ]
+      );
+    };
+
+    // 名称削除：戻る→削除スライド
+    $("geDelete").onclick = ()=>{
+      openModal(
+        "削除確認",
+        `
+          <div style="color:var(--danger); font-weight:900; margin-bottom:10px">この名称と名称内の全席を削除します</div>
+          <div style="opacity:.85; margin-bottom:10px">使用中の席がある場合は削除できません</div>
+          <input id="geDelSlide" class="kRange" type="range" min="0" max="100" value="0"/>
+        `,
+        [{label:"戻る", lime:false, onClick:()=> closeModal()}]
+      );
+
+      setTimeout(()=>{
+        $("geDelSlide").onchange = ()=>{
+          if(Number($("geDelSlide").value||0) < 88){ $("geDelSlide").value=0; return; }
+
+          const ids2 = state.seatSetup.groups.filter(g=> g.name===name).flatMap(g=> g.seatIds);
+          const blocked = ids2.some(id=>{
+            const seat = seatById(id);
+            return seat && seat.status!=="empty";
+          });
+          if(blocked){
+            $("geDelSlide").value=0;
+            toast("使用中の席があるため削除できません");
+            return;
+          }
+
+          ids2.forEach(id=>{
+            state.seats = state.seats.filter(s=> s.id!==id);
+          });
+
+          state.seatSetup.groups = state.seatSetup.groups.filter(g=> g.name!==name);
+          state.seatSetup.customNames = state.seatSetup.customNames.filter(x=> x!==name);
+
+          closeModal();
+          closeModal();
+          renderSeats();
+          renderGroups();
+          renderNameGrid();
+          toast("削除しました");
+        };
+      },0);
+    };
+
+    // 席番号変更
+    list.querySelectorAll("[data-rename-seat]").forEach(btn=>{
+      btn.onclick = ()=>{
+        const oldId = btn.getAttribute("data-rename-seat");
+        openModal(
+          "席番号変更",
+          `
+            <div style="margin-bottom:8px">現在：${oldId}</div>
+            <input id="geSeatNewId" class="btn full" style="text-align:left" placeholder="新しい席番号" />
+          `,
+          [
+            {label:"変更", lime:true, onClick:()=>{
+              const newId = ($("geSeatNewId").value||"").trim();
+              if(!newId){ toast("席番号を入力してください"); return; }
+              if(state.seats.some(s=> s.id===newId)){ toast("同じ席番号があります"); return; }
+
+              const seat = seatById(oldId);
+              if(seat) seat.id = newId;
+
+              state.seatSetup.groups.forEach(g=>{
+                if(g.name===name){
+                  g.seatIds = g.seatIds.map(x=> x===oldId ? newId : x);
+                }
+              });
+
+              closeModal();
+              renderSeats();
+              renderGroups();
+              toast("席番号を変更しました");
+            }},
+            {label:"戻る", lime:false, onClick:()=> closeModal()},
+          ]
+        );
+      };
+    });
+
+    // 個別席削除（確認なし、スライド確定）
+    list.querySelectorAll("[data-del-seat]").forEach(sl=>{
+      sl.onchange = ()=>{
+        if(sl.disabled) return;
+        if(Number(sl.value||0) < 88){ sl.value=0; return; }
+
+        const id = sl.getAttribute("data-del-seat");
+        const seat = seatById(id);
+        if(seat && seat.status!=="empty"){
+          sl.value=0;
+          toast("使用中のため削除できません");
           return;
         }
-        if(pickedSeats.has(id)) pickedSeats.delete(id);
-        else pickedSeats.add(id);
-        renderSeatGrid();
+
+        state.seats = state.seats.filter(s=> s.id!==id);
+        state.seatSetup.groups.forEach(g=>{
+          if(g.name===name){
+            g.seatIds = g.seatIds.filter(x=> x!==id);
+          }
+        });
+        state.seatSetup.groups = state.seatSetup.groups.filter(g=> !(g.name===name && g.seatIds.length===0));
+
+        renderSeats();
+        renderGroups();
+        toast("削除しました");
       };
-
-      grid.appendChild(c);
     });
-  }
-
-  function deleteNameAllSeats(){
-    if(!pickedName){ toast("名称を選択してください"); return false; }
-
-    const ids = (state.seatSetup.groups||[])
-      .filter(g=> g.name===pickedName)
-      .flatMap(g=> g.seatIds);
-
-    const blocked = ids.some(id=> !seatIsEmpty(id));
-    if(blocked){
-      toast("使用中の席があるため削除できません");
-      return false;
-    }
-
-    ids.forEach(id=>{
-      state.seats = state.seats.filter(s=> s.id!==id);
-    });
-
-    state.seatSetup.groups = (state.seatSetup.groups||[]).filter(g=> g.name!==pickedName);
-    state.seatSetup.customNames = (state.seatSetup.customNames||[]).filter(x=> x!==pickedName);
-
-    pickedName = null;
-    pickedSeats = new Set();
-
-    renderSeats();
-    renderGroups();
-    renderNameGrid();
-    renderSeatGrid();
-    if(typeof persistAll==="function") persistAll();
-    toast("名称ごと削除しました");
-    return true;
-  }
-
-  function deletePickedSeats(){
-    if(!pickedName){ toast("名称を選択してください"); return false; }
-    const ids = Array.from(pickedSeats);
-    if(ids.length===0){ toast("席を選択してください"); return false; }
-
-    const blocked = ids.some(id=> !seatIsEmpty(id));
-    if(blocked){
-      toast("使用中の席があるため削除できません");
-      return false;
-    }
-
-    ids.forEach(id=>{
-      state.seats = state.seats.filter(s=> s.id!==id);
-    });
-
-    state.seatSetup.groups.forEach(g=>{
-      if(g.name===pickedName){
-        g.seatIds = g.seatIds.filter(id=> !pickedSeats.has(id));
-      }
-    });
-    state.seatSetup.groups = state.seatSetup.groups.filter(g=> g.seatIds.length>0);
-
-    pickedSeats = new Set();
-
-    renderSeats();
-    renderGroups();
-    renderSeatGrid();
-    if(typeof persistAll==="function") persistAll();
-    toast("席を削除しました");
-    return true;
-  }
-
-  $("ndDelNameSlide").onchange = ()=>{
-    if(Number($("ndDelNameSlide").value||0) < 88){ $("ndDelNameSlide").value=0; return; }
-    deleteNameAllSeats();
-    $("ndDelNameSlide").value = 0;
-  };
-
-  $("ndDelSeatSlide").onchange = ()=>{
-    if(Number($("ndDelSeatSlide").value||0) < 88){ $("ndDelSeatSlide").value=0; return; }
-    deletePickedSeats();
-    $("ndDelSeatSlide").value = 0;
-  };
-
-  $("ndBack").onclick = ()=> showScreen("scrSeatSetup");
-
-  renderNameGrid();
-  renderSeatGrid();
+  },0);
 }
 
-/* ===== 導線 ===== */
-$("goNameCreate").onclick = ()=> { buildNameCreateUI(); showScreen("scrNameCreate"); };
-$("goNameDelete").onclick = ()=> { buildNameDeleteUI(); showScreen("scrNameDelete"); };
-
-/* ===== Seat setup hooks (stable) ===== */
-registerScreenHook("scrSeatSetup", ()=>{
-  try{
-    renderNameGrid();
-    renderGroups();
-    renderSeatPreview();
-  }catch(e){ console.warn(e); }
-});
-
-registerScreenHook("scrNameCreate", ()=>{
-  try{ buildNameCreateUI(); }catch(e){ console.warn(e); }
-});
-
-registerScreenHook("scrNameDelete", ()=>{
-  try{ buildNameDeleteUI(); }catch(e){ console.warn(e); }
-});
+renderNameGrid();
+renderGroups();
 
 /* =========================
   ここから先は PART7 で続く
