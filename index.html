@@ -1645,6 +1645,10 @@ function renderCheckout(){
 
 function openCheckout(){
   showScreen("scrCheckout");
+  setTimeout(()=>{
+    try{ bindCheckoutOnce(); }catch(e){}
+    try{ renderCheckout(); }catch(e){}
+  }, 0);
 }
 
 function finalizeCheckout(){
@@ -1712,33 +1716,47 @@ registerScreenHook("scrCheckout", ()=>{
 function bindCheckoutOnce(){
   if(bindCheckoutOnce._done) return;
 
+  // 候補ID（どれか当たればOK）
+  const pick = (ids)=> ids.map(id=> $(id)).find(el=> !!el);
+
+  const payCash   = pick(["coPayCash"]);
+  const payCard   = pick(["coPayCard"]);
+  const payQR     = pick(["coPayQR"]);
+  const splitMinus= pick(["coSplitMinus"]);
+  const splitPlus = pick(["coSplitPlus"]);
+  const backBtn   = pick(["coBack"]);
+  const confirmBtn= pick(["coConfirm","coCommit","coFinalize","coDone"]); // ★保険
+  const sendBtn   = pick(["coSendReceipt"]);
+
   // DOMがまだ無い（早すぎる）場合は少し待ってリトライ
-  const must = ["coPayCash","coPayCard","coPayQR","coSplitMinus","coSplitPlus","coBack","coConfirm","coSendReceipt"];
-  const ok = must.every(id => !!$(id));
-  if(!ok){
+  if(!(payCash && payCard && payQR && splitMinus && splitPlus && backBtn && confirmBtn && sendBtn)){
     setTimeout(bindCheckoutOnce, 50);
     return;
   }
 
-  $("coPayCash").onclick = ()=>{ state.checkout.method="cash"; setPayBtnHL(); };
-  $("coPayCard").onclick = ()=>{ state.checkout.method="card"; setPayBtnHL(); };
-  $("coPayQR").onclick   = ()=>{ state.checkout.method="qr";   setPayBtnHL(); };
+  payCash.onclick = ()=>{ state.checkout.method="cash"; setPayBtnHL(); };
+  payCard.onclick = ()=>{ state.checkout.method="card"; setPayBtnHL(); };
+  payQR.onclick   = ()=>{ state.checkout.method="qr";   setPayBtnHL(); };
 
-  $("coSplitMinus").onclick = ()=>{
+  splitMinus.onclick = ()=>{
     state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) - 1);
     renderCheckout();
   };
-  $("coSplitPlus").onclick = ()=>{
+  splitPlus.onclick = ()=>{
     state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) + 1);
     renderCheckout();
   };
 
-  $("coBack").onclick = ()=> showScreen("scrOrder");
+  backBtn.onclick = ()=> showScreen("scrOrder");
 
-  // ★会計確定：ここを“確実に”割り当て
-  $("coConfirm").onclick = ()=> finalizeCheckout();
+  // ★会計確定：確実にここが動く
+  confirmBtn.onclick = ()=>{
+    // 押せたか分かるように保険トースト（いらなければ後で消してOK）
+    // toast("会計確定：押せた");
+    finalizeCheckout();
+  };
 
-  $("coSendReceipt").onclick = ()=> toast("無料版は送信できません（有料版）");
+  sendBtn.onclick = ()=> toast("無料版は送信できません（有料版）");
 
   bindCheckoutOnce._done = true;
 }
