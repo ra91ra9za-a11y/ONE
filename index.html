@@ -1714,7 +1714,6 @@ registerScreenHook("scrCheckout", ()=>{
 
 /* ===== ここが今回の修正の本体：確実にバインドする ===== */
 function bindCheckoutOnce(){
-  if(bindCheckoutOnce._done) return;
 
   // 候補ID（どれか当たればOK）
   const pick = (ids)=> ids.map(id=> $(id)).find(el=> !!el);
@@ -1757,9 +1756,7 @@ function bindCheckoutOnce(){
   };
 
   sendBtn.onclick = ()=> toast("無料版は送信できません（有料版）");
-
-  bindCheckoutOnce._done = true;
-}
+  }
 
 // hookが動かない環境でも保険で一度だけ走らせる
 setTimeout(bindCheckoutOnce, 0);
