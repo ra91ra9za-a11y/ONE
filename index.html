@@ -1714,18 +1714,18 @@ registerScreenHook("scrCheckout", ()=>{
 
 /* ===== ここが今回の修正の本体：確実にバインドする ===== */
 function bindCheckoutOnce(){
+  if(bindCheckoutOnce._done) return;
 
-  // 候補ID（どれか当たればOK）
   const pick = (ids)=> ids.map(id=> $(id)).find(el=> !!el);
 
-  const payCash   = pick(["coPayCash"]);
-  const payCard   = pick(["coPayCard"]);
-  const payQR     = pick(["coPayQR"]);
-  const splitMinus= pick(["coSplitMinus"]);
-  const splitPlus = pick(["coSplitPlus"]);
-  const backBtn   = pick(["coBack"]);
-  const confirmBtn= pick(["coConfirm","coCommit","coFinalize","coDone"]); // ★保険
-  const sendBtn   = pick(["coSendReceipt"]);
+  const payCash    = pick(["coPayCash"]);
+  const payCard    = pick(["coPayCard"]);
+  const payQR      = pick(["coPayQR"]);
+  const splitMinus = pick(["coSplitMinus"]);
+  const splitPlus  = pick(["coSplitPlus"]);
+  const backBtn    = pick(["coBack"]);
+  const confirmBtn = pick(["coConfirm","coCommit","coFinalize","coDone"]);
+  const sendBtn    = pick(["coSendReceipt"]);
 
   // DOMがまだ無い（早すぎる）場合は少し待ってリトライ
   if(!(payCash && payCard && payQR && splitMinus && splitPlus && backBtn && confirmBtn && sendBtn)){
@@ -1733,10 +1733,12 @@ function bindCheckoutOnce(){
     return;
   }
 
+  // 支払い方法
   payCash.onclick = ()=>{ state.checkout.method="cash"; setPayBtnHL(); };
   payCard.onclick = ()=>{ state.checkout.method="card"; setPayBtnHL(); };
   payQR.onclick   = ()=>{ state.checkout.method="qr";   setPayBtnHL(); };
 
+  // 割り勘
   splitMinus.onclick = ()=>{
     state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) - 1);
     renderCheckout();
@@ -1746,21 +1748,30 @@ function bindCheckoutOnce(){
     renderCheckout();
   };
 
+  // 戻る
   backBtn.onclick = ()=> showScreen("scrOrder");
 
-  // ★会計確定：確実にここが動く
-  confirmBtn.onclick = ()=>{
-    // 押せたか分かるように保険トースト（いらなければ後で消してOK）
-    // toast("会計確定：押せた");
+  // ★会計確定（iPhone保険：click/touch/pointer全部拾う）
+  const fireConfirm = (e)=>{
+    try{
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+    }catch(_){}
     finalizeCheckout();
   };
 
+  // 既存のonclickを一旦消してから、addEventListenerで強制
+  confirmBtn.onclick = null;
+
+  confirmBtn.addEventListener("click",     fireConfirm, {passive:false});
+  confirmBtn.addEventListener("touchend",  fireConfirm, {passive:false});
+  confirmBtn.addEventListener("pointerup", fireConfirm, {passive:false});
+
+  // 電子レシート
   sendBtn.onclick = ()=> toast("無料版は送信できません（有料版）");
-  }
 
-// hookが動かない環境でも保険で一度だけ走らせる
-setTimeout(bindCheckoutOnce, 0);
-
+  bindCheckoutOnce._done = true;
+}
 
 /* =========================================================
    8) 席移動（復活）
