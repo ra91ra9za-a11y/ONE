@@ -1673,7 +1673,21 @@ function finalizeCheckout(){
     total,
     splitN,
     method,
-    receiptEmail: ($("coEmail") && $("coEmail").value) ? $("coEmail").value.trim() : ""
+let email = "";
+const emailEl = $("coEmail");
+if(emailEl && typeof emailEl.value === "string"){
+  email = emailEl.value.trim();
+}
+
+state.sales.push({
+  ts: nowTs(),
+  type: "checkout",
+  seatId: target.seatId || target.id || state.order.seatId,
+  parentSeatId: (target._parentSeat && target._parentSeat.id) ? target._parentSeat.id : null,
+  total,
+  splitN,
+  method,
+  receiptEmail: email
   });
 
   if(target._parentSeat){
