@@ -1668,7 +1668,7 @@ function finalizeCheckout(){
   state.sales.push({
     ts: nowTs(),
     type: "checkout",
-    seatId: target.seatId || target.id || state.order.seatId,
+    seatId: state.order.seatId,
     parentSeatId: (target._parentSeat && target._parentSeat.id) ? target._parentSeat.id : null,
     total,
     splitN,
