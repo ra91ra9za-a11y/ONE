@@ -1652,9 +1652,98 @@ function openCheckout(){
 }
 
 function finalizeCheckout(){
-  const target = getCheckoutTarget();
-  if(!target){ toast("会計対象が見つかりません"); showScreen("scrMain"); return; }
+  // ===== 安全ガード（原因特定用）=====
+  const safeToast = (msg)=>{
+    try{ if(typeof window.toast==="function") window.toast(msg); }catch(_){}
+  };
+  const safeShow  = (id)=>{
+    try{ if(typeof window.showScreen==="function") window.showScreen(id); }catch(_){}
+  };
 
+  // どれが無いかを先に判定（Safariの「undefined is not a function」対策）
+  const need = (name, fn)=>{
+    if(typeof fn !== "function"){
+      throw new Error(name + " is not a function");
+    }
+    return fn;
+  };
+
+  try{
+    const target = getCheckoutTarget();
+    if(!target){ safeToast("会計対象が見つかりません"); safeShow("scrMain"); return; }
+
+    if(!state.checkout.method){
+      safeToast("支払い方法を選んでください");
+      return;
+    }
+
+    // ここで落ちるなら、どれが無いかエラー名で分かる
+    const tsNow = (typeof window.nowTs === "function") ? window.nowTs : ()=> Date.now();
+
+    const total  = calcTargetTotal(target);
+    const splitN = Math.max(1, Number(state.checkout.splitN||1));
+    const method = state.checkout.method;
+
+    state.sales = Array.isArray(state.sales) ? state.sales : [];
+    state.sales.push({
+      ts: tsNow(),
+      type: "checkout",
+      seatId: target.seatId || target.id || state.order.seatId,
+      parentSeatId: (target._parentSeat && target._parentSeat.id) ? target._parentSeat.id : null,
+      total,
+      splitN,
+      method,
+      receiptEmail: (window.$ && $("coEmail") && $("coEmail").value) ? $("coEmail").value.trim() : ""
+    });
+
+    // 席リセット
+    if(target._parentSeat){
+      const seat = target._parentSeat;
+      seat.status = "empty";
+      seat.people = 0;
+      seat.name = "";
+      seat.total = 0;
+      seat.bills = 0;
+      seat.merged = false;
+      seat.mergeLabel = "";
+      seat.sub = null;
+      seat.reserve = null;
+    }else{
+      const seat = target;
+      seat.status = "empty";
+      seat.people = 0;
+      seat.name = "";
+      seat.total = 0;
+      seat.bills = 0;
+      seat.reserve = null;
+    }
+
+    state.checkout.method = null;
+    state.checkout.splitN = 1;
+
+    // ここが「undefined is not a function」になりがちなので全部ガード
+    try{
+      if(typeof window.persistAll === "function") window.persistAll();
+    }catch(e){
+      console.error(e);
+      safeToast("persistAllでエラー: " + (e?.message || e));
+    }
+
+    try{
+      if(typeof window.renderSeats === "function") window.renderSeats();
+    }catch(e){
+      console.error(e);
+      safeToast("renderSeatsでエラー: " + (e?.message || e));
+    }
+
+    safeToast("会計を確定しました");
+    safeShow("scrMain");
+
+  }catch(err){
+    console.error(err);
+    safeToast("会計確定でエラー: " + (err?.message || err));
+  }
+}
   if(!state.checkout.method){
     toast("支払い方法を選んでください");
     return;
