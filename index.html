@@ -1673,21 +1673,7 @@ function finalizeCheckout(){
     total,
     splitN,
     method,
-let email = "";
-const emailEl = $("coEmail");
-if(emailEl && typeof emailEl.value === "string"){
-  email = emailEl.value.trim();
-}
-
-state.sales.push({
-  ts: nowTs(),
-  type: "checkout",
-  seatId: target.seatId || target.id || state.order.seatId,
-  parentSeatId: (target._parentSeat && target._parentSeat.id) ? target._parentSeat.id : null,
-  total,
-  splitN,
-  method,
-  receiptEmail: email
+    receiptEmail: ($("coEmail") && $("coEmail").value) ? $("coEmail").value.trim() : ""
   });
 
   if(target._parentSeat){
@@ -1726,77 +1712,92 @@ registerScreenHook("scrCheckout", ()=>{
   try{ bindCheckoutOnce(); }catch(e){ console.warn(e); }
 });
 
-/* ===== ここが今回の修正の本体：確実にバインドする ===== */
+/* ===== ここが今回の修正の本体：確実にバインドする（再描画耐性版） ===== */
 function bindCheckoutOnce(){
-  if(bindCheckoutOnce._done) return;
+  // 候補ID（どれか当たればOK）
+  const pick = (ids)=> ids.map(id=> $(id)).find(el=> !!el);
 
-  // クリックを「捕まえる」(capture=true)
-  document.addEventListener("click", (e)=>{
-    const t = e.target;
+  const payCash    = pick(["coPayCash"]);
+  const payCard    = pick(["coPayCard"]);
+  const payQR      = pick(["coPayQR"]);
+  const splitMinus = pick(["coSplitMinus"]);
+  const splitPlus  = pick(["coSplitPlus"]);
+  const backBtn    = pick(["coBack"]);
+  const confirmBtn = pick(["coConfirm","coCommit","coFinalize","coDone"]);
+  const sendBtn    = pick(["coSendReceipt"]);
 
-    // 支払い方法
-    if(t && t.closest && t.closest("#coPayCash")){
-      e.preventDefault(); e.stopPropagation();
-      state.checkout.method = "cash";
-      setPayBtnHL();
-      return;
-    }
-    if(t && t.closest && t.closest("#coPayCard")){
-      e.preventDefault(); e.stopPropagation();
-      state.checkout.method = "card";
-      setPayBtnHL();
-      return;
-    }
-    if(t && t.closest && t.closest("#coPayQR")){
-      e.preventDefault(); e.stopPropagation();
-      state.checkout.method = "qr";
-      setPayBtnHL();
-      return;
-    }
+  // DOMがまだ無い（早すぎる）場合は少し待ってリトライ
+  if(!(payCash && payCard && payQR && splitMinus && splitPlus && backBtn && confirmBtn && sendBtn)){
+    setTimeout(bindCheckoutOnce, 50);
+    return;
+  }
 
-    // 割り勘
-    if(t && t.closest && t.closest("#coSplitMinus")){
-      e.preventDefault(); e.stopPropagation();
+  // 1回だけbind（要素が作り直されたら dataset が消える→次回またbindされる）
+  const once = (el, key, fn)=>{
+    if(!el) return;
+    if(el.dataset && el.dataset[key] === "1") return;
+    if(el.dataset) el.dataset[key] = "1";
+    fn(el);
+  };
+
+  // 支払い方法
+  once(payCash, "bPayCash", (el)=>{
+    el.onclick = ()=>{ state.checkout.method="cash"; setPayBtnHL(); };
+  });
+  once(payCard, "bPayCard", (el)=>{
+    el.onclick = ()=>{ state.checkout.method="card"; setPayBtnHL(); };
+  });
+  once(payQR, "bPayQR", (el)=>{
+    el.onclick = ()=>{ state.checkout.method="qr"; setPayBtnHL(); };
+  });
+
+  // 割り勘
+  once(splitMinus, "bSplitMinus", (el)=>{
+    el.onclick = ()=>{
       state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) - 1);
       renderCheckout();
-      return;
-    }
-    if(t && t.closest && t.closest("#coSplitPlus")){
-      e.preventDefault(); e.stopPropagation();
+    };
+  });
+  once(splitPlus, "bSplitPlus", (el)=>{
+    el.onclick = ()=>{
       state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) + 1);
       renderCheckout();
-      return;
-    }
+    };
+  });
 
-    // 戻る
-    if(t && t.closest && t.closest("#coBack")){
-      e.preventDefault(); e.stopPropagation();
-      showScreen("scrOrder");
-      return;
-    }
+  // 戻る
+  once(backBtn, "bBack", (el)=>{
+    el.onclick = ()=> showScreen("scrOrder");
+  });
 
-    // ★会計確定（ここが本命）
-    if(t && t.closest && t.closest("#coConfirm")){
-      e.preventDefault(); e.stopPropagation();
-      toast("会計確定：タップOK");   // ←まずこれが出るか確認
+  // 電子レシート
+  once(sendBtn, "bSend", (el)=>{
+    el.onclick = ()=> toast("無料版は送信できません（有料版）");
+  });
+
+  // ★会計確定：onclick だけに依存しない（iPhone/Safari対策）
+  once(confirmBtn, "bConfirm", (el)=>{
+    const fire = (e)=>{
+      try{
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+      }catch(_){}
       try{
         finalizeCheckout();
       }catch(err){
-        console.warn(err);
+        console.error(err);
         toast("会計確定でエラー（console確認）");
       }
-      return;
-    }
+    };
 
-    // 電子レシート（無料版）
-    if(t && t.closest && t.closest("#coSendReceipt")){
-      e.preventDefault(); e.stopPropagation();
-      toast("無料版は送信できません（有料版）");
-      return;
-    }
-  }, true); // ← capture=true が超重要
+    // まず onclick も入れる（基本）
+    el.onclick = fire;
 
-  bindCheckoutOnce._done = true;
+    // さらにタッチ系も拾う（再描画でonclickが消えても効く）
+    el.addEventListener("click", fire, {passive:false});
+    el.addEventListener("touchend", fire, {passive:false});
+    el.addEventListener("pointerup", fire, {passive:false});
+  });
 }
 
 /* =========================================================
