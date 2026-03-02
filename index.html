@@ -1714,8 +1714,9 @@ registerScreenHook("scrCheckout", ()=>{
 
 /* ===== ここが今回の修正の本体：確実にバインドする（再描画耐性版） ===== */
 function bindCheckoutOnce(){
-  // 候補ID（どれか当たればOK）
-  const pick = (ids)=> ids.map(id=> $(id)).find(el=> !!el);
+  if(bindCheckoutOnce._done) return;
+
+  const pick = (ids)=> ids.map(id=> document.getElementById(id)).find(el=> !!el);
 
   const payCash    = pick(["coPayCash"]);
   const payCard    = pick(["coPayCard"]);
@@ -1732,72 +1733,51 @@ function bindCheckoutOnce(){
     return;
   }
 
-  // 1回だけbind（要素が作り直されたら dataset が消える→次回またbindされる）
-  const once = (el, key, fn)=>{
-    if(!el) return;
-    if(el.dataset && el.dataset[key] === "1") return;
-    if(el.dataset) el.dataset[key] = "1";
-    fn(el);
-  };
-
   // 支払い方法
-  once(payCash, "bPayCash", (el)=>{
-    el.onclick = ()=>{ state.checkout.method="cash"; setPayBtnHL(); };
-  });
-  once(payCard, "bPayCard", (el)=>{
-    el.onclick = ()=>{ state.checkout.method="card"; setPayBtnHL(); };
-  });
-  once(payQR, "bPayQR", (el)=>{
-    el.onclick = ()=>{ state.checkout.method="qr"; setPayBtnHL(); };
-  });
+  payCash.onclick = ()=>{ state.checkout.method="cash"; setPayBtnHL(); };
+  payCard.onclick = ()=>{ state.checkout.method="card"; setPayBtnHL(); };
+  payQR.onclick   = ()=>{ state.checkout.method="qr";   setPayBtnHL(); };
 
   // 割り勘
-  once(splitMinus, "bSplitMinus", (el)=>{
-    el.onclick = ()=>{
-      state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) - 1);
-      renderCheckout();
-    };
-  });
-  once(splitPlus, "bSplitPlus", (el)=>{
-    el.onclick = ()=>{
-      state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) + 1);
-      renderCheckout();
-    };
-  });
+  splitMinus.onclick = ()=>{
+    state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) - 1);
+    renderCheckout();
+  };
+  splitPlus.onclick = ()=>{
+    state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) + 1);
+    renderCheckout();
+  };
 
   // 戻る
-  once(backBtn, "bBack", (el)=>{
-    el.onclick = ()=> showScreen("scrOrder");
-  });
+  backBtn.onclick = ()=> showScreen("scrOrder");
+
+  // ★会計確定：例外を握りつぶさず、toastにも出す
+  const fireConfirm = (e)=>{
+    try{
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+    }catch(_){}
+
+    try{
+      finalizeCheckout();
+    }catch(err){
+      console.error(err);
+      toast("会計確定でエラー: " + (err?.message || err));
+    }
+  };
+
+  // 既存のonclickを消して、確実に拾う
+  confirmBtn.onclick = null;
+
+  // iPhone Safari対策：click + pointer + touch を全部拾う
+  confirmBtn.addEventListener("click", fireConfirm, {passive:false});
+  confirmBtn.addEventListener("pointerup", fireConfirm, {passive:false});
+  confirmBtn.addEventListener("touchend", fireConfirm, {passive:false});
 
   // 電子レシート
-  once(sendBtn, "bSend", (el)=>{
-    el.onclick = ()=> toast("無料版は送信できません（有料版）");
-  });
+  sendBtn.onclick = ()=> toast("無料版は送信できません（有料版）");
 
-  // ★会計確定：onclick だけに依存しない（iPhone/Safari対策）
-  once(confirmBtn, "bConfirm", (el)=>{
-    const fire = (e)=>{
-      try{
-        e?.preventDefault?.();
-        e?.stopPropagation?.();
-      }catch(_){}
-      try{
-        finalizeCheckout();
-      }catch(err){
-        console.error(err);
-        toast("会計確定でエラー（console確認）");
-      }
-    };
-
-    // まず onclick も入れる（基本）
-    el.onclick = fire;
-
-    // さらにタッチ系も拾う（再描画でonclickが消えても効く）
-    el.addEventListener("click", fire, {passive:false});
-    el.addEventListener("touchend", fire, {passive:false});
-    el.addEventListener("pointerup", fire, {passive:false});
-  });
+  bindCheckoutOnce._done = true;
 }
 
 /* =========================================================
