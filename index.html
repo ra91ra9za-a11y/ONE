@@ -1744,56 +1744,6 @@ function finalizeCheckout(){
     safeToast("会計確定でエラー: " + (err?.message || err));
   }
 }
-  if(!state.checkout.method){
-    toast("支払い方法を選んでください");
-    return;
-  }
-
-  const total = calcTargetTotal(target);
-  const splitN = Math.max(1, Number(state.checkout.splitN||1));
-  const method = state.checkout.method;
-
-  state.sales = state.sales || [];
-  state.sales.push({
-    ts: nowTs(),
-    type: "checkout",
-    seatId: state.order.seatId,
-    parentSeatId: (target._parentSeat && target._parentSeat.id) ? target._parentSeat.id : null,
-    total,
-    splitN,
-    method,
-    receiptEmail: ($("coEmail") && $("coEmail").value) ? $("coEmail").value.trim() : ""
-  });
-
-  if(target._parentSeat){
-    const seat = target._parentSeat;
-    seat.status = "empty";
-    seat.people = 0;
-    seat.name = "";
-    seat.total = 0;
-    seat.bills = 0;
-    seat.merged = false;
-    seat.mergeLabel = "";
-    seat.sub = null;
-    seat.reserve = null;
-  }else{
-    const seat = target;
-    seat.status = "empty";
-    seat.people = 0;
-    seat.name = "";
-    seat.total = 0;
-    seat.bills = 0;
-    seat.reserve = null;
-  }
-
-  state.checkout.method = null;
-  state.checkout.splitN = 1;
-
-  if(typeof persistAll === "function") persistAll();
-  renderSeats();
-  toast("会計を確定しました");
-  showScreen("scrMain");
-}
 
 /* ===== Checkout hook ===== */
 registerScreenHook("scrCheckout", ()=>{
