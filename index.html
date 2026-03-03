@@ -947,7 +947,23 @@ const screens = ["scrMain","scrKitchen","scrSales","scrFix","scrSeatSetup","scrS
     };
 
     $("goMove").onclick = ()=> openMoveHome();
-    $("goTodaySales").onclick = ()=> { state._salesFromMain = true; showScreen("scrSales"); };
+
+$("goTodaySales").onclick = ()=> {
+  state._salesFromMain = true;
+
+  // 売上の形を必ず統一（バグの元を潰す）
+  if(Array.isArray(state.sales)){
+    state.sales = { list: state.sales, tab:"today", dailyYmd:null };
+  }
+  state.sales = state.sales || { list: [], tab:"today", dailyYmd:null };
+  if(!Array.isArray(state.sales.list)) state.sales.list = [];
+
+  // 「本日」固定で開く（タブ表示させない）
+  state.sales.tab = "today";
+
+  showScreen("scrSales");
+};
+
     $("goSettings").onclick = ()=> showScreen("scrSettings");
 
     function openMoveHome(){ toast("席移動（PART2で実装）"); }
@@ -2590,20 +2606,13 @@ renderKitchen();
 (function buildSalesUI(){
   const scr = $("scrSales");
   scr.innerHTML = `
-    <div class="pill" style="margin-bottom:10px">売上</div>
-
-    <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap">
-      <button class="btn primary" id="tabToday">本日</button>
-      <button class="btn" id="tabDaily">日別</button>
-      <button class="btn" id="tabMonth">月</button>
-      <button class="btn" id="tabYear">年</button>
-    </div>
-
+    <div class="pill" style="margin-bottom:10px">本日の売上</div>
     <div id="salesToday"></div>
-    <div id="salesDaily" style="display:none"></div>
-    <div id="salesMonth" style="display:none"></div>
-    <div id="salesYear" style="display:none"></div>
   `;
+
+  // 無料版は本日固定
+  if(!state.sales) state.sales = { list:[], tab:"today", dailyYmd:null };
+  state.sales.tab = "today";
 })();
 
 /* ===== PART4 State（互換対応：配列でも動く） ===== */
@@ -2829,20 +2838,7 @@ function saleRowEl(s){
 
 /* ===== Render ===== */
 function renderSales(){
-  const t = $("salesToday");
-  const d = $("salesDaily");
-  const m = $("salesMonth");
-  const y = $("salesYear");
-
-  t.style.display = state.sales.tab==="today" ? "block":"none";
-  d.style.display = state.sales.tab==="daily" ? "block":"none";
-  m.style.display = state.sales.tab==="month" ? "block":"none";
-  y.style.display = state.sales.tab==="year"  ? "block":"none";
-
-  if(state.sales.tab==="today") renderToday();
-  if(state.sales.tab==="daily") renderDaily();
-  if(state.sales.tab==="month") renderMonth();
-  if(state.sales.tab==="year")  renderYear();
+  renderToday();
 }
 
 function renderToday(){
@@ -2994,14 +2990,6 @@ function openSaleDetail(s){
 }
 
 /* ===== Tabs ===== */
-function setTab(t){
-  state.sales.tab = t;
-
-  $("tabToday").classList.toggle("primary", t==="today");
-  $("tabDaily").classList.toggle("primary", t==="daily");
-  $("tabMonth").classList.toggle("primary", t==="month");
-  $("tabYear").classList.toggle("primary", t==="year");
-
   renderSales();
 }
 
