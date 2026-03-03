@@ -1652,97 +1652,58 @@ function openCheckout(){
 }
 
 function finalizeCheckout(){
-  // ===== 安全ガード（原因特定用）=====
-  const safeToast = (msg)=>{
-    try{ if(typeof window.toast==="function") window.toast(msg); }catch(_){}
-  };
-  const safeShow  = (id)=>{
-    try{ if(typeof window.showScreen==="function") window.showScreen(id); }catch(_){}
-  };
+  const target = getCheckoutTarget();
+  if(!target){ toast("会計対象が見つかりません"); showScreen("scrMain"); return; }
 
-  // どれが無いかを先に判定（Safariの「undefined is not a function」対策）
-  const need = (name, fn)=>{
-    if(typeof fn !== "function"){
-      throw new Error(name + " is not a function");
-    }
-    return fn;
-  };
-
-  try{
-    const target = getCheckoutTarget();
-    if(!target){ safeToast("会計対象が見つかりません"); safeShow("scrMain"); return; }
-
-    if(!state.checkout.method){
-      safeToast("支払い方法を選んでください");
-      return;
-    }
-
-    // ここで落ちるなら、どれが無いかエラー名で分かる
-    const tsNow = (typeof window.nowTs === "function") ? window.nowTs : ()=> Date.now();
-
-    const total  = calcTargetTotal(target);
-    const splitN = Math.max(1, Number(state.checkout.splitN||1));
-    const method = state.checkout.method;
-
-    state.sales = Array.isArray(state.sales) ? state.sales : [];
-    state.sales.push({
-      ts: tsNow(),
-      type: "checkout",
-      seatId: target.seatId || target.id || state.order.seatId,
-      parentSeatId: (target._parentSeat && target._parentSeat.id) ? target._parentSeat.id : null,
-      total,
-      splitN,
-      method,
-      receiptEmail: (window.$ && $("coEmail") && $("coEmail").value) ? $("coEmail").value.trim() : ""
-    });
-
-    // 席リセット
-    if(target._parentSeat){
-      const seat = target._parentSeat;
-      seat.status = "empty";
-      seat.people = 0;
-      seat.name = "";
-      seat.total = 0;
-      seat.bills = 0;
-      seat.merged = false;
-      seat.mergeLabel = "";
-      seat.sub = null;
-      seat.reserve = null;
-    }else{
-      const seat = target;
-      seat.status = "empty";
-      seat.people = 0;
-      seat.name = "";
-      seat.total = 0;
-      seat.bills = 0;
-      seat.reserve = null;
-    }
-
-    state.checkout.method = null;
-    state.checkout.splitN = 1;
-
-    // ここが「undefined is not a function」になりがちなので全部ガード
-    try{
-      if(typeof window.persistAll === "function") window.persistAll();
-    }catch(e){
-      console.error(e);
-      safeToast("persistAllでエラー: " + (e?.message || e));
-    }
-
-    try{
-      if(typeof window.renderSeats === "function") window.renderSeats();
-    }catch(e){
-      console.error(e);
-      safeToast("renderSeatsでエラー: " + (e?.message || e));
-    }
-
-    safeToast("会計を確定しました");
-    safeShow("scrMain");
-
-  }catch(err){
-    console.error(err);
-    safeToast("会計確定でエラー: " + (err?.message || err));
+  if(!state.checkout.method){
+    toast("支払い方法を選んでください");
+    return;
   }
+
+  const total = calcTargetTotal(target);
+  const splitN = Math.max(1, Number(state.checkout.splitN||1));
+  const method = state.checkout.method;
+
+  state.sales = state.sales || [];
+  state.sales.push({
+    ts: nowTs(),
+    type: "checkout",
+    seatId: target.seatId || target.id || state.order.seatId,
+    parentSeatId: (target._parentSeat && target._parentSeat.id) ? target._parentSeat.id : null,
+    total,
+    splitN,
+    method,
+    receiptEmail: ($("coEmail") && $("coEmail").value) ? $("coEmail").value.trim() : ""
+  });
+
+  if(target._parentSeat){
+    const seat = target._parentSeat;
+    seat.status = "empty";
+    seat.people = 0;
+    seat.name = "";
+    seat.total = 0;
+    seat.bills = 0;
+    seat.merged = false;
+    seat.mergeLabel = "";
+    seat.sub = null;
+    seat.reserve = null;
+  }else{
+    const seat = target;
+    seat.status = "empty";
+    seat.people = 0;
+    seat.name = "";
+    seat.total = 0;
+    seat.bills = 0;
+    seat.reserve = null;
+  }
+
+  state.checkout.method = null;
+  state.checkout.splitN = 1;
+
+  if(typeof persistAll === "function") persistAll();
+  renderSeats();
+  toast("会計を確定しました");
+  showScreen("scrMain");
 }
 
 /* ===== Checkout hook ===== */
@@ -1752,10 +1713,11 @@ registerScreenHook("scrCheckout", ()=>{
 });
 
 /* ===== ここが今回の修正の本体：確実にバインドする（再描画耐性版） ===== */
-function bindCheckoutOnce(){
-  if(bindCheckoutOnce._done) return;
 
-  const pick = (ids)=> ids.map(id=> document.getElementById(id)).find(el=> !!el);
+/* ===== 会計画面：イベントを確実にバインド（iPhone/Safari対策）===== */
+function bindCheckoutOnce(){
+  // 候補ID（どれか当たればOK）
+  const pick = (ids)=> ids.map(id=> $(id)).find(el=> !!el);
 
   const payCash    = pick(["coPayCash"]);
   const payCard    = pick(["coPayCard"]);
@@ -1763,7 +1725,7 @@ function bindCheckoutOnce(){
   const splitMinus = pick(["coSplitMinus"]);
   const splitPlus  = pick(["coSplitPlus"]);
   const backBtn    = pick(["coBack"]);
-  const confirmBtn = pick(["coConfirm","coCommit","coFinalize","coDone"]);
+  const confirmBtn = pick(["coConfirm","coCommit","coFinalize","coDone"]); // ←保険
   const sendBtn    = pick(["coSendReceipt"]);
 
   // DOMがまだ無い（早すぎる）場合は少し待ってリトライ
@@ -1772,51 +1734,67 @@ function bindCheckoutOnce(){
     return;
   }
 
+  // 要素が作り直された時だけ再バインドしたい（datasetが消える）
+  const once = (el, key, fn)=>{
+    if(!el) return;
+    if(el.dataset && el.dataset[key] === "1") return;
+    if(el.dataset) el.dataset[key] = "1";
+    fn(el);
+  };
+
   // 支払い方法
-  payCash.onclick = ()=>{ state.checkout.method="cash"; setPayBtnHL(); };
-  payCard.onclick = ()=>{ state.checkout.method="card"; setPayBtnHL(); };
-  payQR.onclick   = ()=>{ state.checkout.method="qr";   setPayBtnHL(); };
+  once(payCash, "bPayCash", (el)=>{
+    el.onclick = ()=>{ state.checkout.method="cash"; setPayBtnHL(); };
+  });
+  once(payCard, "bPayCard", (el)=>{
+    el.onclick = ()=>{ state.checkout.method="card"; setPayBtnHL(); };
+  });
+  once(payQR, "bPayQR", (el)=>{
+    el.onclick = ()=>{ state.checkout.method="qr"; setPayBtnHL(); };
+  });
 
   // 割り勘
-  splitMinus.onclick = ()=>{
-    state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) - 1);
-    renderCheckout();
-  };
-  splitPlus.onclick = ()=>{
-    state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) + 1);
-    renderCheckout();
-  };
+  once(splitMinus, "bSplitMinus", (el)=>{
+    el.onclick = ()=>{
+      state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) - 1);
+      renderCheckout();
+    };
+  });
+  once(splitPlus, "bSplitPlus", (el)=>{
+    el.onclick = ()=>{
+      state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) + 1);
+      renderCheckout();
+    };
+  });
 
   // 戻る
-  backBtn.onclick = ()=> showScreen("scrOrder");
+  once(backBtn, "bBack", (el)=>{
+    el.onclick = ()=> showScreen("scrOrder");
+  });
 
-  // ★会計確定：例外を握りつぶさず、toastにも出す
-  const fireConfirm = (e)=>{
-    try{
-      e?.preventDefault?.();
-      e?.stopPropagation?.();
-    }catch(_){}
+  // 電子レシート（無料版）
+  once(sendBtn, "bSend", (el)=>{
+    el.onclick = ()=> toast("無料版は送信できません（有料版）");
+  });
 
-    try{
+  // ★会計確定：onclick だけに依存しない（iPhone/Safari対策）
+  once(confirmBtn, "bConfirm", (el)=>{
+    const fire = (e)=>{
+      try{
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+      }catch(_){}
       finalizeCheckout();
-    }catch(err){
-      console.error(err);
-      toast("会計確定でエラー: " + (err?.message || err));
-    }
-  };
+    };
 
-  // 既存のonclickを消して、確実に拾う
-  confirmBtn.onclick = null;
+    // 基本
+    el.onclick = fire;
 
-  // iPhone Safari対策：click + pointer + touch を全部拾う
-  confirmBtn.addEventListener("click", fireConfirm, {passive:false});
-  confirmBtn.addEventListener("pointerup", fireConfirm, {passive:false});
-  confirmBtn.addEventListener("touchend", fireConfirm, {passive:false});
-
-  // 電子レシート
-  sendBtn.onclick = ()=> toast("無料版は送信できません（有料版）");
-
-  bindCheckoutOnce._done = true;
+    // タッチ系も拾う
+    el.addEventListener("click", fire, {passive:false});
+    el.addEventListener("touchend", fire, {passive:false});
+    el.addEventListener("pointerup", fire, {passive:false});
+  });
 }
 
 /* =========================================================
