@@ -1651,7 +1651,21 @@ function openCheckout(){
   }, 0);
 }
 
+/* =========================
+  Checkout finalize（改修版）
+  解決すること：
+   ①会計後に注文が残って加算される → orders/log/subを確実に消す
+   ②会計確定後にスライド最終確定を挟む
+   ③合流の片側だけ会計しても、もう片側を消さない
+========================= */
+
 function finalizeCheckout(){
+  // いきなり確定しない。確認モーダル→スライドで最終確定。
+  openCheckoutFinalConfirmModal();
+}
+
+/* 最終確認モーダル（スライド確定） */
+function openCheckoutFinalConfirmModal(){
   const target = getCheckoutTarget();
   if(!target){ toast("会計対象が見つかりません"); showScreen("scrMain"); return; }
 
@@ -1660,13 +1674,105 @@ function finalizeCheckout(){
     return;
   }
 
-  const total = calcTargetTotal(target);
+  const total  = calcTargetTotal(target);
   const splitN = Math.max(1, Number(state.checkout.splitN||1));
   const method = state.checkout.method;
 
-  state.sales = state.sales || [];
+  const seatLabel = (()=>{
+    // 合流なら "B/B" みたいに表示したい → orderSeatLabelと同じ考え方
+    const seat = seatById(state.order.seatId);
+    if(!seat) return String(state.order.seatId||"");
+    if(seat.merged){
+      const subId = state.order.subId || seat.id;
+      return `${seat.mergeLabel} / ${subId}`;
+    }
+    return `${seat.id}`;
+  })();
+
+  const people = (()=>{
+    const seat = seatById(state.order.seatId);
+    if(!seat) return "";
+    return (seat.people ? `${seat.people}名` : "");
+  })();
+
+  const methodText = method==="cash" ? "現金" : method==="card" ? "カード" : method==="qr" ? "QR" : "未選択";
+  const receiptText = "無料版：送信なし"; // 無料版方針
+
+  openModal(
+    "会計 最終確認",
+    `
+      <div style="font-weight:1000; font-size:18px; margin-bottom:10px">内容を確認してください</div>
+
+      <div class="panel" style="padding:12px; border-radius:16px">
+        <div style="display:flex; justify-content:space-between; gap:10px">
+          <div class="muted" style="font-weight:1000">席</div>
+          <div style="font-weight:1000">${seatLabel}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px">
+          <div class="muted" style="font-weight:1000">人数</div>
+          <div style="font-weight:1000">${people||"-"}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px">
+          <div class="muted" style="font-weight:1000">支払い方法</div>
+          <div style="font-weight:1000">${methodText}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px">
+          <div class="muted" style="font-weight:1000">合計</div>
+          <div style="font-weight:1000">${moneyText(total)}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px">
+          <div class="muted" style="font-weight:1000">割り勘</div>
+          <div style="font-weight:1000">${splitN}人 / 1人あたり ${moneyText(Math.ceil(total/splitN))}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px">
+          <div class="muted" style="font-weight:1000">電子レシート</div>
+          <div style="font-weight:1000">${receiptText}</div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+      <div style="color:var(--danger); font-weight:1000; margin-bottom:8px">スライドで最終確定</div>
+      <input id="coFinalSlide" class="range" type="range" min="0" max="100" value="0" />
+      <div class="muted" style="margin-top:6px">※ 右端までスライドすると確定します</div>
+    `,
+    [
+      {label:"戻る", lime:false, onClick:()=> closeModal()},
+    ]
+  );
+
+  setTimeout(()=>{
+    const sl = $("coFinalSlide");
+    if(!sl) return;
+
+    sl.onchange = ()=>{
+      const v = Number(sl.value||0);
+      if(v < 88){ sl.value = 0; return; }
+
+      // ここで初めて本確定
+      closeModal();
+      finalizeCheckoutCore();
+    };
+  },0);
+}
+
+/* 本確定（売上保存 + 席データ消去） */
+function finalizeCheckoutCore(){
+  const target = getCheckoutTarget();
+  if(!target){ toast("会計対象が見つかりません"); showScreen("scrMain"); return; }
+
+  if(!state.checkout.method){
+    toast("支払い方法を選んでください");
+    return;
+  }
+
+  const total  = calcTargetTotal(target);
+  const splitN = Math.max(1, Number(state.checkout.splitN||1));
+  const method = state.checkout.method;
+
+  // --- 売上 push ---
+  state.sales = Array.isArray(state.sales) ? state.sales : [];
   state.sales.push({
-    ts: nowTs(),
+    ts: (typeof nowTs==="function" ? nowTs() : Date.now()),
     type: "checkout",
     seatId: target.seatId || target.id || state.order.seatId,
     parentSeatId: (target._parentSeat && target._parentSeat.id) ? target._parentSeat.id : null,
@@ -1676,34 +1782,96 @@ function finalizeCheckout(){
     receiptEmail: ($("coEmail") && $("coEmail").value) ? $("coEmail").value.trim() : ""
   });
 
+  // --- 席データ消去：ここが重要 ---
   if(target._parentSeat){
+    // 合流の片側だけ会計 → 親席は消さない。subだけ消して、合計を再計算。
     const seat = target._parentSeat;
-    seat.status = "empty";
-    seat.people = 0;
-    seat.name = "";
-    seat.total = 0;
-    seat.bills = 0;
-    seat.merged = false;
-    seat.mergeLabel = "";
-    seat.sub = null;
-    seat.reserve = null;
+    const subId = target.seatId || target.id || state.order.subId;
+
+    clearMergedSubOnly(seat, subId);
+
   }else{
-    const seat = target;
-    seat.status = "empty";
-    seat.people = 0;
-    seat.name = "";
-    seat.total = 0;
-    seat.bills = 0;
-    seat.reserve = null;
+    // 通常席 → 丸ごと空席化（orders/logも消す）
+    clearSeatAllToEmpty(target);
   }
 
+  // 会計UI状態リセット
   state.checkout.method = null;
   state.checkout.splitN = 1;
 
+  // 注文画面側の選択も事故防止でリセット
+  state.order.cat = null;
+  state.order.genre = null;
+
   if(typeof persistAll === "function") persistAll();
-  renderSeats();
+  if(typeof renderSeats === "function") renderSeats();
+
   toast("会計を確定しました");
   showScreen("scrMain");
+}
+
+/* ===== 会計後のデータ消去（通常席）===== */
+function clearSeatAllToEmpty(seat){
+  if(!seat) return;
+
+  seat.status = "empty";
+  seat.people = 0;
+  seat.name = "";
+  seat.bills = 0;
+  seat.total = 0;
+
+  // ★これが「前回の注文が残って加算」の原因なので必ず消す
+  seat.orders = [];
+  seat.orderLog = [];
+
+  // 予約情報も消す
+  seat.reserve = null;
+
+  // 合流情報も消す（通常席想定だが保険）
+  seat.merged = false;
+  seat.mergeLabel = "";
+  seat.sub = null;
+}
+
+/* ===== 会計後のデータ消去（合流：subだけ消す）===== */
+function clearMergedSubOnly(parentSeat, subId){
+  if(!parentSeat || !parentSeat.merged) return;
+
+  const sid = String(subId || "").trim();
+  if(!sid) return;
+
+  parentSeat.sub = parentSeat.sub || {};
+
+  // subだけ削除
+  delete parentSeat.sub[sid];
+
+  // subが空になったら「合流解除」して通常席に戻す
+  const keys = Object.keys(parentSeat.sub || {});
+  if(keys.length <= 1){
+    const keepId = keys[0]; // 0 or 1個
+    if(keepId && parentSeat.sub[keepId]){
+      // 残った1席の注文を親席に戻す（見た目を通常に）
+      parentSeat.orders = parentSeat.sub[keepId].orders || [];
+      parentSeat.orderLog = parentSeat.sub[keepId].orderLog || [];
+      parentSeat.total = calcOrdersTotal(parentSeat.orders || []);
+      parentSeat.status = "in";
+      parentSeat.bills = 1;
+    }else{
+      // 何も残ってないなら空席化
+      clearSeatAllToEmpty(parentSeat);
+      return;
+    }
+
+    parentSeat.merged = false;
+    parentSeat.mergeLabel = "";
+    parentSeat.sub = null;
+    return;
+  }
+
+  // まだ複数残るなら合計を再計算
+  parentSeat.total = calcSeatTotal(parentSeat);
+  parentSeat.status = "in";
+  parentSeat.bills = 1;
 }
 
 /* ===== Checkout hook ===== */
