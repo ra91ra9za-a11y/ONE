@@ -1769,18 +1769,50 @@ function finalizeCheckoutCore(){
   const splitN = Math.max(1, Number(state.checkout.splitN||1));
   const method = state.checkout.method;
 
-  // --- 売上 push ---
-  state.sales = Array.isArray(state.sales) ? state.sales : [];
-  state.sales.push({
-    ts: (typeof nowTs==="function" ? nowTs() : Date.now()),
-    type: "checkout",
+// --- 売上 push（PART4形式に合わせる） ---
+(function pushSale(){
+  // sales状態を正規化（PART4と同じ形に）
+  if(Array.isArray(state.sales)){
+    state.sales = { list: state.sales, tab:"today", dailyYmd:null };
+  }
+  state.sales = state.sales || { list: [], tab:"today", dailyYmd:null };
+  if(!Array.isArray(state.sales.list)) state.sales.list = [];
+
+  const tsNow = (typeof nowTs==="function" ? nowTs() : Date.now());
+
+  // 支払表記（PART4の表示に合わせる）
+  const payJP =
+    method==="cash" ? "現金" :
+    method==="card" ? "カード" :
+    method==="qr"   ? "QR" : "現金";
+
+  // items（会計前の注文から作る：ここ重要）
+  const ordersSrc = (target.orders || []); // 合流subなら subのorders、通常席なら seat.orders
+  const items = ordersSrc.map(o=>({
+    name: o.name,
+    qty: Number(o.qty||0),
+    price: Number(o.price||0),
+    tax: Number(o.tax||0),
+  })).filter(x=> x.name && x.qty>0);
+
+  // 入店/退店（入店時刻が無ければ ts を仮で入れる）
+  const seatObj = seatById(state.order.seatId);
+  const inTsGuess = seatObj?.inTs || seatObj?.startTs || tsNow;
+
+  state.sales.list.push({
+    saleId: "s" + Math.random().toString(36).slice(2),
+    ts: tsNow,
+    inTs: inTsGuess,
+    outTs: tsNow,
     seatId: target.seatId || target.id || state.order.seatId,
-    parentSeatId: (target._parentSeat && target._parentSeat.id) ? target._parentSeat.id : null,
-    total,
-    splitN,
-    method,
-    receiptEmail: ($("coEmail") && $("coEmail").value) ? $("coEmail").value.trim() : ""
+    name: seatObj?.name || "",
+    pay: payJP,
+    amount: total,
+    receipt: false,
+    items,
+    corrections: [],
   });
+})();
 
   // --- 席データ消去：ここが重要 ---
   if(target._parentSeat){
@@ -2574,12 +2606,24 @@ renderKitchen();
   `;
 })();
 
-/* ===== PART4 State ===== */
-state.sales = state.sales || {
-  list: [],
-  tab: "today",
-  dailyYmd: null, // 日別で選択中の日付（YYYY-MM-DD）
-};
+/* ===== PART4 State（互換対応：配列でも動く） ===== */
+(function normalizeSalesState(){
+  // 旧：state.sales が配列で保存されている場合 → 新形式へ移行
+  if(Array.isArray(state.sales)){
+    state.sales = {
+      list: state.sales,      // 既存データを引き継ぐ
+      tab: "today",
+      dailyYmd: null,
+    };
+    return;
+  }
+
+  // 新形式
+  state.sales = state.sales || { list: [], tab: "today", dailyYmd: null };
+
+  // 保険：list が無い/壊れてる場合
+  if(!Array.isArray(state.sales.list)) state.sales.list = [];
+})();
 
 /* ===== Helpers ===== */
 function ymd(d){
