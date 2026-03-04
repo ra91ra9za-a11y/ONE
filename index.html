@@ -663,7 +663,23 @@
 
     const KEY = "ONE_FREE_FULL_V2";
     const $ = (id)=> document.getElementById(id);
+// ===== DEBUG: 画面でエラー表示（iPhone用） =====
+window.addEventListener("error", (e)=>{
+  try{
+    toast("JS停止: " + (e.message || "error"));
+  }catch(_){}
+});
 
+window.addEventListener("unhandledrejection", (e)=>{
+  try{
+    toast("Promise停止: " + (e.reason && (e.reason.message||e.reason) ? (e.reason.message||e.reason) : "rejection"));
+  }catch(_){}
+});
+
+// 起動確認
+setTimeout(()=>{
+  try{ toast("init: PART1 ok"); }catch(_){}
+},300);
     function nowTs(){ return Date.now(); }
     function pad2(n){ return String(n).padStart(2,"0"); }
     function yen(n){
