@@ -555,7 +555,22 @@
   <main class="app">
     <section class="screen active" id="scrMain">
       <div class="hintText" id="mainHint">空席をタップで 来店 / 予約 を切替</div>
-      <div class="seatGrid" id="seatGrid"></div>
+      <div class="seatGrid" id="seatGrid"></div> <div id="arriveBar" style="display:none; margin-top:12px;">
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <button class="btn" id="arriveMinus">−</button>
+    <div class="pill" style="flex:1; min-width:170px; text-align:center; font-weight:900;">
+      人数：<span id="arrivePeople">1</span> 名
+      <span style="opacity:.6; font-weight:800;">（選択 <span id="arriveSelCount">0</span>席）</span>
+    </div>
+    <button class="btn" id="arrivePlus">＋</button>
+  </div>
+
+  <div style="display:flex; gap:10px; margin-top:10px;">
+    <button class="btn full lime" id="arriveDoIn">来店</button>
+    <button class="btn full" id="arriveDoReserve">予約</button>
+    <button class="btn full" id="arriveClear">解除</button>
+  </div>
+</div>
     </section>
 
     <section class="screen" id="scrKitchen"><div class="pageDesc">（PART3で実装）</div></section>
@@ -794,7 +809,9 @@ const screens = ["scrMain","scrKitchen","scrSales","scrFix","scrSeatSetup","scrS
       seatSetup: null,
       sync: null,
      menu: { cat:null, selectedGenre:null },
-    };
+
+mainSel: { ids: [], people: 1 },
+};
 
     function setSync(ok){
       state.syncOk = !!ok;
@@ -884,6 +901,11 @@ const screens = ["scrMain","scrKitchen","scrSales","scrFix","scrSeatSetup","scrS
         card.className = "seatCard " + (seat.status==="reserve" ? "reserve" : seat.status==="in" ? "in" : "empty");
         card.dataset.seatId = seat.id;
 
+// 選択表示
+if(state.mainSel && Array.isArray(state.mainSel.ids) && state.mainSel.ids.includes(seat.id)){
+  card.classList.add("isSelected");
+}
+
         const seatLabel = seat.merged ? (seat.mergeLabel || seat.id) : seat.id;
         const people = (seat.status==="in" || seat.status==="reserve") ? Number(seat.people||0) : 0;
 
@@ -931,9 +953,89 @@ const screens = ["scrMain","scrKitchen","scrSales","scrFix","scrSeatSetup","scrS
     }
 
     /* PART2で上書きされる前提のプレースホルダ */
-    function onSeatTap(seatId){
-      toast("読み込み中…");
+
+function updateArriveBar(){
+  const bar = $("arriveBar");
+  if(!bar) return;
+
+  const ids = (state.mainSel && Array.isArray(state.mainSel.ids)) ? state.mainSel.ids : [];
+  const n = Math.max(1, Number(state.mainSel?.people || 1));
+
+  $("arrivePeople").textContent = String(n);
+  $("arriveSelCount").textContent = String(ids.length);
+
+  bar.style.display = (ids.length > 0) ? "block" : "none";
+}
+
+function toggleSelectSeat(seatId){
+  state.mainSel = state.mainSel || { ids: [], people: 1 };
+  state.mainSel.ids = state.mainSel.ids || [];
+
+  const seat = seatById(seatId);
+  if(!seat) return;
+
+  // 空席/予約のみ選択対象（使用中は後で拡張）
+  if(seat.status !== "empty" && seat.status !== "reserve") {
+    toast("使用中の席です");
+    return;
+  }
+
+  const i = state.mainSel.ids.indexOf(seatId);
+  if(i >= 0) state.mainSel.ids.splice(i,1);
+  else state.mainSel.ids.push(seatId);
+
+  renderSeats();
+  updateArriveBar();
+}
+
+function applyArriveToSelected(mode){
+  const ids = state.mainSel?.ids || [];
+  const people = Math.max(1, Number(state.mainSel?.people || 1));
+  if(ids.length === 0) return;
+
+  ids.forEach(id=>{
+    const s = seatById(id);
+    if(!s) return;
+
+    if(mode === "in"){
+      s.status = "in";
+      s.people = people;
+      s.reserve = null;
+    }else{
+      s.status = "reserve";
+      s.people = people;
+      s.reserve = s.reserve || { time:"", name:"", tel:"", note:"" };
     }
+  });
+
+  // 解除
+  state.mainSel.ids = [];
+  renderSeats();
+  updateArriveBar();
+  toast(mode==="in" ? "来店を反映しました" : "予約を反映しました");
+}
+
+// ★これが席カードのタップ動作
+function onSeatTap(seatId){
+  toggleSelectSeat(seatId);
+}
+
+// arriveBar 操作
+$("arriveMinus").onclick = ()=>{
+  state.mainSel.people = Math.max(1, Number(state.mainSel.people||1) - 1);
+  updateArriveBar();
+};
+$("arrivePlus").onclick = ()=>{
+  state.mainSel.people = Math.min(99, Number(state.mainSel.people||1) + 1);
+  updateArriveBar();
+};
+$("arriveDoIn").onclick = ()=> applyArriveToSelected("in");
+$("arriveDoReserve").onclick = ()=> applyArriveToSelected("reserve");
+$("arriveClear").onclick = ()=>{
+  state.mainSel.ids = [];
+  renderSeats();
+  updateArriveBar();
+};
 
     $("navSecond").onclick = ()=>{
       const current = screens.find(s=> $(s).classList.contains("active")) || "scrMain";
@@ -974,6 +1076,7 @@ $("goTodaySales").onclick = ()=> {
       setSync(true);
       renderSeats();
       showScreen("scrMain");
+updateArriveBar();
     })();
 
     /* =========================
@@ -2829,7 +2932,6 @@ function renderSales(){
 registerScreenHook("scrSales", ()=>{
   try{ renderSales(); }catch(e){ console.warn(e); }
 });
-
 /* =========================
   PART5：売上管理・訂正伝票（本日／日別の修正）
   役割：会計確定後の修正（差分イベントのみ）
