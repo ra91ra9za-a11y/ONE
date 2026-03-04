@@ -2593,55 +2593,32 @@ renderKitchen();
   ここから先は PART4 で続く
 ========================= */
 /* =========================
-  PART4：売上（本日／日別／月／年）
-  役割：閲覧（無料版で全部見る）＋修正導線（PART5へ）
-  方針：軽く・不安を煽らない・修正はPART5へ分離（訂正伝票方式）
-  追加（確定対応）：
-    - 本日／日別／月／年 を無料版で閲覧可能
-    - 本日／日別 の一覧は「入店/退店/席(名前)/金額/支払/修正」
-    - 修正差分（訂正伝票）は “対象行の直下” に追加表示（上書きなし）
+  PART4：売上（本日固定）
 ========================= */
 
 /* ===== UI差し替え（プレースホルダ置換） ===== */
 (function buildSalesUI(){
   const scr = $("scrSales");
+  if(!scr) return;
+
   scr.innerHTML = `
     <div class="pill" style="margin-bottom:10px">本日の売上</div>
     <div id="salesToday"></div>
   `;
 
-  // 無料版は本日固定
-  if(!state.sales) state.sales = { list:[], tab:"today", dailyYmd:null };
-  state.sales.tab = "today";
-})();
-
-/* ===== PART4 State（互換対応：配列でも動く） ===== */
-(function normalizeSalesState(){
-  // 旧：state.sales が配列で保存されている場合 → 新形式へ移行
+  // 売上の形を必ず統一
   if(Array.isArray(state.sales)){
-    state.sales = {
-      list: state.sales,      // 既存データを引き継ぐ
-      tab: "today",
-      dailyYmd: null,
-    };
-    return;
+    state.sales = { list: state.sales, tab:"today", dailyYmd:null };
   }
-
-  // 新形式
-  state.sales = state.sales || { list: [], tab: "today", dailyYmd: null };
-
-  // 保険：list が無い/壊れてる場合
+  state.sales = state.sales || { list: [], tab:"today", dailyYmd:null };
   if(!Array.isArray(state.sales.list)) state.sales.list = [];
+
+  state.sales.tab = "today";
 })();
 
 /* ===== Helpers ===== */
 function ymd(d){
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-}
-function sameDay(a,b){
-  return a.getFullYear()===b.getFullYear()
-      && a.getMonth()===b.getMonth()
-      && a.getDate()===b.getDate();
 }
 function fmtHM(ts){
   if(!ts) return "--:--";
@@ -2650,8 +2627,9 @@ function fmtHM(ts){
 }
 function safeNum(n){ n=Number(n); return Number.isFinite(n)?n:0; }
 
-/* ===== Demo Seed（inTs/outTsも付ける） ===== */
+/* ===== Demo Seed ===== */
 (function seedSalesIfEmpty(){
+  if(!state.sales || !Array.isArray(state.sales.list)) return;
   if(state.sales.list.length) return;
 
   const now = new Date();
@@ -2660,7 +2638,7 @@ function safeNum(n){ n=Number(n); return Number.isFinite(n)?n:0; }
     const outD = new Date(now.getFullYear(), now.getMonth(), now.getDate(), outH, outM);
     return {
       saleId: "s"+Math.random().toString(36).slice(2),
-      ts: outD.getTime(),      // 会計時刻（退店寄りでOK）
+      ts: outD.getTime(),
       inTs: inD.getTime(),
       outTs: outD.getTime(),
       seatId: seat,
@@ -2672,7 +2650,7 @@ function safeNum(n){ n=Number(n); return Number.isFinite(n)?n:0; }
         {name:"生ビール", qty:2, price:600, tax:10},
         {name:"唐揚げ", qty:1, price:800, tax:10},
       ],
-      corrections: [] // 訂正伝票（差分）をここに積む
+      corrections: []
     };
   };
 
@@ -2681,70 +2659,32 @@ function safeNum(n){ n=Number(n); return Number.isFinite(n)?n:0; }
     mk(13,00,13,10,"A","","現金",1800),
     mk(13,40,14, 5,"B","佐藤","QR",2200),
   );
-
-  // 日別の初期日付：今日
-  state.sales.dailyYmd = ymd(new Date());
 })();
 
 /* ===== Aggregation ===== */
-function filterByYmd(targetYmd){
-  const rows = state.sales.list.filter(s=>{
+function filterByToday(){
+  const today = ymd(new Date());
+  return (state.sales.list||[]).filter(s=>{
     const d = new Date(s.ts);
-    return ymd(d) === targetYmd;
+    return ymd(d) === today;
   });
-  return rows;
 }
-
-function aggByRows(rows){
+function aggToday(){
+  const rows = filterByToday();
   const sum = rows.reduce((a,b)=> a + safeNum(b.amount), 0);
-  const cnt = rows.length;
 
   const payCnt = {現金:0, カード:0, QR:0};
-  const paySum = {現金:0, カード:0, QR:0};
-
   rows.forEach(s=>{
     const p = s.pay || "現金";
     if(!(p in payCnt)) payCnt[p]=0;
-    if(!(p in paySum)) paySum[p]=0;
     payCnt[p] += 1;
-    paySum[p] += safeNum(s.amount);
   });
 
-  return {sum,cnt,payCnt,paySum};
-}
-
-function aggToday(){
-  const today = ymd(new Date());
-  const rows = filterByYmd(today);
-  return { ymd: today, rows, ...aggByRows(rows) };
-}
-
-function aggDaily(targetYmd){
-  const rows = filterByYmd(targetYmd);
-  return { ymd: targetYmd, rows, ...aggByRows(rows) };
-}
-
-function aggMonth(){
-  const d = new Date();
-  const y=d.getFullYear(), m=d.getMonth();
-  const rows = state.sales.list.filter(s=>{
-    const x=new Date(s.ts);
-    return x.getFullYear()===y && x.getMonth()===m;
-  });
-  const sum = rows.reduce((a,b)=> a+safeNum(b.amount), 0);
-  return {sum, cnt: rows.length};
-}
-
-function aggYear(){
-  const y=new Date().getFullYear();
-  const rows = state.sales.list.filter(s=> new Date(s.ts).getFullYear()===y);
-  const sum = rows.reduce((a,b)=> a+safeNum(b.amount), 0);
-  return {sum, cnt: rows.length};
+  return { rows, sum, cnt: rows.length, payCnt };
 }
 
 /* ===== 修正導線（PART5へ） ===== */
 function goFix(saleId){
-  // PART5差し替え版：window.ONE_openFixForSaleId がある想定
   if(typeof window.ONE_openFixForSaleId === "function"){
     window.ONE_openFixForSaleId(saleId);
     return;
@@ -2752,85 +2692,43 @@ function goFix(saleId){
   toast("修正機能が見つかりません（PART5を反映してください）");
 }
 
-/* ===== 訂正伝票表示（対象行の直下） ===== */
+/* ===== 訂正伝票表示（簡易） ===== */
 function renderCorrectionsInline(s){
   const list = (s.corrections || []);
   if(!list.length) return "";
-
-  // 新しい順に見せる（直下に複数並ぶ）
-  const html = list.slice().sort((a,b)=> (b.ts||0)-(a.ts||0)).map(c=>{
-    const beforePay = c.payBefore || s.pay || "";
-    const afterPay  = c.payAfter  || "";
-
-    // 商品差分（左：前 / 右：後）
-    const before = c.itemsBefore || [];
-    const after  = c.itemsAfter  || [];
-
-    // 名前集合で並べる
-    const map = new Map();
-    before.forEach(it=>{
-      const k = it.name || "";
-      if(!k) return;
-      if(!map.has(k)) map.set(k, {name:k, b:0, a:0});
-      map.get(k).b += safeNum(it.qty);
-    });
-    after.forEach(it=>{
-      const k = it.name || "";
-      if(!k) return;
-      if(!map.has(k)) map.set(k, {name:k, b:0, a:0});
-      map.get(k).a += safeNum(it.qty);
-    });
-    const diffs = Array.from(map.values()).sort((x,y)=> x.name.localeCompare(y.name,"ja"));
-
-    const diffRows = diffs.map(x=>`
-      <div style="display:flex; justify-content:space-between; gap:10px; margin:4px 0">
-        <div style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${x.name}</div>
-        <div style="display:flex; gap:8px; font-weight:900">
-          <span>${x.b}</span><span style="color:var(--muted)">→</span><span>${x.a}</span>
-        </div>
-      </div>
-    `).join("");
-
-    return `
-      <div class="pill" style="margin:8px 0 10px; color:var(--muted)">
-        訂正：${fmtHM(c.ts)} ／ ${c.who||""} ／ ${c.why||""}<br>
-        支払：${beforePay}${afterPay?` → ${afterPay}`:""}<br>
-        ${diffRows || "（数量変更なし）"}
-      </div>
-    `;
-  }).join("");
-
-  return html;
+  return list.slice().sort((a,b)=> (b.ts||0)-(a.ts||0)).map(c=>`
+    <div class="pill" style="margin:8px 0 10px">
+      訂正：${fmtHM(c.ts)} ／ ${c.who||""} ／ ${c.why||""}
+    </div>
+  `).join("");
 }
 
 /* ===== List Row ===== */
 function saleRowEl(s){
   const row = document.createElement("div");
-  row.className = "kRow";
-  row.dataset.saleId = s.saleId;
+  row.style.padding = "10px";
+  row.style.borderRadius = "14px";
+  row.style.background = "rgba(255,255,255,0.55)";
+  row.style.border = "2px solid rgba(0,0,0,0.06)";
+  row.style.marginBottom = "8px";
 
   const inT  = fmtHM(s.inTs);
   const outT = fmtHM(s.outTs);
   const seatLabel = `${s.seatId || ""}${s.name ? `（${s.name}）` : ""}`;
 
   row.innerHTML = `
-    <div class="kLeft" style="align-items:flex-start">
-      <div style="width:64px; font-weight:900">${inT}</div>
-      <div style="width:64px; font-weight:900">${outT}</div>
-      <div class="kName" style="font-weight:900">${seatLabel}</div>
-    </div>
-
-    <div class="kSlide" style="gap:10px; width:auto">
-      <div style="font-weight:900">${yen(s.amount)}</div>
-      <div class="pill">${s.pay || "現金"}</div>
+    <div style="display:flex; justify-content:space-between; gap:10px; align-items:center">
+      <div style="min-width:0">
+        <div style="font-weight:900">${inT}〜${outT}　${seatLabel}</div>
+        <div style="margin-top:4px; font-weight:900">${yen(s.amount)}　<span class="pill">${s.pay||"現金"}</span></div>
+      </div>
       <button class="btn" data-fix="${s.saleId}">修正</button>
     </div>
   `;
 
-  // 行タップ：詳細（既存の openSaleDetail があれば）
-  row.onclick = (e)=>{
-    if(e && e.target && e.target.getAttribute && e.target.getAttribute("data-fix")) return;
-    if(typeof openSaleDetail === "function") openSaleDetail(s);
+  row.querySelector("[data-fix]").onclick = (e)=>{
+    e.stopPropagation();
+    goFix(s.saleId);
   };
 
   return row;
@@ -2838,20 +2736,16 @@ function saleRowEl(s){
 
 /* ===== Render ===== */
 function renderSales(){
-  renderToday();
-}
-
-function renderToday(){
   const box = $("salesToday");
-  const a = aggToday();
+  if(!box) return;
 
+  const a = aggToday();
   const payTxt = `現金 ${a.payCnt["現金"]||0} / カード ${a.payCnt["カード"]||0} / QR ${a.payCnt["QR"]||0}`;
 
   box.innerHTML = `
     <div class="pill" style="margin-bottom:8px">
       合計 ${yen(a.sum)} ／ 会計 ${a.cnt}件 ／ ${payTxt}
     </div>
-
     <div id="todayList"></div>
   `;
 
@@ -2861,144 +2755,18 @@ function renderToday(){
     return;
   }
 
-  a.rows
-    .slice()
-    .sort((x,y)=> x.ts - y.ts)
-    .forEach(s=>{
-      // 元行
-      const row = saleRowEl(s);
-      list.appendChild(row);
-
-      // 直下：訂正伝票（差分）
-      const inline = renderCorrectionsInline(s);
-      if(inline){
-        const wrap = document.createElement("div");
-        wrap.innerHTML = inline;
-        list.appendChild(wrap);
-      }
-    });
-
-  // 修正ボタン
-  list.querySelectorAll("[data-fix]").forEach(btn=>{
-    btn.onclick = (e)=>{
-      e.stopPropagation();
-      const id = btn.getAttribute("data-fix");
-      goFix(id);
-    };
+  a.rows.slice().sort((x,y)=> x.ts - y.ts).forEach(s=>{
+    list.appendChild(saleRowEl(s));
+    const inline = renderCorrectionsInline(s);
+    if(inline){
+      const wrap = document.createElement("div");
+      wrap.innerHTML = inline;
+      list.appendChild(wrap);
+    }
   });
 }
 
-function renderDaily(){
-  const box = $("salesDaily");
-  const todayY = ymd(new Date());
-  const cur = state.sales.dailyYmd || todayY;
-
-  const a = aggDaily(cur);
-
-  box.innerHTML = `
-    <div class="pill" style="margin-bottom:8px">日付</div>
-    <input id="dailyPick" class="btn" style="width:100%; text-align:left; margin-bottom:10px" value="${cur}" />
-
-    <div class="pill" style="margin-bottom:8px">
-      本日の総売上 ${yen(a.sum)} ／ 総会計数 ${a.cnt}件
-    </div>
-
-    <div class="pill" style="margin-bottom:10px; color:var(--muted)">
-      現金：${a.payCnt["現金"]||0}件／${yen(a.paySum["現金"]||0)}<br>
-      カード：${a.payCnt["カード"]||0}件／${yen(a.paySum["カード"]||0)}<br>
-      QR：${a.payCnt["QR"]||0}件／${yen(a.paySum["QR"]||0)}
-    </div>
-
-    <div id="dailyList"></div>
-  `;
-
-  const list = box.querySelector("#dailyList");
-  if(a.rows.length===0){
-    list.innerHTML = `<div class="pill">この日の会計はありません</div>`;
-  }else{
-    a.rows
-      .slice()
-      .sort((x,y)=> x.ts - y.ts)
-      .forEach(s=>{
-        const row = saleRowEl(s);
-        list.appendChild(row);
-
-        const inline = renderCorrectionsInline(s);
-        if(inline){
-          const wrap = document.createElement("div");
-          wrap.innerHTML = inline;
-          list.appendChild(wrap);
-        }
-      });
-
-    list.querySelectorAll("[data-fix]").forEach(btn=>{
-      btn.onclick = (e)=>{
-        e.stopPropagation();
-        const id = btn.getAttribute("data-fix");
-        goFix(id);
-      };
-    });
-  }
-
-  // 日付変更
-  $("dailyPick").onchange = ()=>{
-    const v = ($("dailyPick").value||"").trim();
-    if(!v){ state.sales.dailyYmd = todayY; }
-    else state.sales.dailyYmd = v;
-    renderDaily();
-  };
-}
-
-function renderMonth(){
-  const box = $("salesMonth");
-  const a = aggMonth();
-  box.innerHTML = `
-    <div class="pill">月合計 ${yen(a.sum)} ／ 会計 ${a.cnt}件</div>
-    <div style="height:8px"></div>
-    <div class="pill">無料版：月の内訳（グラフ等）は今後の有料版で強化</div>
-  `;
-}
-
-function renderYear(){
-  const box = $("salesYear");
-  const a = aggYear();
-  box.innerHTML = `
-    <div class="pill">年合計 ${yen(a.sum)} ／ 会計 ${a.cnt}件</div>
-    <div style="height:8px"></div>
-    <div class="pill">無料版：年の内訳（グラフ等）は今後の有料版で強化</div>
-  `;
-}
-
-/* ===== Detail（修正はPART5へ） ===== */
-function openSaleDetail(s){
-  const items = (s.items||[]).map(it=>`${it.name} ×${it.qty}`).join("<br>");
-  openModal(
-    "会計詳細",
-    `
-      <div>入店：${fmtHM(s.inTs)}</div>
-      <div>退店：${fmtHM(s.outTs)}</div>
-      <div>席：${s.seatId}${s.name?`（${s.name}）`:""}</div>
-      <div>支払：${s.pay}</div>
-      <div style="margin-top:8px">${items}</div>
-      <div style="margin-top:8px;font-weight:900">${yen(s.amount)}</div>
-    `,
-    [
-      {label:"修正", primary:true, onClick:()=>{ closeModal(); goFix(s.saleId); }},
-      {label:"戻る", onClick:()=> closeModal()},
-    ]
-  );
-}
-
-/* ===== Tabs ===== */
-  renderSales();
-}
-
-$("tabToday").onclick=()=> setTab("today");
-$("tabDaily").onclick=()=> setTab("daily");
-$("tabMonth").onclick=()=> setTab("month");
-$("tabYear").onclick =()=> setTab("year");
-
-/* ===== Sales screen hook (stable) ===== */
+/* ===== Sales screen hook ===== */
 registerScreenHook("scrSales", ()=>{
   try{ renderSales(); }catch(e){ console.warn(e); }
 });
@@ -3006,7 +2774,7 @@ registerScreenHook("scrSales", ()=>{
 /* =========================
   ここから先は PART5 で続く
 ========================= */
-/* =========================
+// /* =========================
   PART5：売上管理・訂正伝票（本日／日別の修正）
   役割：会計確定後の修正（差分イベントのみ）
   方針：消さない／上書きしない／履歴を残す（訂正伝票方式）
