@@ -523,6 +523,38 @@
       .topBtn{ font-size:14px; }
     }
   </style>
+  <script>
+(function(){
+  // 画面左上に常駐するデバッグ表示（toast不要）
+  const box = document.createElement("div");
+  box.id = "dbgBox";
+  box.style.cssText = [
+    "position:fixed",
+    "left:8px",
+    "top:calc(8px + env(safe-area-inset-top))",
+    "z-index:99999",
+    "background:rgba(0,0,0,.75)",
+    "color:#fff",
+    "padding:6px 8px",
+    "border-radius:8px",
+    "font-size:12px",
+    "font-weight:800",
+    "max-width:92vw",
+    "white-space:pre-wrap"
+  ].join(";");
+  box.textContent = "DBG: head script OK";
+  document.addEventListener("DOMContentLoaded", ()=>{
+    box.textContent += "\nDBG: DOMContentLoaded OK";
+  });
+  window.addEventListener("error", (e)=>{
+    box.textContent += "\nERR: " + (e.message || "error");
+  });
+  window.addEventListener("unhandledrejection", (e)=>{
+    box.textContent += "\nREJ: " + (e.reason && (e.reason.message||e.reason) ? (e.reason.message||e.reason) : "rejection");
+  });
+  document.documentElement.appendChild(box);
+})();
+</script>
 </head>
 
 <body>
