@@ -523,38 +523,6 @@
       .topBtn{ font-size:14px; }
     }
   </style>
-  <script>
-(function(){
-  // 画面左上に常駐するデバッグ表示（toast不要）
-  const box = document.createElement("div");
-  box.id = "dbgBox";
-  box.style.cssText = [
-    "position:fixed",
-    "left:8px",
-    "top:calc(8px + env(safe-area-inset-top))",
-    "z-index:99999",
-    "background:rgba(0,0,0,.75)",
-    "color:#fff",
-    "padding:6px 8px",
-    "border-radius:8px",
-    "font-size:12px",
-    "font-weight:800",
-    "max-width:92vw",
-    "white-space:pre-wrap"
-  ].join(";");
-  box.textContent = "DBG: head script OK";
-  document.addEventListener("DOMContentLoaded", ()=>{
-    box.textContent += "\nDBG: DOMContentLoaded OK";
-  });
-  window.addEventListener("error", (e)=>{
-    box.textContent += "\nERR: " + (e.message || "error");
-  });
-  window.addEventListener("unhandledrejection", (e)=>{
-    box.textContent += "\nREJ: " + (e.reason && (e.reason.message||e.reason) ? (e.reason.message||e.reason) : "rejection");
-  });
-  document.documentElement.appendChild(box);
-})();
-</script>
 </head>
 
 <body>
@@ -695,23 +663,7 @@
 
     const KEY = "ONE_FREE_FULL_V2";
     const $ = (id)=> document.getElementById(id);
-// ===== DEBUG: 画面でエラー表示（iPhone用） =====
-window.addEventListener("error", (e)=>{
-  try{
-    toast("JS停止: " + (e.message || "error"));
-  }catch(_){}
-});
 
-window.addEventListener("unhandledrejection", (e)=>{
-  try{
-    toast("Promise停止: " + (e.reason && (e.reason.message||e.reason) ? (e.reason.message||e.reason) : "rejection"));
-  }catch(_){}
-});
-
-// 起動確認
-setTimeout(()=>{
-  try{ toast("init: PART1 ok"); }catch(_){}
-},300);
     function nowTs(){ return Date.now(); }
     function pad2(n){ return String(n).padStart(2,"0"); }
     function yen(n){
@@ -2640,189 +2592,12 @@ renderKitchen();
 /* =========================
   ここから先は PART4 で続く
 ========================= */
+/* PART4 ぜんぶここから */
+/* 
+（PART4のコード全部）
+*/
+/* PART4 ぜんぶここまで */
 /* =========================
-  PART4：売上（本日固定）
-========================= */
-
-/* ===== UI差し替え（プレースホルダ置換） ===== */
-(function buildSalesUI(){
-  const scr = $("scrSales");
-  if(!scr) return;
-
-  scr.innerHTML = `
-    <div class="pill" style="margin-bottom:10px">本日の売上</div>
-    <div id="salesToday"></div>
-  `;
-
-  // 売上の形を必ず統一
-  if(Array.isArray(state.sales)){
-    state.sales = { list: state.sales, tab:"today", dailyYmd:null };
-  }
-  state.sales = state.sales || { list: [], tab:"today", dailyYmd:null };
-  if(!Array.isArray(state.sales.list)) state.sales.list = [];
-
-  state.sales.tab = "today";
-})();
-
-/* ===== Helpers ===== */
-function ymd(d){
-  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-}
-function fmtHM(ts){
-  if(!ts) return "--:--";
-  const d = new Date(ts);
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-function safeNum(n){ n=Number(n); return Number.isFinite(n)?n:0; }
-
-/* ===== Demo Seed ===== */
-(function seedSalesIfEmpty(){
-  if(!state.sales || !Array.isArray(state.sales.list)) return;
-  if(state.sales.list.length) return;
-
-  const now = new Date();
-  const mk = (inH,inM,outH,outM,seat,name,pay,amt)=>{
-    const inD  = new Date(now.getFullYear(), now.getMonth(), now.getDate(), inH, inM);
-    const outD = new Date(now.getFullYear(), now.getMonth(), now.getDate(), outH, outM);
-    return {
-      saleId: "s"+Math.random().toString(36).slice(2),
-      ts: outD.getTime(),
-      inTs: inD.getTime(),
-      outTs: outD.getTime(),
-      seatId: seat,
-      name: name||"",
-      pay,
-      amount: amt,
-      receipt: true,
-      items: [
-        {name:"生ビール", qty:2, price:600, tax:10},
-        {name:"唐揚げ", qty:1, price:800, tax:10},
-      ],
-      corrections: []
-    };
-  };
-
-  state.sales.list.push(
-    mk(12,10,12,35,"D","田中","カード",4800),
-    mk(13,00,13,10,"A","","現金",1800),
-    mk(13,40,14, 5,"B","佐藤","QR",2200),
-  );
-})();
-
-/* ===== Aggregation ===== */
-function filterByToday(){
-  const today = ymd(new Date());
-  return (state.sales.list||[]).filter(s=>{
-    const d = new Date(s.ts);
-    return ymd(d) === today;
-  });
-}
-function aggToday(){
-  const rows = filterByToday();
-  const sum = rows.reduce((a,b)=> a + safeNum(b.amount), 0);
-
-  const payCnt = {現金:0, カード:0, QR:0};
-  rows.forEach(s=>{
-    const p = s.pay || "現金";
-    if(!(p in payCnt)) payCnt[p]=0;
-    payCnt[p] += 1;
-  });
-
-  return { rows, sum, cnt: rows.length, payCnt };
-}
-
-/* ===== 修正導線（PART5へ） ===== */
-function goFix(saleId){
-  if(typeof window.ONE_openFixForSaleId === "function"){
-    window.ONE_openFixForSaleId(saleId);
-    return;
-  }
-  toast("修正機能が見つかりません（PART5を反映してください）");
-}
-
-/* ===== 訂正伝票表示（簡易） ===== */
-function renderCorrectionsInline(s){
-  const list = (s.corrections || []);
-  if(!list.length) return "";
-  return list.slice().sort((a,b)=> (b.ts||0)-(a.ts||0)).map(c=>`
-    <div class="pill" style="margin:8px 0 10px">
-      訂正：${fmtHM(c.ts)} ／ ${c.who||""} ／ ${c.why||""}
-    </div>
-  `).join("");
-}
-
-/* ===== List Row ===== */
-function saleRowEl(s){
-  const row = document.createElement("div");
-  row.style.padding = "10px";
-  row.style.borderRadius = "14px";
-  row.style.background = "rgba(255,255,255,0.55)";
-  row.style.border = "2px solid rgba(0,0,0,0.06)";
-  row.style.marginBottom = "8px";
-
-  const inT  = fmtHM(s.inTs);
-  const outT = fmtHM(s.outTs);
-  const seatLabel = `${s.seatId || ""}${s.name ? `（${s.name}）` : ""}`;
-
-  row.innerHTML = `
-    <div style="display:flex; justify-content:space-between; gap:10px; align-items:center">
-      <div style="min-width:0">
-        <div style="font-weight:900">${inT}〜${outT}　${seatLabel}</div>
-        <div style="margin-top:4px; font-weight:900">${yen(s.amount)}　<span class="pill">${s.pay||"現金"}</span></div>
-      </div>
-      <button class="btn" data-fix="${s.saleId}">修正</button>
-    </div>
-  `;
-
-  row.querySelector("[data-fix]").onclick = (e)=>{
-    e.stopPropagation();
-    goFix(s.saleId);
-  };
-
-  return row;
-}
-
-/* ===== Render ===== */
-function renderSales(){
-  const box = $("salesToday");
-  if(!box) return;
-
-  const a = aggToday();
-  const payTxt = `現金 ${a.payCnt["現金"]||0} / カード ${a.payCnt["カード"]||0} / QR ${a.payCnt["QR"]||0}`;
-
-  box.innerHTML = `
-    <div class="pill" style="margin-bottom:8px">
-      合計 ${yen(a.sum)} ／ 会計 ${a.cnt}件 ／ ${payTxt}
-    </div>
-    <div id="todayList"></div>
-  `;
-
-  const list = box.querySelector("#todayList");
-  if(a.rows.length===0){
-    list.innerHTML = `<div class="pill">本日の会計はありません</div>`;
-    return;
-  }
-
-  a.rows.slice().sort((x,y)=> x.ts - y.ts).forEach(s=>{
-    list.appendChild(saleRowEl(s));
-    const inline = renderCorrectionsInline(s);
-    if(inline){
-      const wrap = document.createElement("div");
-      wrap.innerHTML = inline;
-      list.appendChild(wrap);
-    }
-  });
-}
-
-/* ===== Sales screen hook ===== */
-registerScreenHook("scrSales", ()=>{
-  try{ renderSales(); }catch(e){ console.warn(e); }
-});
-
-/* =========================
-  ここから先は PART5 で続く
-========================= */
-// /* =========================
   PART5：売上管理・訂正伝票（本日／日別の修正）
   役割：会計確定後の修正（差分イベントのみ）
   方針：消さない／上書きしない／履歴を残す（訂正伝票方式）
