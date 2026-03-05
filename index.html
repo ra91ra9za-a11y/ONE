@@ -52,6 +52,8 @@
       --ink2:#1b4a31;
       --white:#ffffff;
 
+      --panel:#ecf6e6;
+
       --pageBg:#eaf4df;     /* うっすら若草 */
       --cardBg:#dff0c9;     /* 席カード */
       --cardBgOn:#86df63;   /* 選択 */
@@ -556,7 +558,7 @@
     <section class="screen active" id="scrMain">
       <div class="hintText" id="mainHint">空席をタップで 来店 / 予約 を切替</div>
       <div class="seatGrid" id="seatGrid"></div>
-      <div id="arriveBar" style="display:none; margin-top:12px;">
+<div id="arriveBar" style="display:none; margin-top:12px;">
   <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
     <button class="btn" id="arriveMinus">−</button>
     <div class="pill" style="flex:1; min-width:170px; text-align:center; font-weight:900;">
@@ -948,7 +950,29 @@ if(state.mainSel && Array.isArray(state.mainSel.ids) && state.mainSel.ids.includ
           <div class="seatPrice">${money || " "}</div>
         `;
 
-        card.onclick = ()=> onSeatTap(seat.id);
+// --- タップ/長押しを分離 ---
+let pressT = null;
+let longPressed = false;
+
+card.addEventListener("pointerdown", (e)=>{
+  longPressed = false;
+  pressT = setTimeout(()=>{
+    longPressed = true;
+    // 長押し：詳細（予約・来店中など）
+    if(typeof onSeatLongPress === "function") onSeatLongPress(seat.id);
+  }, 420); // 0.4秒くらいが現場でちょうどいい
+}, {passive:true});
+
+card.addEventListener("pointerup", (e)=>{
+  clearTimeout(pressT);
+  if(longPressed) return; // 長押し済みならタップは無視
+  onSeatTap(seat.id);     // 通常タップ
+}, {passive:true});
+
+card.addEventListener("pointerleave", ()=>{
+  clearTimeout(pressT);
+}, {passive:true});
+
         grid.appendChild(card);
       });
     }
@@ -988,6 +1012,11 @@ function toggleSelectSeat(seatId){
   renderSeats();
   updateArriveBar();
 }
+
+// ✅ PART2から呼ぶ用（名前衝突しない）
+window.ONE_MAIN_TAP_MULTI = function(seatId){
+  toggleSelectSeat(seatId);
+};
 
 function applyArriveToSelected(mode){
   const ids = state.mainSel?.ids || [];
@@ -1685,18 +1714,60 @@ function openMergedPick_v3(seat){
   openModal("どちらの注文、会計をしますか？", `<div class="muted">席を選択してください</div>`, buttons, seat.id);
 }
 
+// ★PART1の複数選択を優先（空席/予約は multi）
+// それ以外（使用中/合流）は従来通り
 onSeatTap = function(seatId){
   const seat = seatById(seatId);
   if(!seat) return;
 
-  if(seat.status==="empty"){ openEmptyAction_v3(seat); return; }
-  if(seat.status==="reserve"){ openReserveAction_v3(seat); return; }
+  // ① 空席/予約 → PART1の複数選択へ（arriveBar）
+  if((seat.status==="empty" || seat.status==="reserve") && typeof window.ONE_MAIN_TAP_MULTI==="function"){
+    window.ONE_MAIN_TAP_MULTI(seat.id);
+    return;
+  }
 
+  // ② 合流はサブ選択
   if(seat.merged){ openMergedPick_v3(seat); return; }
 
+  // ③ 来店中は注文へ
   openOrderFor_v3(seat.id, seat.id);
 };
 
+// 長押し：詳細を出す（選択モード中でも見れる）
+function onSeatLongPress(seatId){
+  const seat = seatById(seatId);
+  if(!seat) return;
+
+  // ✅ 空席：長押しで「空席」モーダル（来店/予約）
+  if(seat.status === "empty"){
+    openEmptyAction_v3(seat);
+    return;
+  }
+
+  // 予約：長押しで予約詳細
+  if(seat.status==="reserve"){
+    openReserveAction_v3(seat);
+    return;
+  }
+
+  // 来店中：長押しで席情報
+  if(seat.status==="in"){
+    openModal(
+      "席情報",
+      `
+        <div style="font-weight:1000; font-size:18px; margin-bottom:8px">席：${seat.id}</div>
+        <div style="font-weight:1000; margin-bottom:6px">人数：${seat.people||0}名</div>
+        <div style="font-weight:1000; margin-bottom:6px">名前：${seat.name||"-"}</div>
+        <div style="font-weight:1000;">合計：${yen(calcSeatTotal(seat))}</div>
+      `,
+      [{label:"閉じる", lime:true, onClick:()=> closeModal()}],
+      seat.id
+    );
+    return;
+  }
+
+  toast("状態が不明です");
+}
 
 /* =========================================================
    7) 注文画面フック
