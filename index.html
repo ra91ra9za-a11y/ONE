@@ -3902,14 +3902,16 @@ registerScreenHook("scrFix", ()=>{
   ここから先は PART6 で続く
 ========================= */
 /* =========================
-  PART6-1：席登録（完全版 v6）
+  PART6-1：席登録（完全版 v8）
   追加修正：
-   - プレビュータップ編集
-   - 席番号予測ロジック完全対応
-   - 予測ON / OFF 追加
+   - 全角数字の次番号予測
+   - 半角数字の次番号予測
+   - 末尾数字の一般予測
+   - 未定義＋英字1文字予測
+   - 未定義＋英字2文字以上は予測しない
 ========================= */
 
-(function buildSeatSetupUI_v6(){
+(function buildSeatSetupUI_v8(){
 
   const scr = $("scrSeatSetup");
   if(!scr) return;
@@ -3917,7 +3919,6 @@ registerScreenHook("scrFix", ()=>{
   scr.innerHTML = `
     <div style="font-weight:900;margin-bottom:10px">席登録</div>
 
-    <!-- ① 名称 -->
     <div style="font-weight:900;margin-bottom:6px">① 名称</div>
     <div id="ssNameGrid" class="seatGrid" style="margin-bottom:8px"></div>
 
@@ -3938,7 +3939,6 @@ registerScreenHook("scrFix", ()=>{
       <button class="btn lime" id="ssNameCommit" style="min-width:110px">決定</button>
     </div>
 
-    <!-- ② 作成席数 -->
     <div style="font-weight:900;margin-bottom:6px">② 作成席数</div>
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <button class="btn" id="ssCntMinus">◀</button>
@@ -3946,7 +3946,6 @@ registerScreenHook("scrFix", ()=>{
       <button class="btn" id="ssCntPlus">▶</button>
     </div>
 
-    <!-- ③ 1席あたり定員 -->
     <div style="font-weight:900;margin-bottom:6px">③ 1席あたり定員</div>
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <button class="btn" id="ssCapMinus">◀</button>
@@ -3954,14 +3953,13 @@ registerScreenHook("scrFix", ()=>{
       <button class="btn" id="ssCapPlus">▶</button>
     </div>
 
-    <!-- ④ 席番号 -->
     <div style="font-weight:900;margin-bottom:6px">④ 席番号</div>
     <div style="display:flex;gap:10px;margin-bottom:8px">
       <input
         id="ssStartLabel"
         class="btn full"
         style="text-align:left"
-        placeholder="A / 1 / あ / ア / a1 / 1a"
+        placeholder="A / 1 / １ / あ / a1 / 1a / カウンター1"
       />
       <button class="btn lime" id="ssApplyLabel" style="min-width:110px">決定</button>
     </div>
@@ -3971,7 +3969,7 @@ registerScreenHook("scrFix", ()=>{
     </div>
 
     <div style="opacity:.85;margin-bottom:10px">
-      例：A → A,B,C… ／ a1 → a1,a2,a3… ／ 1a → 1a,1b,1c…
+      例：A → A,B,C… ／ a1 → a1,a2,a3… ／ 1a → 1a,1b,1c… ／ カウンター１ → カウンター２…
     </div>
 
     <div style="font-weight:900;margin-bottom:6px">作成予定の席</div>
@@ -3994,13 +3992,10 @@ state.seatSetup = state.seatSetup || {
   customNames: [],
   selectedName: null,
   committedName: null,
-
   count: 0,
   capacity: 0,
-
   startLabel: "",
   predictOn: true,
-
   previewSeatIds: [],
   groups: []
 };
@@ -4043,65 +4038,182 @@ function ssNewGid(){
   return "sg_" + Math.random().toString(36).slice(2);
 }
 
+function ssNormalizeWideDigitChar(ch){
+  const code = ch.charCodeAt(0);
+  if(code >= 0xFF10 && code <= 0xFF19){
+    return String(code - 0xFF10);
+  }
+  return ch;
+}
+
+function ssToHalfDigits(str){
+  return String(str || "").replace(/[０-９]/g, ch => ssNormalizeWideDigitChar(ch));
+}
+
+function ssToWideDigitString(numStr){
+  return String(numStr).replace(/[0-9]/g, d =>
+    String.fromCharCode("０".charCodeAt(0) + Number(d))
+  );
+}
+
+function ssDigitStyleOf(str){
+  return /[０-９]/.test(str) ? "wide" : "half";
+}
+
 /* =========================
   予測ロジック
 ========================= */
 
-const SS_HIRA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
-const SS_LOWER = "abcdefghijklmnopqrstuvwxyz";
-const SS_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const SS_DIGITS = "123456789";
+const SS_HIRA_V8 = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
+const SS_LOWER_V8 = "abcdefghijklmnopqrstuvwxyz";
+const SS_UPPER_V8 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-function ssIsOnlyDigits(s){
-  return /^[0-9]+$/.test(s);
-}
-function ssIsOnlyLower(s){
-  return /^[a-z]+$/.test(s);
-}
-function ssIsOnlyUpper(s){
-  return /^[A-Z]+$/.test(s);
-}
-function ssIsOnlyHira(s){
-  return [...s].every(ch => SS_HIRA.includes(ch));
-}
-function ssHasSpaceOrSymbol(s){
-  return /[^0-9A-Za-zぁ-んァ-ンー]/.test(s);
+function ssHasSpaceOrSymbol_v8(s){
+  return /[^0-9０-９A-Za-zぁ-んァ-ンー]/.test(s);
 }
 
-function ssNextFromSet(ch, setStr){
+function ssNextFromSet_v8(ch, setStr){
   const i = setStr.indexOf(ch);
   if(i === -1) return null;
   return setStr[i+1] || null;
 }
 
-function ssSplitPredictPattern(s){
+function ssParsePredictPattern_v8(s){
   const t = String(s || "").trim();
   if(!t) return null;
-  if(ssHasSpaceOrSymbol(t)) return null;
+  if(ssHasSpaceOrSymbol_v8(t)) return null;
+
+  const half = ssToHalfDigits(t);
 
   if(t.length === 1){
     const ch = t;
-    if(SS_HIRA.includes(ch)) return { mode:"single_hira", first:ch };
-    if(SS_LOWER.includes(ch)) return { mode:"single_lower", first:ch };
-    if(SS_UPPER.includes(ch)) return { mode:"single_upper", first:ch };
-    if(/[1-9]/.test(ch)) return { mode:"single_digit", first:ch };
+    const h = half;
+
+    if(SS_HIRA_V8.includes(ch)) return { mode:"single_hira", first:ch };
+    if(SS_LOWER_V8.includes(ch)) return { mode:"single_lower", first:ch };
+    if(SS_UPPER_V8.includes(ch)) return { mode:"single_upper", first:ch };
+    if(/^[1-9]$/.test(h)) return { mode:"single_digit", first:h, digitStyle:ssDigitStyleOf(t) };
+
     return null;
   }
 
-  if(/^[ぁ-ん][0-9]+$/.test(t)) return { mode:"prefix_hira_digit", prefix:t.slice(0,1), tail:t.slice(1) };
-  if(/^[a-z][0-9]+$/.test(t)) return { mode:"prefix_lower_digit", prefix:t.slice(0,1), tail:t.slice(1) };
-  if(/^[A-Z][0-9]+$/.test(t)) return { mode:"prefix_upper_digit", prefix:t.slice(0,1), tail:t.slice(1) };
+  if(/^[ぁ-ん][0-9]+$/.test(half)){
+    return {
+      mode:"prefix_hira_digit",
+      prefix:t.slice(0,1),
+      tailHalf:half.slice(1),
+      digitStyle:ssDigitStyleOf(t)
+    };
+  }
 
-  if(/^[0-9]+[ぁ-ん]$/.test(t)) return { mode:"digit_hira", prefix:t.slice(0,-1), tail:t.slice(-1) };
-  if(/^[0-9]+[a-z]$/.test(t)) return { mode:"digit_lower", prefix:t.slice(0,-1), tail:t.slice(-1) };
-  if(/^[0-9]+[A-Z]$/.test(t)) return { mode:"digit_upper", prefix:t.slice(0,-1), tail:t.slice(-1) };
+  if(/^[a-z][0-9]+$/.test(half)){
+    return {
+      mode:"prefix_lower_digit",
+      prefix:t.slice(0,1),
+      tailHalf:half.slice(1),
+      digitStyle:ssDigitStyleOf(t)
+    };
+  }
 
-  if(ssIsOnlyDigits(t)) return { mode:"digits_only", firstNum:Number(t) };
+  if(/^[A-Z][0-9]+$/.test(half)){
+    return {
+      mode:"prefix_upper_digit",
+      prefix:t.slice(0,1),
+      tailHalf:half.slice(1),
+      digitStyle:ssDigitStyleOf(t)
+    };
+  }
+
+  if(/^[0-9]+[ぁ-ん]$/.test(half)){
+    return {
+      mode:"digit_hira",
+      prefix:half.slice(0,-1),
+      tail:t.slice(-1),
+      digitStyle:ssDigitStyleOf(t.slice(0,-1))
+    };
+  }
+
+  if(/^[0-9]+[a-z]$/.test(half)){
+    return {
+      mode:"digit_lower",
+      prefix:half.slice(0,-1),
+      tail:t.slice(-1),
+      digitStyle:ssDigitStyleOf(t.slice(0,-1))
+    };
+  }
+
+  if(/^[0-9]+[A-Z]$/.test(half)){
+    return {
+      mode:"digit_upper",
+      prefix:half.slice(0,-1),
+      tail:t.slice(-1),
+      digitStyle:ssDigitStyleOf(t.slice(0,-1))
+    };
+  }
+
+  if(/^[0-9]+$/.test(half)){
+    return {
+      mode:"digits_only",
+      firstNum:Number(half),
+      digitStyle:ssDigitStyleOf(t)
+    };
+  }
+
+  const mNum = t.match(/^(.*?)([0-9０-９]+)$/);
+  if(mNum){
+    return {
+      mode:"suffix_digits_generic",
+      prefix:mNum[1],
+      tailHalf:ssToHalfDigits(mNum[2]),
+      digitStyle:ssDigitStyleOf(mNum[2])
+    };
+  }
+
+  const mLower1 = t.match(/^(.*)([a-z])$/);
+  if(mLower1){
+    const before = mLower1[1];
+    if(!/[a-z]{2,}$/.test(t) && !/[A-Z]+$/.test(before) && !/[ぁ-ん]+$/.test(before)){
+      return {
+        mode:"suffix_lower_generic",
+        prefix:before,
+        tail:mLower1[2]
+      };
+    }
+  }
+
+  const mUpper1 = t.match(/^(.*)([A-Z])$/);
+  if(mUpper1){
+    const before = mUpper1[1];
+    if(!/[A-Z]{2,}$/.test(t) && !/[a-z]+$/.test(before) && !/[ぁ-ん]+$/.test(before)){
+      return {
+        mode:"suffix_upper_generic",
+        prefix:before,
+        tail:mUpper1[2]
+      };
+    }
+  }
+
+  const mHira1 = t.match(/^(.*)([ぁ-ん])$/);
+  if(mHira1){
+    const before = mHira1[1];
+    if(!/[ぁ-ん]{2,}$/.test(t) && !/[a-zA-Z]+$/.test(before)){
+      return {
+        mode:"suffix_hira_generic",
+        prefix:before,
+        tail:mHira1[2]
+      };
+    }
+  }
 
   return null;
 }
 
-function ssBuildIds(start, count, predictOn){
+function ssFormatNumWithStyle_v8(n, style){
+  const s = String(n);
+  return style === "wide" ? ssToWideDigitString(s) : s;
+}
+
+function ssBuildIds_v8(start, count, predictOn){
   const s = String(start || "").trim();
   const c = Math.max(0, ssNum(count));
   const out = [];
@@ -4115,7 +4227,7 @@ function ssBuildIds(start, count, predictOn){
     return out;
   }
 
-  const p = ssSplitPredictPattern(s);
+  const p = ssParsePredictPattern_v8(s);
   if(!p){
     for(let i=1;i<=c;i++){
       out.push(c===1 ? s : `${s}_${i}`);
@@ -4127,9 +4239,9 @@ function ssBuildIds(start, count, predictOn){
     let cur = p.first;
     for(let i=0;i<c;i++){
       out.push(cur);
-      const nx = ssNextFromSet(cur, SS_HIRA);
+      const nx = ssNextFromSet_v8(cur, SS_HIRA_V8);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:(c-1-i)},(_,k)=>`${s}_${k+2}`));
+        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
         break;
       }
       cur = nx;
@@ -4141,9 +4253,9 @@ function ssBuildIds(start, count, predictOn){
     let cur = p.first;
     for(let i=0;i<c;i++){
       out.push(cur);
-      const nx = ssNextFromSet(cur, SS_LOWER);
+      const nx = ssNextFromSet_v8(cur, SS_LOWER_V8);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:(c-1-i)},(_,k)=>`${s}_${k+2}`));
+        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
         break;
       }
       cur = nx;
@@ -4155,9 +4267,9 @@ function ssBuildIds(start, count, predictOn){
     let cur = p.first;
     for(let i=0;i<c;i++){
       out.push(cur);
-      const nx = ssNextFromSet(cur, SS_UPPER);
+      const nx = ssNextFromSet_v8(cur, SS_UPPER_V8);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:(c-1-i)},(_,k)=>`${s}_${k+2}`));
+        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
         break;
       }
       cur = nx;
@@ -4168,16 +4280,20 @@ function ssBuildIds(start, count, predictOn){
   if(p.mode === "single_digit"){
     let n = Number(p.first);
     for(let i=0;i<c;i++){
-      out.push(String(n));
+      out.push(ssFormatNumWithStyle_v8(n, p.digitStyle));
       n += 1;
     }
     return out;
   }
 
-  if(p.mode === "prefix_hira_digit" || p.mode === "prefix_lower_digit" || p.mode === "prefix_upper_digit"){
-    let n = Number(p.tail);
+  if(
+    p.mode === "prefix_hira_digit" ||
+    p.mode === "prefix_lower_digit" ||
+    p.mode === "prefix_upper_digit"
+  ){
+    let n = Number(p.tailHalf);
     for(let i=0;i<c;i++){
-      out.push(`${p.prefix}${n}`);
+      out.push(`${p.prefix}${ssFormatNumWithStyle_v8(n, p.digitStyle)}`);
       n += 1;
     }
     return out;
@@ -4186,10 +4302,10 @@ function ssBuildIds(start, count, predictOn){
   if(p.mode === "digit_hira"){
     let cur = p.tail;
     for(let i=0;i<c;i++){
-      out.push(`${p.prefix}${cur}`);
-      const nx = ssNextFromSet(cur, SS_HIRA);
+      out.push(`${ssFormatNumWithStyle_v8(p.prefix, p.digitStyle)}${cur}`);
+      const nx = ssNextFromSet_v8(cur, SS_HIRA_V8);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:(c-1-i)},(_,k)=>`${s}_${k+2}`));
+        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
         break;
       }
       cur = nx;
@@ -4200,10 +4316,10 @@ function ssBuildIds(start, count, predictOn){
   if(p.mode === "digit_lower"){
     let cur = p.tail;
     for(let i=0;i<c;i++){
-      out.push(`${p.prefix}${cur}`);
-      const nx = ssNextFromSet(cur, SS_LOWER);
+      out.push(`${ssFormatNumWithStyle_v8(p.prefix, p.digitStyle)}${cur}`);
+      const nx = ssNextFromSet_v8(cur, SS_LOWER_V8);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:(c-1-i)},(_,k)=>`${s}_${k+2}`));
+        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
         break;
       }
       cur = nx;
@@ -4214,10 +4330,10 @@ function ssBuildIds(start, count, predictOn){
   if(p.mode === "digit_upper"){
     let cur = p.tail;
     for(let i=0;i<c;i++){
-      out.push(`${p.prefix}${cur}`);
-      const nx = ssNextFromSet(cur, SS_UPPER);
+      out.push(`${ssFormatNumWithStyle_v8(p.prefix, p.digitStyle)}${cur}`);
+      const nx = ssNextFromSet_v8(cur, SS_UPPER_V8);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:(c-1-i)},(_,k)=>`${s}_${k+2}`));
+        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
         break;
       }
       cur = nx;
@@ -4228,10 +4344,61 @@ function ssBuildIds(start, count, predictOn){
   if(p.mode === "digits_only"){
     let n = Number(p.firstNum);
     for(let i=0;i<c;i++){
-      out.push(String(n));
+      out.push(ssFormatNumWithStyle_v8(n, p.digitStyle));
       n += 1;
     }
     return out;
+  }
+
+  if(p.mode === "suffix_digits_generic"){
+    let n = Number(p.tailHalf);
+    for(let i=0;i<c;i++){
+      out.push(`${p.prefix}${ssFormatNumWithStyle_v8(n, p.digitStyle)}`);
+      n += 1;
+    }
+    return out;
+  }
+
+  if(p.mode === "suffix_lower_generic"){
+    let cur = p.tail;
+    for(let i=0;i<c;i++){
+      out.push(`${p.prefix}${cur}`);
+      const nx = ssNextFromSet_v8(cur, SS_LOWER_V8);
+      if(!nx && i < c-1){
+        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        break;
+      }
+      cur = nx;
+    }
+    return out.slice(0,c);
+  }
+
+  if(p.mode === "suffix_upper_generic"){
+    let cur = p.tail;
+    for(let i=0;i<c;i++){
+      out.push(`${p.prefix}${cur}`);
+      const nx = ssNextFromSet_v8(cur, SS_UPPER_V8);
+      if(!nx && i < c-1){
+        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        break;
+      }
+      cur = nx;
+    }
+    return out.slice(0,c);
+  }
+
+  if(p.mode === "suffix_hira_generic"){
+    let cur = p.tail;
+    for(let i=0;i<c;i++){
+      out.push(`${p.prefix}${cur}`);
+      const nx = ssNextFromSet_v8(cur, SS_HIRA_V8);
+      if(!nx && i < c-1){
+        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        break;
+      }
+      cur = nx;
+    }
+    return out.slice(0,c);
   }
 
   for(let i=1;i<=c;i++){
@@ -4240,7 +4407,11 @@ function ssBuildIds(start, count, predictOn){
   return out;
 }
 
-function ssEnsurePreview(){
+/* =========================
+  preview
+========================= */
+
+function ssEnsurePreview_v8(){
   const n = ssNum(state.seatSetup.count);
   const s = state.seatSetup.startLabel;
   const predictOn = !!state.seatSetup.predictOn;
@@ -4255,20 +4426,16 @@ function ssEnsurePreview(){
     return;
   }
 
-  state.seatSetup.previewSeatIds = ssBuildIds(s, n, predictOn);
+  state.seatSetup.previewSeatIds = ssBuildIds_v8(s, n, predictOn);
 }
 
-/* =========================
-  preview html
-========================= */
-
-function ssPreviewHtml(id, cap){
+function ssPreviewHtml_v8(id, cap){
   return `
     <div
       class="seatCard in"
       data-id="${id}"
       style="
-        min-height:80px;
+        min-height:90px;
         display:flex;
         flex-direction:column;
         align-items:center;
@@ -4276,17 +4443,18 @@ function ssPreviewHtml(id, cap){
         gap:4px;
       "
     >
-      <div style="font-size:20px;font-weight:900">${id}</div>
+      <div style="font-size:14px;font-weight:900;opacity:.8">${state.seatSetup.committedName || "名称未定"}</div>
+      <div style="font-size:22px;font-weight:900">${id}</div>
       <div style="font-size:13px">定員 ${cap}</div>
     </div>
   `;
 }
 
-function renderSeatSetupPreview_v6(){
+function renderSeatSetupPreview_v8(){
   const box = $("ssPreviewGrid");
   if(!box) return;
 
-  ssEnsurePreview();
+  ssEnsurePreview_v8();
 
   const ids = state.seatSetup.previewSeatIds || [];
   const cap = Math.max(0, ssNum(state.seatSetup.capacity));
@@ -4296,24 +4464,23 @@ function renderSeatSetupPreview_v6(){
     return;
   }
 
-  box.innerHTML = ids.map(id=> ssPreviewHtml(id, cap)).join("");
+  box.innerHTML = ids.map(id=> ssPreviewHtml_v8(id, cap)).join("");
 
   box.querySelectorAll("[data-id]").forEach(el=>{
     el.onclick = ()=>{
       const id = el.getAttribute("data-id");
-      if(typeof openSeatSetupPreviewEditor_v6 === "function"){
-        openSeatSetupPreviewEditor_v6(id);
+      if(typeof openSeatSetupPreviewEditor_v8 === "function"){
+        openSeatSetupPreviewEditor_v8(id);
       }
     };
   });
 }
 
 /* =========================
-  PART6-2：席登録（完全版 v6）
-  名称描画 / 予測ONOFF / プレビュー編集 / 保存前処理
+  PART6-2：席登録（完全版 v8）
 ========================= */
 
-function renderSeatSetupNames_v6(){
+function renderSeatSetupNames_v8(){
 
   const grid = $("ssNameGrid");
   if(!grid) return;
@@ -4332,14 +4499,13 @@ function renderSeatSetupNames_v6(){
     c.textContent = name;
 
     if(state.seatSetup.selectedName === name){
-      c.style.outline = "2px solid rgba(122,167,255,0.9)";
-      c.style.background = "rgba(122,167,255,0.14)";
+      c.style.outline = "2px solid #7aa7ff";
     }
 
     c.onclick = ()=>{
       state.seatSetup.selectedName =
         (state.seatSetup.selectedName === name) ? null : name;
-      renderSeatSetupNames_v6();
+      renderSeatSetupNames_v8();
     };
 
     grid.appendChild(c);
@@ -4348,33 +4514,27 @@ function renderSeatSetupNames_v6(){
   ssSetCommittedBox();
 }
 
-function renderSeatSetupCounters_v6(){
+function renderSeatSetupCounters_v8(){
 
-  if($("ssCntVal")){
-    $("ssCntVal").textContent = String(Math.max(0, ssNum(state.seatSetup.count)));
-  }
+  $("ssCntVal").textContent =
+    Math.max(0, ssNum(state.seatSetup.count));
 
-  if($("ssCapVal")){
-    $("ssCapVal").textContent = String(Math.max(0, ssNum(state.seatSetup.capacity)));
-  }
+  $("ssCapVal").textContent =
+    Math.max(0, ssNum(state.seatSetup.capacity));
 
-  if($("ssStartLabel")){
-    $("ssStartLabel").value = state.seatSetup.startLabel || "";
-  }
+  $("ssStartLabel").value =
+    state.seatSetup.startLabel || "";
 
-  if($("ssPredictToggle")){
-    const on = !!state.seatSetup.predictOn;
-    $("ssPredictToggle").textContent = on ? "予測ON" : "予測OFF";
-    $("ssPredictToggle").classList.toggle("lime", on);
-    if(!on){
-      $("ssPredictToggle").style.opacity = ".7";
-    }else{
-      $("ssPredictToggle").style.opacity = "1";
-    }
-  }
+  const on = !!state.seatSetup.predictOn;
+
+  $("ssPredictToggle").textContent =
+    on ? "予測ON" : "予測OFF";
+
+  $("ssPredictToggle").style.opacity =
+    on ? "1" : ".6";
 }
 
-function resetSeatSetupForm_v6(){
+function resetSeatSetupForm_v8(){
 
   state.seatSetup.selectedName = null;
   state.seatSetup.committedName = null;
@@ -4384,83 +4544,83 @@ function resetSeatSetupForm_v6(){
   state.seatSetup.previewSeatIds = [];
   state.seatSetup.predictOn = true;
 
-  renderSeatSetupNames_v6();
-  renderSeatSetupCounters_v6();
-  renderSeatSetupPreview_v6();
+  renderSeatSetupNames_v8();
+  renderSeatSetupCounters_v8();
+  renderSeatSetupPreview_v8();
 }
 
 /* =========================
-  プレビュー席編集
+  preview editor
 ========================= */
 
-function openSeatSetupPreviewEditor_v6(oldId){
+function openSeatSetupPreviewEditor_v8(oldId){
 
   const ids = state.seatSetup.previewSeatIds || [];
   const idx = ids.indexOf(oldId);
+
   if(idx === -1) return;
 
   openModal(
     "作成予定席の編集",
-    `
-      <div style="font-weight:900;margin-bottom:10px">席番号：${oldId}</div>
 
-      <div style="margin-bottom:6px;font-weight:900">番号変更</div>
-      <input
-        id="ssEditPreviewId"
+    `
+      席番号
+      <input id="ssEditPreviewId"
         class="btn full"
-        style="text-align:left;margin-bottom:12px"
         value="${oldId}"
       />
 
-      <div style="margin-bottom:6px;font-weight:900">定員変更</div>
-      <div style="display:flex;gap:10px;margin-bottom:12px">
+      定員
+      <div style="display:flex;gap:10px">
         <button class="btn" id="ssEditCapMinus">◀</button>
-        <div id="ssEditCapVal" class="pill" style="flex:1">
-          ${Math.max(0, ssNum(state.seatSetup.capacity))}
+        <div id="ssEditCapVal" class="pill">
+          ${state.seatSetup.capacity}
         </div>
         <button class="btn" id="ssEditCapPlus">▶</button>
       </div>
 
-      <div style="margin-bottom:6px;font-weight:900;color:var(--danger)">削除</div>
-      <input
-        id="ssEditDeleteSlide"
-        class="range"
+      削除
+      <input id="ssEditDeleteSlide"
         type="range"
         min="0"
         max="100"
         value="0"
       />
     `,
+
     [
       {
         label:"保存",
         lime:true,
         onClick:()=>{
 
-          const newId = String(($("ssEditPreviewId").value || "")).trim();
+          const newId =
+            $("ssEditPreviewId").value.trim();
+
           if(!newId){
-            toast("席番号を入力してください");
+            toast("番号を入力");
             return;
           }
 
-          if(ids.some((x,i)=> x === newId && i !== idx)){
-            toast("同じ席番号があります");
+          if(ids.some((x,i)=> x===newId && i!==idx)){
+            toast("重複");
             return;
           }
 
-          state.seatSetup.previewSeatIds[idx] = newId;
+          ids[idx] = newId;
+
           state.seatSetup.capacity =
-            Math.max(0, ssNum($("ssEditCapVal").textContent || 0));
+            ssNum($("ssEditCapVal").textContent);
 
           closeModal();
-          renderSeatSetupCounters_v6();
-          renderSeatSetupPreview_v6();
-          toast("変更しました");
+
+          renderSeatSetupCounters_v8();
+          renderSeatSetupPreview_v8();
         }
       },
+
       {
         label:"戻る",
-        lime:false,
         onClick:()=> closeModal()
       }
     ]
@@ -4469,41 +4629,45 @@ function openSeatSetupPreviewEditor_v6(oldId){
   setTimeout(()=>{
 
     $("ssEditCapMinus").onclick = ()=>{
-      const cur = Math.max(0, ssNum($("ssEditCapVal").textContent) - 1);
-      $("ssEditCapVal").textContent = String(cur);
+      $("ssEditCapVal").textContent =
+        Math.max(
+          0,
+          ssNum($("ssEditCapVal").textContent) - 1
+        );
     };
 
     $("ssEditCapPlus").onclick = ()=>{
-      const cur = Math.max(0, ssNum($("ssEditCapVal").textContent) + 1);
-      $("ssEditCapVal").textContent = String(cur);
+      $("ssEditCapVal").textContent =
+        ssNum($("ssEditCapVal").textContent) + 1;
     };
 
     $("ssEditDeleteSlide").onchange = ()=>{
-      const v = ssNum($("ssEditDeleteSlide").value || 0);
-      if(v < 88){
+
+      if(ssNum($("ssEditDeleteSlide").value) < 88){
         $("ssEditDeleteSlide").value = 0;
         return;
       }
 
-      state.seatSetup.previewSeatIds.splice(idx,1);
-      state.seatSetup.count = state.seatSetup.previewSeatIds.length;
+      ids.splice(idx,1);
+      state.seatSetup.count = ids.length;
 
       closeModal();
-      renderSeatSetupCounters_v6();
-      renderSeatSetupPreview_v6();
-      toast("削除しました");
+
+      renderSeatSetupCounters_v8();
+      renderSeatSetupPreview_v8();
     };
 
   },0);
 }
 
 /* =========================
-  保存用 seat object
+  save seat
 ========================= */
 
-function ssCreateSeatObject_v6(id, cap){
+function ssCreateSeatObject_v8(id, cap){
 
   return normalizeSeat({
+
     id:id,
     status:"empty",
     people:0,
@@ -4512,35 +4676,38 @@ function ssCreateSeatObject_v6(id, cap){
     bills:0,
     reserve:null,
     merged:false,
-    mergeLabel:"",
     sub:null,
-    orders:[],
-    orderLog:[],
     groupId:null,
     groupColor:null,
     groupRoot:null,
-    cap:Math.max(0, ssNum(cap))
+    cap:cap
+
   });
 }
 
-function ssHasDuplicateIds_v6(ids){
-  return ids.some(id => state.seats.some(s => s.id === id));
+function ssHasDuplicateIds_v8(ids){
+
+  return ids.some(id =>
+    state.seats.some(s=> s.id===id)
+  );
 }
 
 /* =========================
-  ボタン処理
+  hook
 ========================= */
 
-(function hookSeatSetup_v6(){
+(function hookSeatSetup_v8(){
 
-  if(hookSeatSetup_v6._done) return;
-  hookSeatSetup_v6._done = true;
+  if(hookSeatSetup_v8._done) return;
+  hookSeatSetup_v8._done = true;
 
   $("ssNameCommit").onclick = ()=>{
 
-    const pick = state.seatSetup.selectedName;
+    const pick =
+      state.seatSetup.selectedName;
+
     if(!pick){
-      toast("名称を選択してください");
+      toast("名称選択");
       return;
     }
 
@@ -4548,45 +4715,30 @@ function ssHasDuplicateIds_v6(ids){
 
       openModal(
         "名称作成",
-        `
-          <input
-            id="ssNewName"
-            class="btn full"
-            style="text-align:left"
-            placeholder="例：中庭テラスA1"
-          />
-        `,
+
+        `<input id="ssNewName"
+          class="btn full"
+        />`,
+
         [
           {
             label:"追加",
             lime:true,
             onClick:()=>{
 
-              const v = String(($("ssNewName").value || "")).trim();
+              const v =
+                $("ssNewName").value.trim();
 
-              if(!v){
-                toast("名称を入力してください");
-                return;
-              }
-
-              if(ssAllNames().includes(v)){
-                toast("同じ名称があります");
-                return;
-              }
+              if(!v) return;
 
               state.seatSetup.customNames.push(v);
+
               state.seatSetup.selectedName = v;
               state.seatSetup.committedName = v;
 
               closeModal();
-              renderSeatSetupNames_v6();
-              toast("名称を追加しました");
+              renderSeatSetupNames_v8();
             }
-          },
-          {
-            label:"戻る",
-            lime:false,
-            onClick:()=> closeModal()
           }
         ]
       );
@@ -4595,126 +4747,125 @@ function ssHasDuplicateIds_v6(ids){
     }
 
     state.seatSetup.committedName = pick;
-    renderSeatSetupNames_v6();
-    toast(`名称：${pick}`);
+    renderSeatSetupNames_v8();
   };
 
   $("ssCntMinus").onclick = ()=>{
-    state.seatSetup.count = Math.max(0, ssNum(state.seatSetup.count) - 1);
-    renderSeatSetupCounters_v6();
-    renderSeatSetupPreview_v6();
+    state.seatSetup.count--;
+    if(state.seatSetup.count < 0)
+      state.seatSetup.count = 0;
+
+    renderSeatSetupCounters_v8();
+    renderSeatSetupPreview_v8();
   };
 
   $("ssCntPlus").onclick = ()=>{
-    state.seatSetup.count = Math.max(0, ssNum(state.seatSetup.count) + 1);
-    renderSeatSetupCounters_v6();
-    renderSeatSetupPreview_v6();
+    state.seatSetup.count++;
+    renderSeatSetupCounters_v8();
+    renderSeatSetupPreview_v8();
   };
 
   $("ssCapMinus").onclick = ()=>{
-    state.seatSetup.capacity = Math.max(0, ssNum(state.seatSetup.capacity) - 1);
-    renderSeatSetupCounters_v6();
-    renderSeatSetupPreview_v6();
+    state.seatSetup.capacity--;
+    if(state.seatSetup.capacity < 0)
+      state.seatSetup.capacity = 0;
+
+    renderSeatSetupCounters_v8();
+    renderSeatSetupPreview_v8();
   };
 
   $("ssCapPlus").onclick = ()=>{
-    state.seatSetup.capacity = Math.max(0, ssNum(state.seatSetup.capacity) + 1);
-    renderSeatSetupCounters_v6();
-    renderSeatSetupPreview_v6();
+    state.seatSetup.capacity++;
+    renderSeatSetupCounters_v8();
+    renderSeatSetupPreview_v8();
   };
 
   $("ssPredictToggle").onclick = ()=>{
-    state.seatSetup.predictOn = !state.seatSetup.predictOn;
-    renderSeatSetupCounters_v6();
-    renderSeatSetupPreview_v6();
+    state.seatSetup.predictOn =
+      !state.seatSetup.predictOn;
+
+    renderSeatSetupCounters_v8();
+    renderSeatSetupPreview_v8();
   };
 
   $("ssApplyLabel").onclick = ()=>{
 
     state.seatSetup.startLabel =
-      String(($("ssStartLabel").value || "")).trim();
+      $("ssStartLabel").value.trim();
 
-    if(!state.seatSetup.startLabel){
-      toast("席番号を入力してください");
-      return;
-    }
-
-    renderSeatSetupCounters_v6();
-    renderSeatSetupPreview_v6();
+    renderSeatSetupPreview_v8();
   };
 
   $("ssSave").onclick = ()=>{
 
-    const name = String(state.seatSetup.committedName || "").trim();
-    const count = Math.max(0, ssNum(state.seatSetup.count));
-    const cap = Math.max(0, ssNum(state.seatSetup.capacity));
-    const ids = (state.seatSetup.previewSeatIds || [])
-      .map(x=> String(x || "").trim())
-      .filter(Boolean);
+    const name =
+      state.seatSetup.committedName;
+
+    const count =
+      ssNum(state.seatSetup.count);
+
+    const cap =
+      ssNum(state.seatSetup.capacity);
+
+    const ids =
+      state.seatSetup.previewSeatIds || [];
 
     if(!name){
-      toast("名称を決定してください");
+      toast("名称決定");
       return;
     }
 
-    if(count <= 0){
-      toast("作成席数を入力してください");
+    if(!count){
+      toast("席数");
       return;
     }
 
-    if(cap <= 0){
-      toast("1席あたり定員を入力してください");
+    if(!cap){
+      toast("定員");
       return;
     }
 
     if(ids.length !== count){
-      toast("席番号を決定してください");
+      toast("番号決定");
       return;
     }
 
-    if(ids.some(id => /^未/.test(id))){
-      toast("席番号を決定してください");
-      return;
-    }
-
-    if(ssHasDuplicateIds_v6(ids)){
-      toast("すでに存在する席番号があります");
+    if(ssHasDuplicateIds_v8(ids)){
+      toast("重複");
       return;
     }
 
     ids.forEach(id=>{
-      state.seats.push(ssCreateSeatObject_v6(id, cap));
+      state.seats.push(
+        ssCreateSeatObject_v8(id, cap)
+      );
     });
 
     state.seatSetup.groups.push({
+
       gid:ssNewGid(),
       name:name,
       seatIds:[...ids],
-      capacity:cap,
-      createdTs:nowTs()
+      capacity:cap
+
     });
 
     normalizeAllSeats();
 
-    if(typeof renderSeats === "function") renderSeats();
-    if(typeof persistAll === "function") persistAll();
-    if(typeof emitEvent === "function"){
-      emitEvent("seat_setup_save", {name, seatIds:[...ids], capacity:cap});
-    }
+    renderSeats();
+    renderSeatSetupGroups_v8();
+    resetSeatSetupForm_v8();
 
-    renderSeatSetupGroups_v6();
-    resetSeatSetupForm_v6();
-    toast("保存しました");
   };
 
 })();
 
 /* =========================
-  PART6-3：席登録（完全版 v6）
-  作成済み一覧 / 名称変更 / 削除 / 席編集
+  PART6-3：席登録（完全版 v8）
+  作成済み一覧 / 名称変更 / 削除 / 元席削除対応
 ========================= */
 
-function renderSeatSetupGroups_v6(){
+function renderSeatSetupGroups_v8(){
 
   const box = $("ssGroups");
   if(!box) return;
@@ -4725,55 +4876,129 @@ function renderSeatSetupGroups_v6(){
 
   if(groups.length === 0){
     box.innerHTML = `<div style="opacity:.85">まだ作成されていません</div>`;
-    return;
+  }else{
+    groups.forEach(g=>{
+
+      const wrap = document.createElement("div");
+      wrap.style.marginBottom = "14px";
+
+      const head = document.createElement("button");
+      head.className = "btn full";
+      head.style.textAlign = "left";
+      head.style.fontWeight = "900";
+      head.textContent = `${g.name}（定員 ${Math.max(0, ssNum(g.capacity))}名）`;
+      head.onclick = ()=> openSeatSetupGroupEditor_v8(g.gid);
+      wrap.appendChild(head);
+
+      const grid = document.createElement("div");
+      grid.className = "seatGrid";
+      grid.style.marginTop = "10px";
+
+      (g.seatIds || []).forEach(id=>{
+
+        const seat = seatById(id);
+        const cap = Math.max(0, ssNum(seat?.cap ?? g.capacity ?? 0));
+
+        const c = document.createElement("div");
+        c.className = "seatCard in";
+        c.style.minHeight = "92px";
+        c.style.display = "flex";
+        c.style.flexDirection = "column";
+        c.style.alignItems = "center";
+        c.style.justifyContent = "center";
+        c.style.gap = "4px";
+        c.style.fontWeight = "900";
+
+        c.innerHTML = `
+          <div style="font-size:13px;opacity:.78">${g.name}</div>
+          <div style="font-size:22px">${id}</div>
+          <div style="font-size:13px;opacity:.85">定員 ${cap}名</div>
+        `;
+
+        c.onclick = ()=> openSavedSeatEditor_v8(g.gid, id);
+        grid.appendChild(c);
+      });
+
+      wrap.appendChild(grid);
+      box.appendChild(wrap);
+    });
   }
 
-  groups.forEach(g=>{
-
-    const wrap = document.createElement("div");
-    wrap.style.marginBottom = "14px";
-
-    const head = document.createElement("button");
-    head.className = "btn full";
-    head.style.textAlign = "left";
-    head.style.fontWeight = "900";
-    head.textContent = `${g.name}（定員 ${Math.max(0, ssNum(g.capacity))}名）`;
-    head.onclick = ()=> openSeatSetupGroupEditor_v6(g.gid);
-    wrap.appendChild(head);
-
-    const grid = document.createElement("div");
-    grid.className = "seatGrid";
-    grid.style.marginTop = "10px";
-
-    (g.seatIds || []).forEach(id=>{
-
-      const seat = seatById(id);
-      const cap = Math.max(0, ssNum(seat?.cap ?? g.capacity ?? 0));
-
-      const c = document.createElement("div");
-      c.className = "seatCard in";
-      c.style.minHeight = "72px";
-      c.style.display = "flex";
-      c.style.flexDirection = "column";
-      c.style.alignItems = "center";
-      c.style.justifyContent = "center";
-      c.style.gap = "6px";
-      c.style.fontWeight = "900";
-      c.innerHTML = `
-        <div style="font-size:20px">${id}</div>
-        <div style="font-size:13px;opacity:.85">定員 ${cap}名</div>
-      `;
-      c.onclick = ()=> openSavedSeatEditor_v6(g.gid, id);
-
-      grid.appendChild(c);
-    });
-
-    wrap.appendChild(grid);
-    box.appendChild(wrap);
-  });
+  renderSeatSetupBaseSeats_v8();
 }
 
-function openSeatSetupGroupEditor_v6(gid){
+/* =========================
+  元からある席一覧
+========================= */
+
+function renderSeatSetupBaseSeats_v8(){
+
+  const box = $("ssGroups");
+  if(!box) return;
+
+  const groupedIds = new Set(
+    (state.seatSetup.groups || []).flatMap(g => g.seatIds || [])
+  );
+
+  const baseSeats = (state.seats || []).filter(s => !groupedIds.has(s.id));
+  if(baseSeats.length === 0) return;
+
+  const wrap = document.createElement("div");
+  wrap.style.marginTop = "18px";
+
+  const title = document.createElement("div");
+  title.style.fontWeight = "900";
+  title.style.marginBottom = "8px";
+  title.textContent = "元からある席";
+  wrap.appendChild(title);
+
+  const grid = document.createElement("div");
+  grid.className = "seatGrid";
+
+  baseSeats.forEach(seat=>{
+
+    const busy = ssIsBusy(seat);
+
+    const c = document.createElement("div");
+    c.className = "seatCard";
+    c.style.minHeight = "92px";
+    c.style.display = "flex";
+    c.style.flexDirection = "column";
+    c.style.alignItems = "center";
+    c.style.justifyContent = "center";
+    c.style.gap = "4px";
+    c.style.fontWeight = "900";
+
+    if(busy){
+      c.style.background = "#d85c5c";
+      c.style.borderColor = "#8f1f1f";
+      c.style.color = "#fff";
+    }
+
+    c.innerHTML = `
+      <div style="font-size:13px;opacity:.9">既存席</div>
+      <div style="font-size:22px">${seat.id}</div>
+      <div style="font-size:13px;opacity:.9">
+        ${busy ? "使用中で削除不可" : `定員 ${Math.max(0, ssNum(seat.cap || 0))}名`}
+      </div>
+    `;
+
+    c.onclick = ()=>{
+      openBaseSeatEditor_v8(seat.id);
+    };
+
+    grid.appendChild(c);
+  });
+
+  wrap.appendChild(grid);
+  box.appendChild(wrap);
+}
+
+/* =========================
+  名称編集
+========================= */
+
+function openSeatSetupGroupEditor_v8(gid){
 
   const g = (state.seatSetup.groups || []).find(x=> x.gid === gid);
   if(!g) return;
@@ -4782,18 +5007,13 @@ function openSeatSetupGroupEditor_v6(gid){
     "名称編集",
     `
       <div style="font-weight:900;margin-bottom:10px">${g.name}</div>
-
       <div style="display:flex;gap:10px">
         <button class="btn lime" id="ssRenameGroup" style="flex:1">名称変更</button>
         <button class="btn" id="ssDeleteGroup" style="flex:1">削除</button>
       </div>
     `,
     [
-      {
-        label:"戻る",
-        lime:false,
-        onClick:()=> closeModal()
-      }
+      { label:"戻る", lime:false, onClick:()=> closeModal() }
     ]
   );
 
@@ -4803,29 +5023,20 @@ function openSeatSetupGroupEditor_v6(gid){
 
       openModal(
         "名称変更",
-        `
-          <input
-            id="ssRenameGroupVal"
-            class="btn full"
-            style="text-align:left"
-            value="${g.name}"
-          />
-        `,
+        `<input id="ssRenameGroupVal" class="btn full" style="text-align:left" value="${g.name}" />`,
         [
           {
             label:"変更",
             lime:true,
             onClick:()=>{
-
-              const v = String(($("ssRenameGroupVal").value || "")).trim();
-
+              const v = ($("ssRenameGroupVal").value || "").trim();
               if(!v){
-                toast("名称を入力してください");
+                toast("名称を入力");
                 return;
               }
 
               if(v !== g.name && ssAllNames().includes(v)){
-                toast("同じ名称があります");
+                toast("同じ名称");
                 return;
               }
 
@@ -4835,25 +5046,17 @@ function openSeatSetupGroupEditor_v6(gid){
               state.seatSetup.customNames =
                 (state.seatSetup.customNames || []).map(x=> x === oldName ? v : x);
 
-              if(state.seatSetup.committedName === oldName){
-                state.seatSetup.committedName = v;
-              }
-              if(state.seatSetup.selectedName === oldName){
-                state.seatSetup.selectedName = v;
-              }
+              if(state.seatSetup.committedName === oldName) state.seatSetup.committedName = v;
+              if(state.seatSetup.selectedName === oldName) state.seatSetup.selectedName = v;
 
               closeModal();
-              renderSeatSetupNames_v6();
-              renderSeatSetupGroups_v6();
+              renderSeatSetupNames_v8();
+              renderSeatSetupGroups_v8();
               if(typeof persistAll === "function") persistAll();
-              toast("名称を変更しました");
+              toast("変更しました");
             }
           },
-          {
-            label:"戻る",
-            lime:false,
-            onClick:()=> closeModal()
-          }
+          { label:"戻る", lime:false, onClick:()=> closeModal() }
         ]
       );
     };
@@ -4866,7 +5069,7 @@ function openSeatSetupGroupEditor_v6(gid){
       });
 
       if(blocked){
-        toast("使用中・予約中・合流中の席があるため削除できません");
+        toast("使用中があるため削除不可");
         return;
       }
 
@@ -4876,74 +5079,53 @@ function openSeatSetupGroupEditor_v6(gid){
           <div style="color:var(--danger);font-weight:900;margin-bottom:10px">
             名称「${g.name}」と席を削除します
           </div>
-
-          <input
-            id="ssDeleteGroupSlide"
-            class="range"
-            type="range"
-            min="0"
-            max="100"
-            value="0"
-          />
+          <input id="ssDeleteGroupSlide" class="range" type="range" min="0" max="100" value="0" />
         `,
         [
-          {
-            label:"戻る",
-            lime:false,
-            onClick:()=> closeModal()
-          }
+          { label:"戻る", lime:false, onClick:()=> closeModal() }
         ]
       );
 
       setTimeout(()=>{
-
         $("ssDeleteGroupSlide").onchange = ()=>{
-
           const v = ssNum($("ssDeleteGroupSlide").value || 0);
           if(v < 88){
             $("ssDeleteGroupSlide").value = 0;
             return;
           }
 
-          state.seats =
-            state.seats.filter(s=> !(g.seatIds || []).includes(s.id));
+          state.seats = state.seats.filter(s=> !(g.seatIds || []).includes(s.id));
+          state.seatSetup.groups = (state.seatSetup.groups || []).filter(x=> x.gid !== gid);
+          state.seatSetup.customNames = (state.seatSetup.customNames || []).filter(x=> x !== g.name);
 
-          state.seatSetup.groups =
-            (state.seatSetup.groups || []).filter(x=> x.gid !== gid);
-
-          state.seatSetup.customNames =
-            (state.seatSetup.customNames || []).filter(x=> x !== g.name);
-
-          if(state.seatSetup.committedName === g.name){
-            state.seatSetup.committedName = null;
-          }
-          if(state.seatSetup.selectedName === g.name){
-            state.seatSetup.selectedName = null;
-          }
+          if(state.seatSetup.committedName === g.name) state.seatSetup.committedName = null;
+          if(state.seatSetup.selectedName === g.name) state.seatSetup.selectedName = null;
 
           closeModal();
-          renderSeatSetupNames_v6();
-          renderSeatSetupGroups_v6();
+          renderSeatSetupNames_v8();
+          renderSeatSetupGroups_v8();
           if(typeof renderSeats === "function") renderSeats();
           if(typeof persistAll === "function") persistAll();
           toast("削除しました");
         };
-
       },0);
     };
 
   },0);
 }
 
-function openSavedSeatEditor_v6(gid, seatId){
+/* =========================
+  保存済み席編集
+========================= */
+
+function openSavedSeatEditor_v8(gid, seatId){
 
   const g = (state.seatSetup.groups || []).find(x=> x.gid === gid);
   const seat = seatById(seatId);
-
   if(!g || !seat) return;
 
   if(ssIsBusy(seat)){
-    toast("使用中・予約中・合流中の席は編集できません");
+    toast("使用中・予約中・合流中は編集不可");
     return;
   }
 
@@ -4953,12 +5135,7 @@ function openSavedSeatEditor_v6(gid, seatId){
       <div style="font-weight:900;margin-bottom:10px">席：${seat.id}</div>
 
       <div style="margin-bottom:6px;font-weight:900">番号変更</div>
-      <input
-        id="ssSavedSeatNewId"
-        class="btn full"
-        style="text-align:left;margin-bottom:12px"
-        value="${seat.id}"
-      />
+      <input id="ssSavedSeatNewId" class="btn full" style="text-align:left;margin-bottom:12px" value="${seat.id}" />
 
       <div style="margin-bottom:6px;font-weight:900">定員変更</div>
       <div style="display:flex;gap:10px;margin-bottom:12px">
@@ -4968,68 +5145,52 @@ function openSavedSeatEditor_v6(gid, seatId){
       </div>
 
       <div style="margin-bottom:6px;font-weight:900;color:var(--danger)">削除</div>
-      <input
-        id="ssSavedSeatDeleteSlide"
-        class="range"
-        type="range"
-        min="0"
-        max="100"
-        value="0"
-      />
+      <input id="ssSavedSeatDeleteSlide" class="range" type="range" min="0" max="100" value="0" />
     `,
     [
       {
         label:"保存",
         lime:true,
         onClick:()=>{
-
-          const newId = String(($("ssSavedSeatNewId").value || "")).trim();
-
+          const newId = ($("ssSavedSeatNewId").value || "").trim();
           if(!newId){
-            toast("席番号を入力してください");
+            toast("席番号を入力");
             return;
           }
-
           if(state.seats.some(s=> s.id === newId && s !== seat)){
-            toast("同じ席番号があります");
+            toast("同じ席番号");
             return;
           }
 
           const oldId = seat.id;
           seat.id = newId;
           seat.cap = Math.max(0, ssNum($("ssSavedCapVal").textContent || 0));
-
           g.seatIds = (g.seatIds || []).map(x=> x === oldId ? newId : x);
 
           closeModal();
-          renderSeatSetupGroups_v6();
+          renderSeatSetupGroups_v8();
           if(typeof renderSeats === "function") renderSeats();
           if(typeof persistAll === "function") persistAll();
           toast("変更しました");
         }
       },
-      {
-        label:"戻る",
-        lime:false,
-        onClick:()=> closeModal()
-      }
+      { label:"戻る", lime:false, onClick:()=> closeModal() }
     ]
   );
 
   setTimeout(()=>{
 
     $("ssSavedCapMinus").onclick = ()=>{
-      const cur = Math.max(0, ssNum($("ssSavedCapVal").textContent || 0) - 1);
-      $("ssSavedCapVal").textContent = String(cur);
+      $("ssSavedCapVal").textContent =
+        Math.max(0, ssNum($("ssSavedCapVal").textContent || 0) - 1);
     };
 
     $("ssSavedCapPlus").onclick = ()=>{
-      const cur = Math.max(0, ssNum($("ssSavedCapVal").textContent || 0) + 1);
-      $("ssSavedCapVal").textContent = String(cur);
+      $("ssSavedCapVal").textContent =
+        ssNum($("ssSavedCapVal").textContent || 0) + 1;
     };
 
     $("ssSavedSeatDeleteSlide").onchange = ()=>{
-
       const v = ssNum($("ssSavedSeatDeleteSlide").value || 0);
       if(v < 88){
         $("ssSavedSeatDeleteSlide").value = 0;
@@ -5040,12 +5201,11 @@ function openSavedSeatEditor_v6(gid, seatId){
       g.seatIds = (g.seatIds || []).filter(x=> x !== seatId);
 
       if((g.seatIds || []).length === 0){
-        state.seatSetup.groups =
-          (state.seatSetup.groups || []).filter(x=> x.gid !== gid);
+        state.seatSetup.groups = (state.seatSetup.groups || []).filter(x=> x.gid !== gid);
       }
 
       closeModal();
-      renderSeatSetupGroups_v6();
+      renderSeatSetupGroups_v8();
       if(typeof renderSeats === "function") renderSeats();
       if(typeof persistAll === "function") persistAll();
       toast("削除しました");
@@ -5054,23 +5214,87 @@ function openSavedSeatEditor_v6(gid, seatId){
   },0);
 }
 
+/* =========================
+  元席編集
+========================= */
+
+function openBaseSeatEditor_v8(seatId){
+
+  const seat = seatById(seatId);
+  if(!seat) return;
+
+  const busy = ssIsBusy(seat);
+
+  if(busy){
+    openModal(
+      "既存席",
+      `
+        <div style="font-weight:900;color:#c33;margin-bottom:10px">
+          使用中のため削除できません
+        </div>
+        <div>席番号：${seat.id}</div>
+        <div>定員：${Math.max(0, ssNum(seat.cap || 0))}名</div>
+      `,
+      [
+        { label:"戻る", lime:false, onClick:()=> closeModal() }
+      ]
+    );
+    return;
+  }
+
+  openModal(
+    "既存席削除",
+    `
+      <div style="font-weight:900;margin-bottom:10px">席番号：${seat.id}</div>
+      <div style="margin-bottom:10px">定員：${Math.max(0, ssNum(seat.cap || 0))}名</div>
+      <div style="margin-bottom:6px;font-weight:900;color:var(--danger)">削除</div>
+      <input id="ssBaseSeatDeleteSlide" class="range" type="range" min="0" max="100" value="0" />
+    `,
+    [
+      { label:"戻る", lime:false, onClick:()=> closeModal() }
+    ]
+  );
+
+  setTimeout(()=>{
+    $("ssBaseSeatDeleteSlide").onchange = ()=>{
+      const v = ssNum($("ssBaseSeatDeleteSlide").value || 0);
+      if(v < 88){
+        $("ssBaseSeatDeleteSlide").value = 0;
+        return;
+      }
+
+      state.seats = state.seats.filter(s=> s.id !== seatId);
+
+      closeModal();
+      renderSeatSetupGroups_v8();
+      if(typeof renderSeats === "function") renderSeats();
+      if(typeof persistAll === "function") persistAll();
+      toast("削除しました");
+    };
+  },0);
+}
+
+/* =========================
+  hook
+========================= */
+
 registerScreenHook("scrSeatSetup", ()=>{
   try{
-    renderSeatSetupNames_v6();
-    renderSeatSetupCounters_v6();
-    renderSeatSetupPreview_v6();
-    renderSeatSetupGroups_v6();
+    renderSeatSetupNames_v8();
+    renderSeatSetupCounters_v8();
+    renderSeatSetupPreview_v8();
+    renderSeatSetupGroups_v8();
   }catch(e){
     console.warn(e);
   }
 });
 
-(function initSeatSetupPart6_v6(){
+(function initSeatSetupPart6_v8(){
   try{
-    renderSeatSetupNames_v6();
-    renderSeatSetupCounters_v6();
-    renderSeatSetupPreview_v6();
-    renderSeatSetupGroups_v6();
+    renderSeatSetupNames_v8();
+    renderSeatSetupCounters_v8();
+    renderSeatSetupPreview_v8();
+    renderSeatSetupGroups_v8();
   }catch(e){
     console.warn(e);
   }
