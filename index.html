@@ -3902,712 +3902,1241 @@ registerScreenHook("scrFix", ()=>{
   ここから先は PART6 で続く
 ========================= */
 /* =========================
-  PART6：席登録（作り直し版）1/2
-  仕様：
-  ・名称 → 総席/総卓 → 1席あたり定員 → 開始文字 → 保存
-  ・capacity を各席に保存
-  ・share系の初期値も持たせる
+  PART6-1：席登録（完全版 v5）
+  UI / state / helper / preview生成
 ========================= */
 
-(function buildSeatSetupUI_v2(){
+(function buildSeatSetupUI_v5(){
+
   const scr = $("scrSeatSetup");
   if(!scr) return;
 
   scr.innerHTML = `
-    <div style="font-weight:900; margin-bottom:10px">席登録</div>
 
-    <!-- ① 名称 -->
-    <div style="font-weight:900; margin-bottom:8px">① 名称</div>
-    <div id="ssNameGrid" class="seatGrid" style="margin-bottom:8px"></div>
-    <button class="btn lime full" id="ssNameCommit" style="margin-bottom:14px">決定</button>
+<div style="font-weight:900;margin-bottom:10px">
+席登録
+</div>
 
-    <!-- ② 総席数 / 総卓数 -->
-    <div style="font-weight:900; margin-bottom:8px">② 総席数 / 総卓数</div>
-    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px">
-      <button class="btn" id="ssCntMinus">◀︎</button>
-      <div id="ssCntVal" style="flex:1; text-align:center; font-weight:900; border-radius:14px; padding:10px; background:rgba(255,255,255,0.08)">0</div>
-      <button class="btn" id="ssCntPlus">▶︎</button>
-    </div>
 
-    <!-- ③ 1席あたり定員 -->
-    <div style="font-weight:900; margin-bottom:8px">③ 1席あたり定員</div>
-    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px">
-      <button class="btn" id="ssCapMinus">◀︎</button>
-      <div id="ssCapVal" style="flex:1; text-align:center; font-weight:900; border-radius:14px; padding:10px; background:rgba(255,255,255,0.08)">1</div>
-      <button class="btn" id="ssCapPlus">▶︎</button>
-    </div>
+<!-- 名称 -->
+<div style="font-weight:900;margin-bottom:6px">
+① 名称
+</div>
 
-    <!-- ④ 席番号 -->
-    <div style="font-weight:900; margin-bottom:8px">④ 席番号（自動で次が入ります）</div>
-    <input class="btn full" id="ssStartLabel" placeholder="開始文字（例：A / 1 / あ / ア）" style="text-align:left; margin-bottom:6px" />
-    <div style="opacity:.85; margin-bottom:14px">入力が1文字のみの場合は自動で連番になります</div>
+<div id="ssNameGrid" class="seatGrid" style="margin-bottom:8px"></div>
 
-    <!-- ⑤ 保存 -->
-    <button class="btn lime full" id="ssSave" style="padding:14px 12px; font-weight:900; margin-bottom:14px">保存</button>
+<div style="display:flex;gap:10px;margin-bottom:16px">
 
-    <!-- ⑥ 作った席 -->
-    <div style="font-weight:900; margin-bottom:8px">作った席</div>
-    <div id="ssGroups"></div>
-  `;
+<div id="ssCommittedNameBox"
+style="
+flex:1;
+min-height:48px;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:14px;
+border:2px solid rgba(217,255,154,.9);
+background:rgba(23,75,47,.1);
+font-weight:900;
+">
+未選択
+</div>
+
+<button
+class="btn lime"
+id="ssNameCommit"
+style="min-width:110px"
+>
+決定
+</button>
+
+</div>
+
+
+
+<!-- 作成席数 -->
+<div style="font-weight:900;margin-bottom:6px">
+② 作成席数
+</div>
+
+<div style="display:flex;gap:10px;margin-bottom:14px">
+
+<button class="btn" id="ssCntMinus">◀</button>
+
+<div
+id="ssCntVal"
+class="pill"
+style="flex:1;font-weight:900"
+>
+0
+</div>
+
+<button class="btn" id="ssCntPlus">▶</button>
+
+</div>
+
+
+
+<!-- 定員 -->
+<div style="font-weight:900;margin-bottom:6px">
+③ 1席あたり定員
+</div>
+
+<div style="display:flex;gap:10px;margin-bottom:14px">
+
+<button class="btn" id="ssCapMinus">◀</button>
+
+<div
+id="ssCapVal"
+class="pill"
+style="flex:1;font-weight:900"
+>
+0
+</div>
+
+<button class="btn" id="ssCapPlus">▶</button>
+
+</div>
+
+
+
+<!-- 席番号 -->
+<div style="font-weight:900;margin-bottom:6px">
+④ 席番号
+</div>
+
+<div style="display:flex;gap:10px;margin-bottom:8px">
+
+<input
+id="ssStartLabel"
+class="btn full"
+style="text-align:left"
+placeholder="A / 1 / あ / ア"
+/>
+
+<button
+class="btn lime"
+id="ssApplyLabel"
+style="min-width:110px"
+>
+決定
+</button>
+
+</div>
+
+
+<div style="opacity:.85;margin-bottom:10px">
+
+1文字 → 連番  
+複数文字 → _1 _2
+
+</div>
+
+
+
+<div style="font-weight:900;margin-bottom:6px">
+作成予定の席
+</div>
+
+<div
+id="ssPreviewGrid"
+class="seatGrid"
+style="margin-bottom:16px"
+></div>
+
+
+
+<button
+class="btn lime full"
+id="ssSave"
+style="padding:14px;font-weight:900;margin-bottom:16px"
+>
+保存
+</button>
+
+
+
+<div style="font-weight:900;margin-bottom:6px">
+作成した席
+</div>
+
+<div id="ssGroups"></div>
+
+`;
+
 })();
+
+
+
+
+/* state */
 
 state.seatSetup = state.seatSetup || {
-  baseNames: ["カウンター","テーブル","座敷","個室","立ち","その他"],
-  customNames: [],
-  selectedName: null,
-  committedName: null,
-  count: 0,
-  capacity: 1,
-  groups: [] // {name, capacity, seatIds:[]}
+
+baseNames:[
+"カウンター",
+"テーブル",
+"座敷",
+"個室",
+"立ち",
+"名称作成"
+],
+
+customNames:[],
+
+selectedName:null,
+committedName:null,
+
+count:0,
+capacity:0,
+startLabel:"",
+
+previewSeatIds:[],
+
+groups:[]
+
 };
 
-/* ===== 古いデータ補正 ===== */
-(function normalizeSeatSetupState(){
-  state.seatSetup = state.seatSetup || {};
-  state.seatSetup.baseNames = Array.isArray(state.seatSetup.baseNames) && state.seatSetup.baseNames.length
-    ? state.seatSetup.baseNames
-    : ["カウンター","テーブル","座敷","個室","立ち","その他"];
-  state.seatSetup.customNames = Array.isArray(state.seatSetup.customNames) ? state.seatSetup.customNames : [];
-  state.seatSetup.selectedName = state.seatSetup.selectedName || null;
-  state.seatSetup.committedName = state.seatSetup.committedName || null;
-  state.seatSetup.count = Number(state.seatSetup.count || 0);
-  state.seatSetup.capacity = Math.max(1, Number(state.seatSetup.capacity || 1));
-  state.seatSetup.groups = Array.isArray(state.seatSetup.groups) ? state.seatSetup.groups : [];
 
-  state.seatSetup.groups = state.seatSetup.groups.map(g=>({
-    name: g.name || "",
-    capacity: Math.max(1, Number(g.capacity || 1)),
-    seatIds: Array.isArray(g.seatIds) ? g.seatIds : []
-  }));
-})();
 
-/* ===== 既存 seat データ補正 ===== */
-(function normalizeSeatsForPart6(){
-  state.seats = (state.seats || []).map(s=>{
-    s.capacity = Math.max(1, Number(s.capacity || 1));
-    s.shareGroupId = s.shareGroupId || null;
-    s.sharePrimaryId = s.sharePrimaryId || null;
-    s.shareSeatIds = Array.isArray(s.shareSeatIds) ? s.shareSeatIds : null;
-    s.shareColor = s.shareColor || null;
-    s.inTs = s.inTs || null;
-    s.orders = Array.isArray(s.orders) ? s.orders : [];
-    s.orderLog = Array.isArray(s.orderLog) ? s.orderLog : [];
-    return s;
-  });
-})();
 
-function allNameButtons_v2(){
-  const arr = [];
-  const othersIdx = state.seatSetup.baseNames.indexOf("その他");
+/* helper */
 
-  state.seatSetup.baseNames.forEach((n,i)=>{
-    if(i === othersIdx){
-      state.seatSetup.customNames.forEach(c=> arr.push(c));
-    }
-    arr.push(n);
-  });
+function ssNum(v){
 
-  return arr;
+v=Number(v);
+return Number.isFinite(v)?v:0;
+
 }
 
-function renderNameGrid_v2(){
-  const grid = $("ssNameGrid");
-  if(!grid) return;
-  grid.innerHTML = "";
 
-  allNameButtons_v2().forEach(n=>{
-    const b = document.createElement("div");
-    b.className = "seatCard in";
-    b.style.minHeight = "56px";
-    b.style.display = "flex";
-    b.style.alignItems = "center";
-    b.style.justifyContent = "center";
-    b.style.fontWeight = "900";
-    b.textContent = n;
 
-    if(state.seatSetup.selectedName === n){
-      b.style.outline = "2px solid rgba(122,167,255,0.9)";
-      b.style.background = "rgba(122,167,255,0.14)";
-    }
+function ssAllNames(){
 
-    b.onclick = ()=>{
-      state.seatSetup.selectedName = (state.seatSetup.selectedName === n) ? null : n;
-      renderNameGrid_v2();
-    };
+const out=[];
 
-    grid.appendChild(b);
-  });
+state.seatSetup.baseNames.forEach(n=>{
+
+if(n==="名称作成"){
+
+state.seatSetup.customNames.forEach(c=>out.push(c));
+
 }
 
-function applyDefaultSeatSetupByName_v2(name){
-  if(name==="テーブル" || name==="座敷" || name==="個室"){
-    state.seatSetup.count = 4;
-    state.seatSetup.capacity = 4;
-  }else if(name==="カウンター" || name==="立ち"){
-    state.seatSetup.count = 1;
-    state.seatSetup.capacity = 1;
-  }else{
-    state.seatSetup.count = 1;
-    state.seatSetup.capacity = 1;
-  }
+out.push(n);
 
-  if($("ssCntVal")) $("ssCntVal").textContent = String(state.seatSetup.count);
-  if($("ssCapVal")) $("ssCapVal").textContent = String(state.seatSetup.capacity);
+});
+
+return out;
+
 }
 
-function isSingleChar_v2(str){
-  return (str || "").length === 1;
+
+
+
+function ssSetCommittedBox(){
+
+const el=$("ssCommittedNameBox");
+if(!el) return;
+
+el.textContent=
+state.seatSetup.committedName||"未選択";
+
 }
 
-function nextLabelOneChar_v2(ch){
-  if(ch>="0" && ch<="9"){
-    const n = Number(ch);
-    if(Number.isFinite(n)) return String(n+1);
-  }
-  if(ch>="a" && ch<="z"){
-    return ch==="z" ? "a" : String.fromCharCode(ch.charCodeAt(0)+1);
-  }
-  if(ch>="A" && ch<="Z"){
-    return ch==="Z" ? "A" : String.fromCharCode(ch.charCodeAt(0)+1);
-  }
 
-  const hira = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
-  const kata = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
 
-  const hi = hira.indexOf(ch);
-  if(hi !== -1) return hira[(hi+1) % hira.length];
+function ssIsBusy(seat){
 
-  const ka = kata.indexOf(ch);
-  if(ka !== -1) return kata[(ka+1) % kata.length];
+if(!seat) return false;
 
-  return null;
+if(seat.status && seat.status!=="empty") return true;
+
+if(seat.merged) return true;
+
+if(seat.groupId) return true;
+
+return false;
+
 }
 
-function buildSeatIds_v2(start, count){
-  const ids = [];
-  const s = (start || "").trim();
-  const c = Number(count || 0);
 
-  if(!s || c <= 0) return ids;
 
-  if(isSingleChar_v2(s)){
-    let cur = s;
-    for(let i=0; i<c; i++){
-      ids.push(cur);
-      const nx = nextLabelOneChar_v2(cur);
-      if(!nx) break;
-      cur = nx;
-    }
-    return ids;
-  }
+function ssNewGid(){
 
-  return [s];
+return "sg_"+Math.random().toString(36).slice(2);
+
 }
 
-function ensureSeatExists_v2(id, groupName, capacity){
-  if(state.seats.some(s=> s.id === id)) return false;
 
-  state.seats.push({
-    id: String(id),
-    status: "empty",
-    people: 0,
-    name: "",
-    total: 0,
-    bills: 0,
-    merged: false,
-    mergeLabel: "",
-    sub: null,
-    reserve: null,
-    orders: [],
-    orderLog: [],
-    capacity: Math.max(1, Number(capacity || 1)),
-    seatTypeName: groupName || "",
-    shareGroupId: null,
-    sharePrimaryId: null,
-    shareSeatIds: null,
-    shareColor: null,
-    inTs: null
-  });
 
-  return true;
+
+/* 連番 */
+
+function ssNextChar(c){
+
+if(c>="0"&&c<="9"){
+return String(Number(c)+1);
 }
 
-function renderGroups_v2(){
-  const box = $("ssGroups");
-  if(!box) return;
-  box.innerHTML = "";
-
-  if(!state.seatSetup.groups.length){
-    box.innerHTML = `<div style="opacity:.85">まだ作成されていません</div>`;
-    return;
-  }
-
-  const byName = {};
-  state.seatSetup.groups.forEach(g=>{
-    if(!byName[g.name]) byName[g.name] = [];
-    byName[g.name].push(g);
-  });
-
-  Object.keys(byName).forEach(name=>{
-    const wrap = document.createElement("div");
-    wrap.style.marginBottom = "14px";
-
-    const ids = byName[name].flatMap(g=> g.seatIds);
-    const cap = byName[name][0]?.capacity || 1;
-
-    const head = document.createElement("button");
-    head.className = "btn full";
-    head.style.textAlign = "left";
-    head.style.fontWeight = "900";
-    head.innerHTML = `${name}<br><span style="font-size:13px; opacity:.85">定員 ${cap}名 / ${ids.length}席</span>`;
-    head.onclick = ()=> openSeatGroupEditor_v2(name);
-    wrap.appendChild(head);
-
-    const grid = document.createElement("div");
-    grid.className = "seatGrid";
-    grid.style.marginTop = "10px";
-
-    ids.forEach(id=>{
-      const seat = seatById(id);
-      const c = document.createElement("div");
-      c.className = "seatCard in";
-      c.style.minHeight = "70px";
-      c.style.display = "flex";
-      c.style.flexDirection = "column";
-      c.style.alignItems = "center";
-      c.style.justifyContent = "center";
-      c.style.fontWeight = "900";
-      c.innerHTML = `
-        <div>${id}</div>
-        <div style="font-size:12px; opacity:.8">定員 ${seat?.capacity || cap}名</div>
-      `;
-      grid.appendChild(c);
-    });
-
-    wrap.appendChild(grid);
-    box.appendChild(wrap);
-  });
+if(c>="A"&&c<="Z"){
+return c==="Z"?"A":
+String.fromCharCode(c.charCodeAt(0)+1);
 }
 
-/* ===== UIイベント ===== */
-$("ssNameCommit").onclick = ()=>{
-  const pick = state.seatSetup.selectedName;
-  if(!pick){
-    toast("名称を選択してください");
-    return;
-  }
+if(c>="a"&&c<="z"){
+return c==="z"?"a":
+String.fromCharCode(c.charCodeAt(0)+1);
+}
 
-  if(pick === "その他"){
-    openModal(
-      "名称追加（その他）",
-      `<input id="ssNewName" class="btn full" style="text-align:left" placeholder="例：中庭テラスA1" />`,
-      [
-        {label:"追加", lime:true, onClick:()=>{
-          const v = ($("ssNewName").value || "").trim();
-          if(!v){ toast("名称を入力してください"); return; }
-          if(allNameButtons_v2().includes(v)){ toast("同じ名称があります"); return; }
+const hira="あいうえおかきくけこさしすせそたちつてと";
+const kata="アイウエオカキクケコサシスセソタチツテト";
 
-          state.seatSetup.customNames.push(v);
-          state.seatSetup.selectedName = v;
-          state.seatSetup.committedName = v;
+let i=hira.indexOf(c);
+if(i!==-1) return hira[(i+1)%hira.length];
 
-          closeModal();
-          renderNameGrid_v2();
-          applyDefaultSeatSetupByName_v2(v);
-          toast("名称を追加しました");
-        }},
-        {label:"戻る", lime:false, onClick:()=> closeModal()}
-      ]
-    );
-    return;
-  }
+i=kata.indexOf(c);
+if(i!==-1) return kata[(i+1)%kata.length];
 
-  state.seatSetup.committedName = pick;
-  applyDefaultSeatSetupByName_v2(pick);
-  toast(`名称：${pick}`);
-};
+return null;
 
-$("ssCntMinus").onclick = ()=>{
-  state.seatSetup.count = Math.max(0, Number(state.seatSetup.count || 0) - 1);
-  $("ssCntVal").textContent = String(state.seatSetup.count);
-};
-$("ssCntPlus").onclick = ()=>{
-  state.seatSetup.count = Number(state.seatSetup.count || 0) + 1;
-  $("ssCntVal").textContent = String(state.seatSetup.count);
-};
+}
 
-$("ssCapMinus").onclick = ()=>{
-  state.seatSetup.capacity = Math.max(1, Number(state.seatSetup.capacity || 1) - 1);
-  $("ssCapVal").textContent = String(state.seatSetup.capacity);
-};
-$("ssCapPlus").onclick = ()=>{
-  state.seatSetup.capacity = Math.min(20, Number(state.seatSetup.capacity || 1) + 1);
-  $("ssCapVal").textContent = String(state.seatSetup.capacity);
-};
 
-$("ssSave").onclick = ()=>{
-  const name = state.seatSetup.committedName;
-  const cnt = Number(state.seatSetup.count || 0);
-  const cap = Math.max(1, Number(state.seatSetup.capacity || 1));
-  const start = ($("ssStartLabel").value || "").trim();
 
-  if(!name){ toast("名称を決定してください"); return; }
-  if(cnt <= 0){ toast("総席 / 総卓数を入力してください"); return; }
-  if(!start){ toast("開始文字を入力してください"); return; }
+function ssBuildIds(start,count){
 
-  const seatIds = buildSeatIds_v2(start, cnt);
+const s=String(start||"").trim();
+const c=Math.max(0,ssNum(count));
 
-  const unique = [];
-  seatIds.forEach(id=>{
-    const ok = ensureSeatExists_v2(id, name, cap);
-    if(ok) unique.push(id);
-  });
+const ids=[];
 
-  if(unique.length === 0){
-    toast("作成できる席がありません（既に存在）");
-    return;
-  }
+if(!s||c<=0) return ids;
 
-  state.seatSetup.groups.push({
-    name,
-    capacity: cap,
-    seatIds: unique
-  });
+if(s.length===1){
 
-  $("ssStartLabel").value = "";
+let cur=s;
 
-  renderSeats();
-  renderGroups_v2();
+for(let i=0;i<c;i++){
 
-  if(typeof emitEvent==="function"){
-    emitEvent("seat_setup_save", { name, capacity: cap, seatIds: unique });
-  }
+ids.push(cur);
 
-  toast("保存しました");
-};
+const nx=ssNextChar(cur);
+
+cur=nx||s+"_"+(i+2);
+
+}
+
+return ids;
+
+}
+
+for(let i=1;i<=c;i++){
+
+ids.push(s+"_"+i);
+
+}
+
+return ids;
+
+}
+
+
+
+
+function ssEnsurePreview(){
+
+const n=ssNum(state.seatSetup.count);
+const s=state.seatSetup.startLabel;
+
+if(n<=0){
+
+state.seatSetup.previewSeatIds=[];
+return;
+
+}
+
+if(!s){
+
+state.seatSetup.previewSeatIds=
+Array.from({length:n},(_,i)=>"未"+(i+1));
+
+return;
+
+}
+
+state.seatSetup.previewSeatIds=
+ssBuildIds(s,n);
+
+}
+
+
+
+
+function ssPreviewHtml(id,cap){
+
+return `
+<div
+class="seatCard in"
+data-id="${id}"
+style="
+min-height:80px;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+gap:4px;
+"
+>
+
+<div style="font-size:20px;font-weight:900">
+${id}
+</div>
+
+<div style="font-size:13px">
+定員 ${cap}
+</div>
+
+</div>
+`;
+
+}
+
+
+
+function renderSeatSetupPreview_v5(){
+
+const box=$("ssPreviewGrid");
+if(!box) return;
+
+ssEnsurePreview();
+
+const ids=
+state.seatSetup.previewSeatIds;
+
+const cap=
+Math.max(0,ssNum(state.seatSetup.capacity));
+
+if(ids.length===0){
+
+box.innerHTML="まだありません";
+return;
+
+}
+
+box.innerHTML=
+ids.map(id=>ssPreviewHtml(id,cap)).join("");
+
+}
 
 /* =========================
-  PART6：席登録（作り直し版）2/2
-  グループ編集 / 名称変更 / 定員変更 / 席番号変更 / 削除
+  PART6-2：席登録（完全版 v5）
+  プレビュー編集 / 入力処理 / 保存
 ========================= */
 
-function openSeatGroupEditor_v2(name){
-  const targetGroups = state.seatSetup.groups.filter(g=> g.name === name);
-  const ids = targetGroups.flatMap(g=> g.seatIds);
-  const cap = targetGroups[0]?.capacity || 1;
+function renderSeatSetupNames_v5(){
 
-  openModal(
-    "名称",
-    `
-      <div style="font-weight:900; margin-bottom:8px">${name}</div>
-      <div style="opacity:.85; margin-bottom:12px">定員 ${cap}名 / ${ids.length}席</div>
+const grid=$("ssNameGrid");
+if(!grid) return;
 
-      <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap">
-        <button class="btn" id="geBack">戻る</button>
-        <button class="btn lime" id="geRename">名称変更</button>
-        <button class="btn lime" id="geCapEdit">定員変更</button>
-        <button class="btn" id="geDelete">削除</button>
-      </div>
+grid.innerHTML="";
 
-      <div style="font-weight:900; margin-bottom:8px">席一覧</div>
-      <div id="geSeats"></div>
-    `,
-    [{label:"閉じる", lime:false, onClick:()=> closeModal()}]
-  );
+ssAllNames().forEach(name=>{
 
-  setTimeout(()=>{
-    $("geBack").onclick = ()=> closeModal();
+const c=document.createElement("div");
+c.className="seatCard in";
+c.style.minHeight="56px";
+c.style.display="flex";
+c.style.alignItems="center";
+c.style.justifyContent="center";
+c.style.fontWeight="900";
+c.textContent=name;
 
-    const list = $("geSeats");
-    list.innerHTML = "";
-
-    ids.forEach(id=>{
-      const seat = seatById(id);
-      const inUse = seat && seat.status !== "empty";
-
-      const row = document.createElement("div");
-      row.className = "kRow";
-      row.style.marginBottom = "10px";
-      row.innerHTML = `
-        <div class="kLeft">
-          <div class="kSeat">${id}</div>
-          <div class="kName" style="opacity:.85">
-            定員 ${seat?.capacity || cap}名
-            ${inUse ? `<span style="color:#ff6b6b"> / 使用中のため削除不可</span>` : ``}
-          </div>
-        </div>
-        <div class="kSlide" style="flex-direction:column; align-items:flex-end; gap:6px">
-          <button class="btn" data-rename-seat="${id}">番号変更</button>
-          <button class="btn" data-cap-seat="${id}">定員変更</button>
-          <input class="kRange" data-del-seat="${id}" type="range" min="0" max="100" value="0" ${inUse ? "disabled" : ""}/>
-        </div>
-      `;
-      list.appendChild(row);
-    });
-
-    /* ===== 名称変更 ===== */
-    $("geRename").onclick = ()=>{
-      openModal(
-        "名称変更",
-        `<input id="geNewName" class="btn full" style="text-align:left" value="${name}" />`,
-        [
-          {label:"変更", lime:true, onClick:()=>{
-            const v = ($("geNewName").value || "").trim();
-            if(!v){ toast("名称を入力してください"); return; }
-
-            const exists = state.seatSetup.groups.some(g=> g.name === v);
-            if(exists && v !== name){
-              toast("同じ名称があります");
-              return;
-            }
-
-            state.seatSetup.groups.forEach(g=>{
-              if(g.name === name) g.name = v;
-            });
-
-            state.seatSetup.customNames = state.seatSetup.customNames.map(x=> x===name ? v : x);
-
-            ids.forEach(id=>{
-              const s = seatById(id);
-              if(s) s.seatTypeName = v;
-            });
-
-            closeModal();
-            renderNameGrid_v2();
-            renderGroups_v2();
-            toast("名称を変更しました");
-          }},
-          {label:"戻る", lime:false, onClick:()=> closeModal()}
-        ]
-      );
-    };
-
-    /* ===== グループ定員変更 ===== */
-    $("geCapEdit").onclick = ()=>{
-      let capVal = Math.max(1, Number(cap || 1));
-
-      openModal(
-        "定員変更",
-        `
-          <div style="font-weight:900; margin-bottom:10px">名称：${name}</div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <button class="btn" id="geCapMinus">◀︎</button>
-            <div id="geCapNow" style="flex:1; text-align:center; font-weight:900; border-radius:14px; padding:10px; background:rgba(255,255,255,0.08)">${capVal}</div>
-            <button class="btn" id="geCapPlus">▶︎</button>
-          </div>
-        `,
-        [
-          {label:"変更", lime:true, onClick:()=>{
-            state.seatSetup.groups.forEach(g=>{
-              if(g.name === name) g.capacity = capVal;
-            });
-
-            ids.forEach(id=>{
-              const s = seatById(id);
-              if(s) s.capacity = capVal;
-            });
-
-            closeModal();
-            renderGroups_v2();
-            renderSeats();
-            toast("定員を変更しました");
-          }},
-          {label:"戻る", lime:false, onClick:()=> closeModal()}
-        ]
-      );
-
-      setTimeout(()=>{
-        $("geCapMinus").onclick = ()=>{
-          capVal = Math.max(1, capVal - 1);
-          $("geCapNow").textContent = String(capVal);
-        };
-        $("geCapPlus").onclick = ()=>{
-          capVal = Math.min(20, capVal + 1);
-          $("geCapNow").textContent = String(capVal);
-        };
-      },0);
-    };
-
-    /* ===== 名称ごと削除 ===== */
-    $("geDelete").onclick = ()=>{
-      openModal(
-        "削除確認",
-        `
-          <div style="color:#ff6b6b; font-weight:900; margin-bottom:10px">この名称と名称内の全席を削除します</div>
-          <div style="opacity:.85; margin-bottom:10px">使用中の席がある場合は削除できません</div>
-          <input id="geDelSlide" class="kRange" type="range" min="0" max="100" value="0" />
-        `,
-        [{label:"戻る", lime:false, onClick:()=> closeModal()}]
-      );
-
-      setTimeout(()=>{
-        $("geDelSlide").onchange = ()=>{
-          if(Number($("geDelSlide").value || 0) < 88){
-            $("geDelSlide").value = 0;
-            return;
-          }
-
-          const blocked = ids.some(id=>{
-            const seat = seatById(id);
-            return seat && seat.status !== "empty";
-          });
-
-          if(blocked){
-            $("geDelSlide").value = 0;
-            toast("使用中の席があるため削除できません");
-            return;
-          }
-
-          ids.forEach(id=>{
-            state.seats = state.seats.filter(s=> s.id !== id);
-          });
-
-          state.seatSetup.groups = state.seatSetup.groups.filter(g=> g.name !== name);
-          state.seatSetup.customNames = state.seatSetup.customNames.filter(x=> x !== name);
-
-          closeModal();
-          closeModal();
-          renderSeats();
-          renderGroups_v2();
-          renderNameGrid_v2();
-          toast("削除しました");
-        };
-      },0);
-    };
-
-    /* ===== 席番号変更 ===== */
-    list.querySelectorAll("[data-rename-seat]").forEach(btn=>{
-      btn.onclick = ()=>{
-        const oldId = btn.getAttribute("data-rename-seat");
-
-        openModal(
-          "席番号変更",
-          `
-            <div style="margin-bottom:8px">現在：${oldId}</div>
-            <input id="geSeatNewId" class="btn full" style="text-align:left" placeholder="新しい席番号" />
-          `,
-          [
-            {label:"変更", lime:true, onClick:()=>{
-              const newId = ($("geSeatNewId").value || "").trim();
-              if(!newId){ toast("席番号を入力してください"); return; }
-              if(state.seats.some(s=> s.id === newId)){ toast("同じ席番号があります"); return; }
-
-              const seat = seatById(oldId);
-              if(!seat){ toast("席が見つかりません"); return; }
-
-              seat.id = newId;
-
-              if(seat.sharePrimaryId === oldId) seat.sharePrimaryId = newId;
-              if(Array.isArray(seat.shareSeatIds)){
-                seat.shareSeatIds = seat.shareSeatIds.map(x=> x===oldId ? newId : x);
-              }
-
-              state.seatSetup.groups.forEach(g=>{
-                if(g.name === name){
-                  g.seatIds = g.seatIds.map(x=> x===oldId ? newId : x);
-                }
-              });
-
-              state.seats.forEach(s=>{
-                if(s.sharePrimaryId === oldId) s.sharePrimaryId = newId;
-                if(Array.isArray(s.shareSeatIds)){
-                  s.shareSeatIds = s.shareSeatIds.map(x=> x===oldId ? newId : x);
-                }
-              });
-
-              closeModal();
-              renderSeats();
-              renderGroups_v2();
-              toast("席番号を変更しました");
-            }},
-            {label:"戻る", lime:false, onClick:()=> closeModal()}
-          ]
-        );
-      };
-    });
-
-    /* ===== 個別席の定員変更 ===== */
-    list.querySelectorAll("[data-cap-seat]").forEach(btn=>{
-      btn.onclick = ()=>{
-        const id = btn.getAttribute("data-cap-seat");
-        const seat = seatById(id);
-        if(!seat){ toast("席が見つかりません"); return; }
-
-        let capVal = Math.max(1, Number(seat.capacity || 1));
-
-        openModal(
-          "席定員変更",
-          `
-            <div style="font-weight:900; margin-bottom:10px">席：${id}</div>
-            <div style="display:flex; gap:10px; align-items:center;">
-              <button class="btn" id="gsCapMinus">◀︎</button>
-              <div id="gsCapNow" style="flex:1; text-align:center; font-weight:900; border-radius:14px; padding:10px; background:rgba(255,255,255,0.08)">${capVal}</div>
-              <button class="btn" id="gsCapPlus">▶︎</button>
-            </div>
-          `,
-          [
-            {label:"変更", lime:true, onClick:()=>{
-              seat.capacity = capVal;
-              closeModal();
-              renderSeats();
-              renderGroups_v2();
-              toast("席の定員を変更しました");
-            }},
-            {label:"戻る", lime:false, onClick:()=> closeModal()}
-          ]
-        );
-
-        setTimeout(()=>{
-          $("gsCapMinus").onclick = ()=>{
-            capVal = Math.max(1, capVal - 1);
-            $("gsCapNow").textContent = String(capVal);
-          };
-          $("gsCapPlus").onclick = ()=>{
-            capVal = Math.min(20, capVal + 1);
-            $("gsCapNow").textContent = String(capVal);
-          };
-        },0);
-      };
-    });
-
-    /* ===== 個別席削除 ===== */
-    list.querySelectorAll("[data-del-seat]").forEach(sl=>{
-      sl.onchange = ()=>{
-        if(sl.disabled) return;
-        if(Number(sl.value || 0) < 88){
-          sl.value = 0;
-          return;
-        }
-
-        const id = sl.getAttribute("data-del-seat");
-        const seat = seatById(id);
-
-        if(seat && seat.status !== "empty"){
-          sl.value = 0;
-          toast("使用中のため削除できません");
-          return;
-        }
-
-        state.seats = state.seats.filter(s=> s.id !== id);
-
-        state.seatSetup.groups.forEach(g=>{
-          if(g.name === name){
-            g.seatIds = g.seatIds.filter(x=> x !== id);
-          }
-        });
-
-        state.seatSetup.groups = state.seatSetup.groups.filter(g=> !(g.name === name && g.seatIds.length === 0));
-
-        renderSeats();
-        renderGroups_v2();
-        toast("削除しました");
-      };
-    });
-  },0);
+if(state.seatSetup.selectedName===name){
+c.style.outline="2px solid rgba(122,167,255,0.9)";
+c.style.background="rgba(122,167,255,0.14)";
 }
 
-renderNameGrid_v2();
-renderGroups_v2();
+c.onclick=()=>{
+
+state.seatSetup.selectedName=
+(state.seatSetup.selectedName===name)?null:name;
+
+renderSeatSetupNames_v5();
+
+};
+
+grid.appendChild(c);
+
+});
+
+ssSetCommittedBox();
+
+}
+
+
+
+function renderSeatSetupCounters_v5(){
+
+if($("ssCntVal")){
+$("ssCntVal").textContent=String(Math.max(0,ssNum(state.seatSetup.count)));
+}
+
+if($("ssCapVal")){
+$("ssCapVal").textContent=String(Math.max(0,ssNum(state.seatSetup.capacity)));
+}
+
+if($("ssStartLabel")){
+$("ssStartLabel").value=state.seatSetup.startLabel||"";
+}
+
+}
+
+
+
+function resetSeatSetupForm_v5(){
+
+state.seatSetup.selectedName=null;
+state.seatSetup.committedName=null;
+state.seatSetup.count=0;
+state.seatSetup.capacity=0;
+state.seatSetup.startLabel="";
+state.seatSetup.previewSeatIds=[];
+
+renderSeatSetupNames_v5();
+renderSeatSetupCounters_v5();
+renderSeatSetupPreview_v5();
+
+}
+
+
+
+function openSeatSetupPreviewEditor_v5(oldId){
+
+const ids=state.seatSetup.previewSeatIds||[];
+const idx=ids.indexOf(oldId);
+if(idx===-1) return;
+
+openModal(
+"作成予定席の編集",
+`
+<div style="font-weight:900;margin-bottom:10px">
+席番号：${oldId}
+</div>
+
+<div style="margin-bottom:6px;font-weight:900">
+番号変更
+</div>
+<input
+id="ssEditPreviewId"
+class="btn full"
+style="text-align:left;margin-bottom:12px"
+value="${oldId}"
+/>
+
+<div style="margin-bottom:6px;font-weight:900">
+定員変更
+</div>
+
+<div style="display:flex;gap:10px;margin-bottom:12px">
+<button class="btn" id="ssEditCapMinus">◀</button>
+<div id="ssEditCapVal" class="pill" style="flex:1">
+${Math.max(0,ssNum(state.seatSetup.capacity))}
+</div>
+<button class="btn" id="ssEditCapPlus">▶</button>
+</div>
+
+<div style="margin-bottom:6px;font-weight:900;color:var(--danger)">
+削除
+</div>
+<input
+id="ssEditDeleteSlide"
+class="range"
+type="range"
+min="0"
+max="100"
+value="0"
+/>
+`,
+[
+{
+label:"保存",
+lime:true,
+onClick:()=>{
+
+const newId=String(($("ssEditPreviewId").value||"")).trim();
+if(!newId){
+toast("席番号を入力してください");
+return;
+}
+
+if(ids.some((x,i)=>x===newId&&i!==idx)){
+toast("同じ席番号があります");
+return;
+}
+
+state.seatSetup.previewSeatIds[idx]=newId;
+state.seatSetup.capacity=
+Math.max(0,ssNum($("ssEditCapVal").textContent||0));
+
+closeModal();
+renderSeatSetupCounters_v5();
+renderSeatSetupPreview_v5();
+toast("変更しました");
+
+}
+},
+{
+label:"戻る",
+lime:false,
+onClick:()=>closeModal()
+}
+]
+);
+
+setTimeout(()=>{
+
+$("ssEditCapMinus").onclick=()=>{
+const cur=Math.max(0,ssNum($("ssEditCapVal").textContent)-1);
+$("ssEditCapVal").textContent=String(cur);
+};
+
+$("ssEditCapPlus").onclick=()=>{
+const cur=Math.max(0,ssNum($("ssEditCapVal").textContent)+1);
+$("ssEditCapVal").textContent=String(cur);
+};
+
+$("ssEditDeleteSlide").onchange=()=>{
+const v=ssNum($("ssEditDeleteSlide").value||0);
+if(v<88){
+$("ssEditDeleteSlide").value=0;
+return;
+}
+
+state.seatSetup.previewSeatIds.splice(idx,1);
+state.seatSetup.count=state.seatSetup.previewSeatIds.length;
+
+closeModal();
+renderSeatSetupCounters_v5();
+renderSeatSetupPreview_v5();
+toast("削除しました");
+};
+
+},0);
+
+}
+
+
+
+
+function ssCreateSeatObject(id,cap){
+
+return normalizeSeat({
+id:id,
+status:"empty",
+people:0,
+name:"",
+total:0,
+bills:0,
+reserve:null,
+merged:false,
+mergeLabel:"",
+sub:null,
+orders:[],
+orderLog:[],
+groupId:null,
+groupColor:null,
+groupRoot:null,
+cap:Math.max(0,ssNum(cap))
+});
+
+}
+
+
+
+function ssHasDuplicateIds(ids){
+
+return ids.some(id=>state.seats.some(s=>s.id===id));
+
+}
+
+
+
+
+(function hookSeatSetup_v5(){
+
+if(hookSeatSetup_v5._done) return;
+hookSeatSetup_v5._done=true;
+
+
+
+$("ssNameCommit").onclick=()=>{
+
+const pick=state.seatSetup.selectedName;
+if(!pick){
+toast("名称を選択してください");
+return;
+}
+
+if(pick==="名称作成"){
+
+openModal(
+"名称作成",
+`
+<input
+id="ssNewName"
+class="btn full"
+style="text-align:left"
+placeholder="例：中庭テラスA1"
+/>
+`,
+[
+{
+label:"追加",
+lime:true,
+onClick:()=>{
+
+const v=String(($("ssNewName").value||"")).trim();
+
+if(!v){
+toast("名称を入力してください");
+return;
+}
+
+if(ssAllNames().includes(v)){
+toast("同じ名称があります");
+return;
+}
+
+state.seatSetup.customNames.push(v);
+state.seatSetup.selectedName=v;
+state.seatSetup.committedName=v;
+
+closeModal();
+renderSeatSetupNames_v5();
+toast("名称を追加しました");
+
+}
+},
+{
+label:"戻る",
+lime:false,
+onClick:()=>closeModal()
+}
+]
+);
+
+return;
+}
+
+state.seatSetup.committedName=pick;
+renderSeatSetupNames_v5();
+toast(`名称：${pick}`);
+
+};
+
+
+
+$("ssCntMinus").onclick=()=>{
+state.seatSetup.count=Math.max(0,ssNum(state.seatSetup.count)-1);
+renderSeatSetupCounters_v5();
+renderSeatSetupPreview_v5();
+};
+
+$("ssCntPlus").onclick=()=>{
+state.seatSetup.count=Math.max(0,ssNum(state.seatSetup.count)+1);
+renderSeatSetupCounters_v5();
+renderSeatSetupPreview_v5();
+};
+
+
+
+$("ssCapMinus").onclick=()=>{
+state.seatSetup.capacity=Math.max(0,ssNum(state.seatSetup.capacity)-1);
+renderSeatSetupCounters_v5();
+renderSeatSetupPreview_v5();
+};
+
+$("ssCapPlus").onclick=()=>{
+state.seatSetup.capacity=Math.max(0,ssNum(state.seatSetup.capacity)+1);
+renderSeatSetupCounters_v5();
+renderSeatSetupPreview_v5();
+};
+
+
+
+$("ssApplyLabel").onclick=()=>{
+
+state.seatSetup.startLabel=
+String(($("ssStartLabel").value||"")).trim();
+
+if(!state.seatSetup.startLabel){
+toast("席番号を入力してください");
+return;
+}
+
+renderSeatSetupCounters_v5();
+renderSeatSetupPreview_v5();
+
+};
+
+
+
+$("ssSave").onclick=()=>{
+
+const name=String(state.seatSetup.committedName||"").trim();
+const count=Math.max(0,ssNum(state.seatSetup.count));
+const cap=Math.max(0,ssNum(state.seatSetup.capacity));
+const ids=(state.seatSetup.previewSeatIds||[])
+.map(x=>String(x||"").trim())
+.filter(Boolean);
+
+if(!name){
+toast("名称を決定してください");
+return;
+}
+
+if(count<=0){
+toast("作成席数を入力してください");
+return;
+}
+
+if(cap<=0){
+toast("1席あたり定員を入力してください");
+return;
+}
+
+if(ids.length!==count){
+toast("席番号を決定してください");
+return;
+}
+
+if(ids.some(id=>/^未/.test(id))){
+toast("席番号を決定してください");
+return;
+}
+
+if(ssHasDuplicateIds(ids)){
+toast("すでに存在する席番号があります");
+return;
+}
+
+ids.forEach(id=>{
+state.seats.push(ssCreateSeatObject(id,cap));
+});
+
+state.seatSetup.groups.push({
+gid:ssNewGid(),
+name:name,
+seatIds:[...ids],
+capacity:cap,
+createdTs:nowTs()
+});
+
+normalizeAllSeats();
+
+if(typeof renderSeats==="function") renderSeats();
+if(typeof persistAll==="function") persistAll();
+if(typeof emitEvent==="function"){
+emitEvent("seat_setup_save",{name,seatIds:[...ids],capacity:cap});
+}
+
+renderSeatSetupGroups_v5();
+resetSeatSetupForm_v5();
+toast("保存しました");
+
+};
+
+})();
+
+/* =========================
+  PART6-3：席登録（完全版 v5）
+  作成済み一覧 / 名称変更 / 削除 / 席編集
+========================= */
+
+function renderSeatSetupGroups_v5(){
+
+const box=$("ssGroups");
+if(!box) return;
+
+box.innerHTML="";
+
+const groups=state.seatSetup.groups||[];
+
+if(groups.length===0){
+box.innerHTML=`<div style="opacity:.85">まだ作成されていません</div>`;
+return;
+}
+
+groups.forEach(g=>{
+
+const wrap=document.createElement("div");
+wrap.style.marginBottom="14px";
+
+const head=document.createElement("button");
+head.className="btn full";
+head.style.textAlign="left";
+head.style.fontWeight="900";
+head.textContent=`${g.name}（定員 ${Math.max(0,ssNum(g.capacity))}名）`;
+head.onclick=()=>openSeatSetupGroupEditor_v5(g.gid);
+wrap.appendChild(head);
+
+const grid=document.createElement("div");
+grid.className="seatGrid";
+grid.style.marginTop="10px";
+
+(g.seatIds||[]).forEach(id=>{
+
+const seat=seatById(id);
+const cap=Math.max(0,ssNum(seat?.cap ?? g.capacity ?? 0));
+
+const c=document.createElement("div");
+c.className="seatCard in";
+c.style.minHeight="72px";
+c.style.display="flex";
+c.style.flexDirection="column";
+c.style.alignItems="center";
+c.style.justifyContent="center";
+c.style.gap="6px";
+c.style.fontWeight="900";
+c.innerHTML=`
+<div style="font-size:20px">${id}</div>
+<div style="font-size:13px;opacity:.85">定員 ${cap}名</div>
+`;
+c.onclick=()=>openSavedSeatEditor_v5(g.gid,id);
+
+grid.appendChild(c);
+
+});
+
+wrap.appendChild(grid);
+box.appendChild(wrap);
+
+});
+
+}
+
+
+
+
+function openSeatSetupGroupEditor_v5(gid){
+
+const g=(state.seatSetup.groups||[]).find(x=>x.gid===gid);
+if(!g) return;
+
+openModal(
+"名称編集",
+`
+<div style="font-weight:900;margin-bottom:10px">${g.name}</div>
+
+<div style="display:flex;gap:10px">
+  <button class="btn lime" id="ssRenameGroup" style="flex:1">名称変更</button>
+  <button class="btn" id="ssDeleteGroup" style="flex:1">削除</button>
+</div>
+`,
+[
+{
+label:"戻る",
+lime:false,
+onClick:()=>closeModal()
+}
+]
+);
+
+setTimeout(()=>{
+
+$("ssRenameGroup").onclick=()=>{
+
+openModal(
+"名称変更",
+`
+<input
+id="ssRenameGroupVal"
+class="btn full"
+style="text-align:left"
+value="${g.name}"
+/>
+`,
+[
+{
+label:"変更",
+lime:true,
+onClick:()=>{
+
+const v=String(($("ssRenameGroupVal").value||"")).trim();
+
+if(!v){
+toast("名称を入力してください");
+return;
+}
+
+if(v!==g.name && ssAllNames().includes(v)){
+toast("同じ名称があります");
+return;
+}
+
+const oldName=g.name;
+g.name=v;
+
+state.seatSetup.customNames=
+(state.seatSetup.customNames||[]).map(x=>x===oldName?v:x);
+
+if(state.seatSetup.committedName===oldName){
+state.seatSetup.committedName=v;
+}
+if(state.seatSetup.selectedName===oldName){
+state.seatSetup.selectedName=v;
+}
+
+closeModal();
+renderSeatSetupNames_v5();
+renderSeatSetupGroups_v5();
+if(typeof persistAll==="function") persistAll();
+toast("名称を変更しました");
+
+}
+},
+{
+label:"戻る",
+lime:false,
+onClick:()=>closeModal()
+}
+]
+);
+
+};
+
+
+
+$("ssDeleteGroup").onclick=()=>{
+
+const blocked=(g.seatIds||[]).some(id=>{
+const s=seatById(id);
+return ssIsBusy(s);
+});
+
+if(blocked){
+toast("使用中・予約中・合流中の席があるため削除できません");
+return;
+}
+
+openModal(
+"削除",
+`
+<div style="color:var(--danger);font-weight:900;margin-bottom:10px">
+名称「${g.name}」と席を削除します
+</div>
+
+<input
+id="ssDeleteGroupSlide"
+class="range"
+type="range"
+min="0"
+max="100"
+value="0"
+/>
+`,
+[
+{
+label:"戻る",
+lime:false,
+onClick:()=>closeModal()
+}
+]
+);
+
+setTimeout(()=>{
+
+$("ssDeleteGroupSlide").onchange=()=>{
+
+const v=ssNum($("ssDeleteGroupSlide").value||0);
+if(v<88){
+$("ssDeleteGroupSlide").value=0;
+return;
+}
+
+state.seats=
+state.seats.filter(s=>!(g.seatIds||[]).includes(s.id));
+
+state.seatSetup.groups=
+(state.seatSetup.groups||[]).filter(x=>x.gid!==gid);
+
+state.seatSetup.customNames=
+(state.seatSetup.customNames||[]).filter(x=>x!==g.name);
+
+if(state.seatSetup.committedName===g.name){
+state.seatSetup.committedName=null;
+}
+if(state.seatSetup.selectedName===g.name){
+state.seatSetup.selectedName=null;
+}
+
+closeModal();
+renderSeatSetupNames_v5();
+renderSeatSetupGroups_v5();
+if(typeof renderSeats==="function") renderSeats();
+if(typeof persistAll==="function") persistAll();
+toast("削除しました");
+
+};
+
+},0);
+
+};
+
+},0);
+
+}
+
+
+
+
+function openSavedSeatEditor_v5(gid,seatId){
+
+const g=(state.seatSetup.groups||[]).find(x=>x.gid===gid);
+const seat=seatById(seatId);
+
+if(!g||!seat) return;
+
+if(ssIsBusy(seat)){
+toast("使用中・予約中・合流中の席は編集できません");
+return;
+}
+
+openModal(
+"席編集",
+`
+<div style="font-weight:900;margin-bottom:10px">席：${seat.id}</div>
+
+<div style="margin-bottom:6px;font-weight:900">番号変更</div>
+<input
+id="ssSavedSeatNewId"
+class="btn full"
+style="text-align:left;margin-bottom:12px"
+value="${seat.id}"
+/>
+
+<div style="margin-bottom:6px;font-weight:900">定員変更</div>
+<div style="display:flex;gap:10px;margin-bottom:12px">
+  <button class="btn" id="ssSavedCapMinus">◀</button>
+  <div id="ssSavedCapVal" class="pill" style="flex:1">${Math.max(0,ssNum(seat.cap||0))}</div>
+  <button class="btn" id="ssSavedCapPlus">▶</button>
+</div>
+
+<div style="margin-bottom:6px;font-weight:900;color:var(--danger)">削除</div>
+<input
+id="ssSavedSeatDeleteSlide"
+class="range"
+type="range"
+min="0"
+max="100"
+value="0"
+/>
+`,
+[
+{
+label:"保存",
+lime:true,
+onClick:()=>{
+
+const newId=String(($("ssSavedSeatNewId").value||"")).trim();
+
+if(!newId){
+toast("席番号を入力してください");
+return;
+}
+
+if(state.seats.some(s=>s.id===newId && s!==seat)){
+toast("同じ席番号があります");
+return;
+}
+
+const oldId=seat.id;
+seat.id=newId;
+seat.cap=Math.max(0,ssNum($("ssSavedCapVal").textContent||0));
+
+g.seatIds=(g.seatIds||[]).map(x=>x===oldId?newId:x);
+
+closeModal();
+renderSeatSetupGroups_v5();
+if(typeof renderSeats==="function") renderSeats();
+if(typeof persistAll==="function") persistAll();
+toast("変更しました");
+
+}
+},
+{
+label:"戻る",
+lime:false,
+onClick:()=>closeModal()
+}
+]
+);
+
+setTimeout(()=>{
+
+$("ssSavedCapMinus").onclick=()=>{
+const cur=Math.max(0,ssNum($("ssSavedCapVal").textContent||0)-1);
+$("ssSavedCapVal").textContent=String(cur);
+};
+
+$("ssSavedCapPlus").onclick=()=>{
+const cur=Math.max(0,ssNum($("ssSavedCapVal").textContent||0)+1);
+$("ssSavedCapVal").textContent=String(cur);
+};
+
+$("ssSavedSeatDeleteSlide").onchange=()=>{
+
+const v=ssNum($("ssSavedSeatDeleteSlide").value||0);
+if(v<88){
+$("ssSavedSeatDeleteSlide").value=0;
+return;
+}
+
+state.seats=state.seats.filter(s=>s.id!==seatId);
+g.seatIds=(g.seatIds||[]).filter(x=>x!==seatId);
+
+if((g.seatIds||[]).length===0){
+state.seatSetup.groups=
+(state.seatSetup.groups||[]).filter(x=>x.gid!==gid);
+}
+
+closeModal();
+renderSeatSetupGroups_v5();
+if(typeof renderSeats==="function") renderSeats();
+if(typeof persistAll==="function") persistAll();
+toast("削除しました");
+
+};
+
+},0);
+
+}
+
+
+
+
+registerScreenHook("scrSeatSetup", ()=>{
+try{
+renderSeatSetupNames_v5();
+renderSeatSetupCounters_v5();
+renderSeatSetupPreview_v5();
+renderSeatSetupGroups_v5();
+}catch(e){
+console.warn(e);
+}
+});
+
+(function initSeatSetupPart6_v5(){
+try{
+renderSeatSetupNames_v5();
+renderSeatSetupCounters_v5();
+renderSeatSetupPreview_v5();
+renderSeatSetupGroups_v5();
+}catch(e){
+console.warn(e);
+}
+})();
 
 /* =========================
   ここから先は PART7 で続く
