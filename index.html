@@ -1,9 +1,9 @@
 <!-- =========================
-  ONE レジアプリ（無料版）完全フル：PART1-1
-  役割：HTML骨格 / CSS前半 / メイン画面UI前半
+  ONE レジアプリ（無料版）完全フル：PART1-1 修正版
+  役割：HTML骨格 / CSS前半
   保存KEY：ONE_FREE_FULL_V3
   ※重要：このPARTでは </body></html> を閉じない
-  ※重要：このPARTの script もまだ閉じない
+  ※重要：このPARTではまだ </style> を閉じない
 ========================= -->
 <!doctype html>
 <html lang="ja">
@@ -58,13 +58,15 @@
       --pageBg:#eaf4df;
       --cardBg:#dff0c9;
       --reserveBg:#eaf4ff;
+      --emptyBg:#ffffff;
 
       --darkGreen:#174b2f;
       --mossGreen:#3aa55b;
       --limeLine:#d9ff9a;
       --topLine:#77d86b;
 
-      --tanBg:#eadfcf;
+      /* 下段外側の帯を茶色 */
+      --tanBg:#b69072;
       --tanFill:#e2d3bf;
       --tanLineLight:#f2eadf;
       --tanLineDark:#6b4b2c;
@@ -89,7 +91,10 @@
 
       --gap:8px;
       --topH:56px;
-      --bottomH:84px;
+
+      /* 少し詰める */
+      --bottomH:72px;
+
       --radiusTop:16px;
       --radiusCard:16px;
     }
@@ -248,14 +253,18 @@
       border:2px solid var(--darkGreen);
       box-shadow: inset 0 0 0 1px #ffffff;
       min-height:150px;
-      padding:6px;
+      padding:8px 8px 10px;
       color: var(--ink);
       overflow:hidden;
       user-select:none;
       -webkit-user-select:none;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-start;
     }
+
     .seatCard.reserve{ background: var(--reserveBg); }
-    .seatCard.empty{ background: var(--cardBg); }
+    .seatCard.empty{ background: var(--emptyBg); }
     .seatCard.in{ background: var(--cardBg); }
 
     .seatCard.group-pink{
@@ -284,91 +293,86 @@
       color: var(--groupText);
     }
 
+    /* 選択時は赤枠 */
     .seatCard.isSelected{
+      border:3px solid #d22;
       box-shadow:
         inset 0 0 0 1px #ffffff,
-        0 0 0 3px rgba(0,0,0,0.22);
+        0 0 0 2px rgba(210,34,34,.18);
     }
 
     .seatNo{
-      position:absolute;
-      left:6px; top:8px;
-      font-size:32px;
+      font-size:22px;
       font-weight:900;
-      line-height:1;
+      line-height:1.08;
+      word-break:break-word;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      min-height:46px;
+      margin-bottom:4px;
+      padding-right:30px;
     }
+
     .seatPeople{
-      position:absolute;
-      right:6px; top:12px;
       font-size:15px;
-      font-weight:800;
-      line-height:1;
-      opacity:.95;
-      text-align:right;
+      font-weight:900;
+      line-height:1.1;
+      margin-bottom:4px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
     .seatName{
-      position:absolute;
-      left:6px; top:50px;
       font-size:15px;
-      font-weight:800;
-      line-height:1.05;
+      font-weight:900;
+      line-height:1.1;
+      min-height:17px;
+      margin-bottom:4px;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
-      right:6px;
-    }
-    .seatState{
-      position:absolute;
-      left:6px; top:72px;
-      font-size:15px;
-      font-weight:800;
-      line-height:1.05;
-      opacity:.95;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      right:6px;
-    }
-    .seatSub{
-      position:absolute;
-      left:6px; top:94px;
-      font-size:13px;
-      font-weight:800;
-      line-height:1.05;
-      opacity:.78;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      right:6px;
-    }
-    .seatBills{
-      position:absolute;
-      left:6px; top:112px;
-      font-size:13px;
-      font-weight:800;
-      line-height:1.05;
-      opacity:.78;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      right:6px;
     }
 
-    .seatDivider{
-      position:absolute;
-      left:6px; right:6px;
-      bottom:32px;
-      height:2px;
-      background:#000;
-      opacity:.30;
+    .seatState{
+      font-size:15px;
+      font-weight:900;
+      line-height:1.1;
+      min-height:17px;
+      margin-bottom:3px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .seatSub{
+      font-size:13px;
+      font-weight:800;
+      line-height:1.05;
+      opacity:.78;
+      min-height:15px;
+      margin-bottom:2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .seatBills{
+      font-size:13px;
+      font-weight:800;
+      line-height:1.05;
+      opacity:.78;
+      min-height:15px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
     .seatPrice{
-      position:absolute;
-      left:6px; right:6px;
-      bottom:8px;
-      font-size:16px;
+      margin-top:auto;
+      font-size:15px;
       font-weight:900;
       line-height:1.05;
       white-space:nowrap;
@@ -380,7 +384,7 @@
     .groupTag{
       position:absolute;
       right:6px;
-      top:34px;
+      top:6px;
       min-width:26px;
       height:20px;
       padding:0 6px;
@@ -441,11 +445,11 @@
     }
     .navBtn{
       flex:1;
-      height:68px;
+      height:58px;
       background: var(--tanFill);
       color: var(--tanInk);
       border:none;
-      padding:4px 4px;
+      padding:2px 4px;
       font-weight:900;
       font-size:15px;
       line-height:1.05;
@@ -526,6 +530,56 @@
     }
 
     .muted{ opacity:.78; }
+
+    /* =========================
+      共通スライドUI
+    ========================= */
+    .range,
+    .kRange{
+      -webkit-appearance:none;
+      appearance:none;
+      width:82%;
+      max-width:420px;
+      min-width:180px;
+      height:52px;
+      background:rgba(255,255,255,.58);
+      border:1px solid rgba(0,0,0,.10);
+      border-radius:999px;
+      outline:none;
+      padding:0 6px;
+    }
+
+    .range::-webkit-slider-thumb,
+    .kRange::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width:46px;
+      height:46px;
+      border-radius:50%;
+      background:var(--darkGreen);
+      border:none;
+      box-shadow:0 2px 6px rgba(0,0,0,.22);
+      cursor:pointer;
+    }
+
+    .range::-moz-range-thumb,
+    .kRange::-moz-range-thumb{
+      width:46px;
+      height:46px;
+      border-radius:50%;
+      background:var(--darkGreen);
+      border:none;
+      box-shadow:0 2px 6px rgba(0,0,0,.22);
+      cursor:pointer;
+    }
+
+    .range::-moz-range-track,
+    .kRange::-moz-range-track{
+      height:52px;
+      background:rgba(255,255,255,.58);
+      border:1px solid rgba(0,0,0,.10);
+      border-radius:999px;
+    }
 
     .backdrop{
       position:fixed;
@@ -632,8 +686,10 @@
 
     @media (max-width: 390px){
       .hintText{ font-size:15px; }
-      .seatNo{ font-size:30px; }
+      .seatNo{ font-size:20px; }
       .seatPeople{ font-size:14px; }
+      .seatName{ font-size:14px; }
+      .seatState{ font-size:14px; }
       .navBtn{ font-size:13px; }
       .topBtn{ font-size:14px; }
     }
@@ -901,6 +957,7 @@
         s.groupColor = s.groupColor || null;
         s.groupRoot = s.groupRoot || null;
         s.cap = Number(s.cap || s.capacity || 1);
+        s.fromSeatLabels = s.fromSeatLabels || "";
         return s;
       });
     }
@@ -926,6 +983,7 @@
       s.groupColor = s.groupColor || null;
       s.groupRoot = s.groupRoot || null;
       s.cap = Number(s.cap || s.capacity || 1);
+      s.fromSeatLabels = s.fromSeatLabels || "";
 
       return s;
     }
@@ -997,44 +1055,43 @@
           card.classList.add("isSelected");
         }
 
-        const seatLabel = seat.merged ? (seat.mergeLabel || seat.id) : seat.id;
-        const people = (seat.status==="in" || seat.status==="reserve") ? Number(seat.people||0) : 0;
+        const seatLabel = seat.id;
         const bills = Number(seat.bills||0);
-        const billsLine = (seat.status==="in" && bills>=2) ? `別会計${bills}件` : "";
 
+        let peopleText = "";
         let nameLine = "";
         let stateLine = "";
         let subLine = "";
+        let billsLine = "";
 
-        if(seat.merged){
-          nameLine = "合流";
-          stateLine = seat.mergeLabel || "";
-          subLine = "";
-        }else if(seat.status==="in"){
+        if(seat.status==="in"){
+          peopleText = `着席${Number(seat.people||0)}名`;
           nameLine = seat.name || "";
-          stateLine = "来店";
+          stateLine = seat.fromSeatLabels ? `→${seat.fromSeatLabels}` : "来店";
           subLine = seat.groupId ? `グループ ${seat.groupId}` : "";
+          if(bills>=2) billsLine = `別会計${bills}件`;
         }else if(seat.status==="reserve"){
-          nameLine = "予約";
-          stateLine = seat.reserve?.time || "";
-          subLine = seat.reserve?.name || "";
+          peopleText = `予約${Number(seat.people||0)}名`;
+          nameLine = seat.reserve?.name || seat.name || "";
+          stateLine = "予約";
+          subLine = seat.reserve?.time || "";
         }else{
-          nameLine = "空席";
-          stateLine = seat.cap>=2 ? `${seat.cap}名席` : " ";
-          subLine = " ";
+          peopleText = `${Number(seat.cap||1)}名席`;
+          nameLine = "";
+          stateLine = "空席";
+          subLine = "";
         }
 
         const money = (seat.status==="in") ? yen(calcSeatTotal(seat)) : "";
 
         card.innerHTML = `
-          <div class="seatNo">${seatLabel}</div>
-          <div class="seatPeople">${(seat.status==="in"||seat.status==="reserve") ? `${people}名` : ""}</div>
           ${seat.groupId ? `<div class="groupTag">${seat.groupId}</div>` : ``}
+          <div class="seatNo">${seatLabel}</div>
+          <div class="seatPeople">${peopleText || " "}</div>
           <div class="seatName">${nameLine || " "}</div>
           <div class="seatState">${stateLine || " "}</div>
           <div class="seatSub">${subLine || " "}</div>
           <div class="seatBills">${billsLine || " "}</div>
-          <div class="seatDivider"></div>
           <div class="seatPrice">${money || " "}</div>
         `;
 
@@ -1336,6 +1393,7 @@ function clearSeatToEmpty(seat){
   seat.groupId = null;
   seat.groupColor = null;
   seat.groupRoot = null;
+  seat.fromSeatLabels = "";
 }
 
 function clearGroupById(groupId){
@@ -1542,18 +1600,19 @@ function applyArriveDecision_v3(ids, people, name){
   const rootSeat = seatById(rootId);
 
   ids.forEach((id, idx)=>{
-    const s = seatById(id);
-    if(!s) return;
-    s.status = "in";
-    s.people = Number(people||1);
-    s.name = (idx===0 ? (name || "") : "");
-    s.reserve = null;
-    s.bills = 1;
-    s.orders = s.orders || [];
-    s.orderLog = s.orderLog || [];
-  });
+  const s = seatById(id);
+  if(!s) return;
+  s.status = "in";
+  s.people = Number(people||1);
+  s.name = (idx===0 ? (name || "") : "");
+  s.reserve = null;
+  s.bills = 1;
+  s.orders = s.orders || [];
+  s.orderLog = s.orderLog || [];
+  s.fromSeatLabels = "";
+}); 
 
-  if(window.ONE_MAIN_CLEAR_SELECTION) window.ONE_MAIN_CLEAR_SELECTION();
+if(window.ONE_MAIN_CLEAR_SELECTION) window.ONE_MAIN_CLEAR_SELECTION();
 
   closeModal();
   renderSeats();
@@ -1639,16 +1698,17 @@ function applyReserveDecision_v3(ids, people, name, tel, time){
     ? window.ONE_MAIN_ASSIGN_GROUP_TO_IDS(ids, people, "reserve")
     : null;
 
-  ids.forEach(id=>{
-    const s = seatById(id);
-    if(!s) return;
-    s.status = "reserve";
-    s.people = Number(people||1);
-    s.name = "";
-    s.total = 0;
-    s.bills = 0;
-    s.reserve = { time, name, tel, note:"" };
-  });
+ ids.forEach(id=>{
+  const s = seatById(id);
+  if(!s) return;
+  s.status = "reserve";
+  s.people = Number(people||1);
+  s.name = "";
+  s.total = 0;
+  s.bills = 0;
+  s.reserve = { time, name, tel, note:"" };
+  s.fromSeatLabels = "";
+});
 
   if(window.ONE_MAIN_CLEAR_SELECTION) window.ONE_MAIN_CLEAR_SELECTION();
 
@@ -1710,15 +1770,16 @@ function applyReserveToArrive_v3(seat){
   const list = seat.groupId ? getGroupSeats(seat.groupId) : [seat];
   const root = seat.groupId ? (getGroupRootSeat(seat.groupId) || seat) : seat;
 
-  list.forEach((s, idx)=>{
-    s.status = "in";
-    s.bills = 1;
-    if(idx===0) s.name = seat.reserve?.name || "";
-    else s.name = "";
-    s.reserve = null;
-    s.orders = s.orders || [];
-    s.orderLog = s.orderLog || [];
-  });
+ list.forEach((s, idx)=>{
+  s.status = "in";
+  s.bills = 1;
+  if(idx===0) s.name = seat.reserve?.name || "";
+  else s.name = "";
+  s.reserve = null;
+  s.orders = s.orders || [];
+  s.orderLog = s.orderLog || [];
+  s.fromSeatLabels = "";
+});
 
   closeModal();
   renderSeats();
@@ -2487,19 +2548,22 @@ function doSeatMove_v4(fromIds, toIds){
     const payload = cloneSeatPayload(payloadSeat);
 
     fromSeats.forEach(s=> clearSeatToEmpty(s));
-    toSeats.forEach((s, idx)=>{
-      s.status = payload.status;
-      s.people = payload.people;
-      s.name = idx===0 ? payload.name : "";
-      s.bills = payload.bills;
-      s.total = idx===0 ? payload.total : 0;
-      s.orders = idx===0 ? payload.orders : [];
-      s.orderLog = idx===0 ? payload.orderLog : [];
-      s.reserve = payload.reserve;
-      s.groupId = payload.groupId;
-      s.groupColor = payload.groupColor;
-      s.groupRoot = toSeats[0].id;
-    });
+   const movedFromLabel = fromIds.join("");
+
+toSeats.forEach((s, idx)=>{
+  s.status = payload.status;
+  s.people = payload.people;
+  s.name = idx===0 ? payload.name : "";
+  s.bills = payload.bills;
+  s.total = idx===0 ? payload.total : 0;
+  s.orders = idx===0 ? payload.orders : [];
+  s.orderLog = idx===0 ? payload.orderLog : [];
+  s.reserve = payload.reserve;
+  s.groupId = payload.groupId;
+  s.groupColor = payload.groupColor;
+  s.groupRoot = toSeats[0].id;
+  s.fromSeatLabels = idx===0 ? movedFromLabel : "";
+});
 
     renderSeats();
     closeModal();
@@ -2572,21 +2636,24 @@ function doSeatMerge_v4(fromIds, toIds){
     (s.orderLog || []).forEach(l=> combinedLog.push(JSON.parse(JSON.stringify(l))));
   });
 
-  mergeIds.forEach((id, idx)=>{
-    const s = seatById(id);
-    if(!s) return;
-    s.status = "in";
-    s.people = people || 1;
-    s.groupId = gid;
-    s.groupColor = color;
-    s.groupRoot = root;
-    s.name = (id===root ? base.name : "");
-    s.reserve = null;
-    s.bills = 1;
-    s.orders = (id===root ? combinedOrders : []);
-    s.orderLog = (id===root ? combinedLog : []);
-    s.total = (id===root ? total : 0);
-  });
+ const mergeFromLabel = fromIds.join("");
+
+mergeIds.forEach((id, idx)=>{
+  const s = seatById(id);
+  if(!s) return;
+  s.status = "in";
+  s.people = people || 1;
+  s.groupId = gid;
+  s.groupColor = color;
+  s.groupRoot = root;
+  s.name = (id===root ? base.name : "");
+  s.reserve = null;
+  s.bills = 1;
+  s.orders = (id===root ? combinedOrders : []);
+  s.orderLog = (id===root ? combinedLog : []);
+  s.total = (id===root ? total : 0);
+  s.fromSeatLabels = (id===root ? mergeFromLabel : "");
+});
 
   renderSeats();
   closeModal();
@@ -3902,16 +3969,15 @@ registerScreenHook("scrFix", ()=>{
   ここから先は PART6 で続く
 ========================= */
 /* =========================
-  PART6-1：席登録（完全版 v8）
-  追加修正：
-   - 全角数字の次番号予測
-   - 半角数字の次番号予測
-   - 末尾数字の一般予測
-   - 未定義＋英字1文字予測
-   - 未定義＋英字2文字以上は予測しない
+  PART6-1：席登録（完全版 v9）
+  仕様修正：
+   - 未定義文字でも席数分プレビュー生成
+   - 重複判定は「同じ名称内だけ」
+   - 名称が別なら同じ席番号でも保存OK
+   - プレビューは個別編集データで管理
 ========================= */
 
-(function buildSeatSetupUI_v8(){
+(function buildSeatSetupUI_v9(){
 
   const scr = $("scrSeatSetup");
   if(!scr) return;
@@ -3959,7 +4025,7 @@ registerScreenHook("scrFix", ()=>{
         id="ssStartLabel"
         class="btn full"
         style="text-align:left"
-        placeholder="A / 1 / １ / あ / a1 / 1a / カウンター1"
+        placeholder="A / 1 / １ / あ / a1 / 1a / 窓 / 窓1 / 窓a"
       />
       <button class="btn lime" id="ssApplyLabel" style="min-width:110px">決定</button>
     </div>
@@ -3969,7 +4035,7 @@ registerScreenHook("scrFix", ()=>{
     </div>
 
     <div style="opacity:.85;margin-bottom:10px">
-      例：A → A,B,C… ／ a1 → a1,a2,a3… ／ 1a → 1a,1b,1c… ／ カウンター１ → カウンター２…
+      例：A → A,B,C… ／ a1 → a1,a2,a3… ／ 1a → 1a,1b,1c… ／ 窓1 → 窓2… ／ 窓 → 予測なし
     </div>
 
     <div style="font-weight:900;margin-bottom:6px">作成予定の席</div>
@@ -3980,7 +4046,6 @@ registerScreenHook("scrFix", ()=>{
     <div style="font-weight:900;margin-bottom:6px">作成した席</div>
     <div id="ssGroups"></div>
   `;
-
 })();
 
 /* =========================
@@ -3996,7 +4061,7 @@ state.seatSetup = state.seatSetup || {
   capacity: 0,
   startLabel: "",
   predictOn: true,
-  previewSeatIds: [],
+  previewSeats: [],   // [{uid,id,cap}]
   groups: []
 };
 
@@ -4038,6 +4103,10 @@ function ssNewGid(){
   return "sg_" + Math.random().toString(36).slice(2);
 }
 
+function ssNewPreviewUid(){
+  return "pv_" + Math.random().toString(36).slice(2);
+}
+
 function ssNormalizeWideDigitChar(ch){
   const code = ch.charCodeAt(0);
   if(code >= 0xFF10 && code <= 0xFF19){
@@ -4064,24 +4133,24 @@ function ssDigitStyleOf(str){
   予測ロジック
 ========================= */
 
-const SS_HIRA_V8 = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
-const SS_LOWER_V8 = "abcdefghijklmnopqrstuvwxyz";
-const SS_UPPER_V8 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const SS_HIRA_V9 = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
+const SS_LOWER_V9 = "abcdefghijklmnopqrstuvwxyz";
+const SS_UPPER_V9 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-function ssHasSpaceOrSymbol_v8(s){
+function ssHasSpaceOrSymbol_v9(s){
   return /[^0-9０-９A-Za-zぁ-んァ-ンー]/.test(s);
 }
 
-function ssNextFromSet_v8(ch, setStr){
+function ssNextFromSet_v9(ch, setStr){
   const i = setStr.indexOf(ch);
   if(i === -1) return null;
   return setStr[i+1] || null;
 }
 
-function ssParsePredictPattern_v8(s){
+function ssParsePredictPattern_v9(s){
   const t = String(s || "").trim();
   if(!t) return null;
-  if(ssHasSpaceOrSymbol_v8(t)) return null;
+  if(ssHasSpaceOrSymbol_v9(t)) return null;
 
   const half = ssToHalfDigits(t);
 
@@ -4089,11 +4158,12 @@ function ssParsePredictPattern_v8(s){
     const ch = t;
     const h = half;
 
-    if(SS_HIRA_V8.includes(ch)) return { mode:"single_hira", first:ch };
-    if(SS_LOWER_V8.includes(ch)) return { mode:"single_lower", first:ch };
-    if(SS_UPPER_V8.includes(ch)) return { mode:"single_upper", first:ch };
+    if(SS_HIRA_V9.includes(ch)) return { mode:"single_hira", first:ch };
+    if(SS_LOWER_V9.includes(ch)) return { mode:"single_lower", first:ch };
+    if(SS_UPPER_V9.includes(ch)) return { mode:"single_upper", first:ch };
     if(/^[1-9]$/.test(h)) return { mode:"single_digit", first:h, digitStyle:ssDigitStyleOf(t) };
 
+    // 未定義1文字は予測しない
     return null;
   }
 
@@ -4159,6 +4229,7 @@ function ssParsePredictPattern_v8(s){
     };
   }
 
+  // 未定義 + 数字末尾 → その数字だけ連番
   const mNum = t.match(/^(.*?)([0-9０-９]+)$/);
   if(mNum){
     return {
@@ -4169,51 +4240,42 @@ function ssParsePredictPattern_v8(s){
     };
   }
 
-  const mLower1 = t.match(/^(.*)([a-z])$/);
+  // 未定義 + 英字1文字だけ → その英字だけ連番
+  const mLower1 = t.match(/^(.*?)([a-z])$/);
   if(mLower1){
-    const before = mLower1[1];
-    if(!/[a-z]{2,}$/.test(t) && !/[A-Z]+$/.test(before) && !/[ぁ-ん]+$/.test(before)){
-      return {
-        mode:"suffix_lower_generic",
-        prefix:before,
-        tail:mLower1[2]
-      };
+    const prefix = mLower1[1];
+    if(!/[a-z]{2,}$/.test(t)){
+      return { mode:"suffix_lower_generic", prefix, tail:mLower1[2] };
     }
   }
 
-  const mUpper1 = t.match(/^(.*)([A-Z])$/);
+  const mUpper1 = t.match(/^(.*?)([A-Z])$/);
   if(mUpper1){
-    const before = mUpper1[1];
-    if(!/[A-Z]{2,}$/.test(t) && !/[a-z]+$/.test(before) && !/[ぁ-ん]+$/.test(before)){
-      return {
-        mode:"suffix_upper_generic",
-        prefix:before,
-        tail:mUpper1[2]
-      };
+    const prefix = mUpper1[1];
+    if(!/[A-Z]{2,}$/.test(t)){
+      return { mode:"suffix_upper_generic", prefix, tail:mUpper1[2] };
     }
   }
 
-  const mHira1 = t.match(/^(.*)([ぁ-ん])$/);
+  // 未定義 + ひらがな1文字
+  const mHira1 = t.match(/^(.*?)([ぁ-ん])$/);
   if(mHira1){
-    const before = mHira1[1];
-    if(!/[ぁ-ん]{2,}$/.test(t) && !/[a-zA-Z]+$/.test(before)){
-      return {
-        mode:"suffix_hira_generic",
-        prefix:before,
-        tail:mHira1[2]
-      };
+    const prefix = mHira1[1];
+    if(!/[ぁ-ん]{2,}$/.test(t)){
+      return { mode:"suffix_hira_generic", prefix, tail:mHira1[2] };
     }
   }
 
+  // それ以外は予測しない
   return null;
 }
 
-function ssFormatNumWithStyle_v8(n, style){
+function ssFormatNumWithStyle_v9(n, style){
   const s = String(n);
   return style === "wide" ? ssToWideDigitString(s) : s;
 }
 
-function ssBuildIds_v8(start, count, predictOn){
+function ssBuildIds_v9(start, count, predictOn){
   const s = String(start || "").trim();
   const c = Math.max(0, ssNum(count));
   const out = [];
@@ -4221,17 +4283,13 @@ function ssBuildIds_v8(start, count, predictOn){
   if(!s || c <= 0) return out;
 
   if(!predictOn){
-    for(let i=1;i<=c;i++){
-      out.push(c===1 ? s : `${s}_${i}`);
-    }
+    for(let i=0;i<c;i++) out.push(s);
     return out;
   }
 
-  const p = ssParsePredictPattern_v8(s);
+  const p = ssParsePredictPattern_v9(s);
   if(!p){
-    for(let i=1;i<=c;i++){
-      out.push(c===1 ? s : `${s}_${i}`);
-    }
+    for(let i=0;i<c;i++) out.push(s);
     return out;
   }
 
@@ -4239,9 +4297,9 @@ function ssBuildIds_v8(start, count, predictOn){
     let cur = p.first;
     for(let i=0;i<c;i++){
       out.push(cur);
-      const nx = ssNextFromSet_v8(cur, SS_HIRA_V8);
+      const nx = ssNextFromSet_v9(cur, SS_HIRA_V9);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        for(let k=i+1;k<c;k++) out.push(s);
         break;
       }
       cur = nx;
@@ -4253,9 +4311,9 @@ function ssBuildIds_v8(start, count, predictOn){
     let cur = p.first;
     for(let i=0;i<c;i++){
       out.push(cur);
-      const nx = ssNextFromSet_v8(cur, SS_LOWER_V8);
+      const nx = ssNextFromSet_v9(cur, SS_LOWER_V9);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        for(let k=i+1;k<c;k++) out.push(s);
         break;
       }
       cur = nx;
@@ -4267,9 +4325,9 @@ function ssBuildIds_v8(start, count, predictOn){
     let cur = p.first;
     for(let i=0;i<c;i++){
       out.push(cur);
-      const nx = ssNextFromSet_v8(cur, SS_UPPER_V8);
+      const nx = ssNextFromSet_v9(cur, SS_UPPER_V9);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        for(let k=i+1;k<c;k++) out.push(s);
         break;
       }
       cur = nx;
@@ -4280,7 +4338,7 @@ function ssBuildIds_v8(start, count, predictOn){
   if(p.mode === "single_digit"){
     let n = Number(p.first);
     for(let i=0;i<c;i++){
-      out.push(ssFormatNumWithStyle_v8(n, p.digitStyle));
+      out.push(ssFormatNumWithStyle_v9(n, p.digitStyle));
       n += 1;
     }
     return out;
@@ -4293,7 +4351,7 @@ function ssBuildIds_v8(start, count, predictOn){
   ){
     let n = Number(p.tailHalf);
     for(let i=0;i<c;i++){
-      out.push(`${p.prefix}${ssFormatNumWithStyle_v8(n, p.digitStyle)}`);
+      out.push(`${p.prefix}${ssFormatNumWithStyle_v9(n, p.digitStyle)}`);
       n += 1;
     }
     return out;
@@ -4302,10 +4360,10 @@ function ssBuildIds_v8(start, count, predictOn){
   if(p.mode === "digit_hira"){
     let cur = p.tail;
     for(let i=0;i<c;i++){
-      out.push(`${ssFormatNumWithStyle_v8(p.prefix, p.digitStyle)}${cur}`);
-      const nx = ssNextFromSet_v8(cur, SS_HIRA_V8);
+      out.push(`${ssFormatNumWithStyle_v9(p.prefix, p.digitStyle)}${cur}`);
+      const nx = ssNextFromSet_v9(cur, SS_HIRA_V9);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        for(let k=i+1;k<c;k++) out.push(s);
         break;
       }
       cur = nx;
@@ -4316,10 +4374,10 @@ function ssBuildIds_v8(start, count, predictOn){
   if(p.mode === "digit_lower"){
     let cur = p.tail;
     for(let i=0;i<c;i++){
-      out.push(`${ssFormatNumWithStyle_v8(p.prefix, p.digitStyle)}${cur}`);
-      const nx = ssNextFromSet_v8(cur, SS_LOWER_V8);
+      out.push(`${ssFormatNumWithStyle_v9(p.prefix, p.digitStyle)}${cur}`);
+      const nx = ssNextFromSet_v9(cur, SS_LOWER_V9);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        for(let k=i+1;k<c;k++) out.push(s);
         break;
       }
       cur = nx;
@@ -4330,10 +4388,10 @@ function ssBuildIds_v8(start, count, predictOn){
   if(p.mode === "digit_upper"){
     let cur = p.tail;
     for(let i=0;i<c;i++){
-      out.push(`${ssFormatNumWithStyle_v8(p.prefix, p.digitStyle)}${cur}`);
-      const nx = ssNextFromSet_v8(cur, SS_UPPER_V8);
+      out.push(`${ssFormatNumWithStyle_v9(p.prefix, p.digitStyle)}${cur}`);
+      const nx = ssNextFromSet_v9(cur, SS_UPPER_V9);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        for(let k=i+1;k<c;k++) out.push(s);
         break;
       }
       cur = nx;
@@ -4344,7 +4402,7 @@ function ssBuildIds_v8(start, count, predictOn){
   if(p.mode === "digits_only"){
     let n = Number(p.firstNum);
     for(let i=0;i<c;i++){
-      out.push(ssFormatNumWithStyle_v8(n, p.digitStyle));
+      out.push(ssFormatNumWithStyle_v9(n, p.digitStyle));
       n += 1;
     }
     return out;
@@ -4353,7 +4411,7 @@ function ssBuildIds_v8(start, count, predictOn){
   if(p.mode === "suffix_digits_generic"){
     let n = Number(p.tailHalf);
     for(let i=0;i<c;i++){
-      out.push(`${p.prefix}${ssFormatNumWithStyle_v8(n, p.digitStyle)}`);
+      out.push(`${p.prefix}${ssFormatNumWithStyle_v9(n, p.digitStyle)}`);
       n += 1;
     }
     return out;
@@ -4363,9 +4421,9 @@ function ssBuildIds_v8(start, count, predictOn){
     let cur = p.tail;
     for(let i=0;i<c;i++){
       out.push(`${p.prefix}${cur}`);
-      const nx = ssNextFromSet_v8(cur, SS_LOWER_V8);
+      const nx = ssNextFromSet_v9(cur, SS_LOWER_V9);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        for(let k=i+1;k<c;k++) out.push(s);
         break;
       }
       cur = nx;
@@ -4377,9 +4435,9 @@ function ssBuildIds_v8(start, count, predictOn){
     let cur = p.tail;
     for(let i=0;i<c;i++){
       out.push(`${p.prefix}${cur}`);
-      const nx = ssNextFromSet_v8(cur, SS_UPPER_V8);
+      const nx = ssNextFromSet_v9(cur, SS_UPPER_V9);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        for(let k=i+1;k<c;k++) out.push(s);
         break;
       }
       cur = nx;
@@ -4391,9 +4449,9 @@ function ssBuildIds_v8(start, count, predictOn){
     let cur = p.tail;
     for(let i=0;i<c;i++){
       out.push(`${p.prefix}${cur}`);
-      const nx = ssNextFromSet_v8(cur, SS_HIRA_V8);
+      const nx = ssNextFromSet_v9(cur, SS_HIRA_V9);
       if(!nx && i < c-1){
-        out.push(...Array.from({length:c-1-i}, (_,k)=> `${s}_${k+2}`));
+        for(let k=i+1;k<c;k++) out.push(s);
         break;
       }
       cur = nx;
@@ -4401,9 +4459,7 @@ function ssBuildIds_v8(start, count, predictOn){
     return out.slice(0,c);
   }
 
-  for(let i=1;i<=c;i++){
-    out.push(c===1 ? s : `${s}_${i}`);
-  }
+  for(let i=0;i<c;i++) out.push(s);
   return out;
 }
 
@@ -4411,31 +4467,26 @@ function ssBuildIds_v8(start, count, predictOn){
   preview
 ========================= */
 
-function ssEnsurePreview_v8(){
-  const n = ssNum(state.seatSetup.count);
-  const s = state.seatSetup.startLabel;
-  const predictOn = !!state.seatSetup.predictOn;
+function ssRebuildPreviewSeats_v9(){
+  const count = Math.max(0, ssNum(state.seatSetup.count));
+  const cap = Math.max(0, ssNum(state.seatSetup.capacity));
+  const start = String(state.seatSetup.startLabel || "").trim();
+  const ids = ssBuildIds_v9(start, count, !!state.seatSetup.predictOn);
 
-  if(n <= 0){
-    state.seatSetup.previewSeatIds = [];
-    return;
-  }
-
-  if(!s){
-    state.seatSetup.previewSeatIds = Array.from({length:n}, (_,i)=> "未" + (i+1));
-    return;
-  }
-
-  state.seatSetup.previewSeatIds = ssBuildIds_v8(s, n, predictOn);
+  state.seatSetup.previewSeats = ids.map(id => ({
+    uid: ssNewPreviewUid(),
+    id,
+    cap
+  }));
 }
 
-function ssPreviewHtml_v8(id, cap){
+function ssPreviewHtml_v9(seat){
   return `
     <div
       class="seatCard in"
-      data-id="${id}"
+      data-uid="${seat.uid}"
       style="
-        min-height:90px;
+        min-height:96px;
         display:flex;
         flex-direction:column;
         align-items:center;
@@ -4443,44 +4494,41 @@ function ssPreviewHtml_v8(id, cap){
         gap:4px;
       "
     >
-      <div style="font-size:14px;font-weight:900;opacity:.8">${state.seatSetup.committedName || "名称未定"}</div>
-      <div style="font-size:22px;font-weight:900">${id}</div>
-      <div style="font-size:13px">定員 ${cap}</div>
+      <div style="font-size:13px;font-weight:900;opacity:.8">${state.seatSetup.committedName || "名称未定"}</div>
+      <div style="font-size:22px;font-weight:900">${seat.id}</div>
+      <div style="font-size:13px">定員 ${Math.max(0, ssNum(seat.cap))}名</div>
     </div>
   `;
 }
 
-function renderSeatSetupPreview_v8(){
+function renderSeatSetupPreview_v9(){
   const box = $("ssPreviewGrid");
   if(!box) return;
 
-  ssEnsurePreview_v8();
+  const list = state.seatSetup.previewSeats || [];
 
-  const ids = state.seatSetup.previewSeatIds || [];
-  const cap = Math.max(0, ssNum(state.seatSetup.capacity));
-
-  if(ids.length === 0){
+  if(list.length === 0){
     box.innerHTML = "まだありません";
     return;
   }
 
-  box.innerHTML = ids.map(id=> ssPreviewHtml_v8(id, cap)).join("");
+  box.innerHTML = list.map(seat => ssPreviewHtml_v9(seat)).join("");
 
-  box.querySelectorAll("[data-id]").forEach(el=>{
+  box.querySelectorAll("[data-uid]").forEach(el=>{
     el.onclick = ()=>{
-      const id = el.getAttribute("data-id");
-      if(typeof openSeatSetupPreviewEditor_v8 === "function"){
-        openSeatSetupPreviewEditor_v8(id);
+      const uid = el.getAttribute("data-uid");
+      if(typeof openSeatSetupPreviewEditor_v9 === "function"){
+        openSeatSetupPreviewEditor_v9(uid);
       }
     };
   });
 }
 
 /* =========================
-  PART6-2：席登録（完全版 v8）
+  PART6-2：席登録（完全版 v9）
 ========================= */
 
-function renderSeatSetupNames_v8(){
+function renderSeatSetupNames_v9(){
 
   const grid = $("ssNameGrid");
   if(!grid) return;
@@ -4505,7 +4553,7 @@ function renderSeatSetupNames_v8(){
     c.onclick = ()=>{
       state.seatSetup.selectedName =
         (state.seatSetup.selectedName === name) ? null : name;
-      renderSeatSetupNames_v8();
+      renderSeatSetupNames_v9();
     };
 
     grid.appendChild(c);
@@ -4514,113 +4562,100 @@ function renderSeatSetupNames_v8(){
   ssSetCommittedBox();
 }
 
-function renderSeatSetupCounters_v8(){
+function renderSeatSetupCounters_v9(){
 
-  $("ssCntVal").textContent =
-    Math.max(0, ssNum(state.seatSetup.count));
+  const cnt = Math.max(0, ssNum(state.seatSetup.count));
+  const cap = Math.max(0, ssNum(state.seatSetup.capacity));
 
-  $("ssCapVal").textContent =
-    Math.max(0, ssNum(state.seatSetup.capacity));
-
-  $("ssStartLabel").value =
-    state.seatSetup.startLabel || "";
+  if($("ssCntVal")) $("ssCntVal").textContent = String(cnt);
+  if($("ssCapVal")) $("ssCapVal").textContent = String(cap);
+  if($("ssStartLabel")) $("ssStartLabel").value = state.seatSetup.startLabel || "";
 
   const on = !!state.seatSetup.predictOn;
-
-  $("ssPredictToggle").textContent =
-    on ? "予測ON" : "予測OFF";
-
-  $("ssPredictToggle").style.opacity =
-    on ? "1" : ".6";
+  if($("ssPredictToggle")){
+    $("ssPredictToggle").textContent = on ? "予測ON" : "予測OFF";
+    $("ssPredictToggle").style.opacity = on ? "1" : ".65";
+  }
 }
 
-function resetSeatSetupForm_v8(){
+function resetSeatSetupForm_v9(){
 
   state.seatSetup.selectedName = null;
   state.seatSetup.committedName = null;
   state.seatSetup.count = 0;
   state.seatSetup.capacity = 0;
   state.seatSetup.startLabel = "";
-  state.seatSetup.previewSeatIds = [];
   state.seatSetup.predictOn = true;
+  state.seatSetup.previewSeats = [];
 
-  renderSeatSetupNames_v8();
-  renderSeatSetupCounters_v8();
-  renderSeatSetupPreview_v8();
+  renderSeatSetupNames_v9();
+  renderSeatSetupCounters_v9();
+  renderSeatSetupPreview_v9();
 }
 
 /* =========================
   preview editor
 ========================= */
 
-function openSeatSetupPreviewEditor_v8(oldId){
+function openSeatSetupPreviewEditor_v9(uid){
 
-  const ids = state.seatSetup.previewSeatIds || [];
-  const idx = ids.indexOf(oldId);
-
-  if(idx === -1) return;
+  const list = state.seatSetup.previewSeats || [];
+  const seat = list.find(x => x.uid === uid);
+  if(!seat) return;
 
   openModal(
     "作成予定席の編集",
-
     `
-      席番号
-      <input id="ssEditPreviewId"
+      <div style="margin-bottom:6px;font-weight:900">席番号</div>
+      <input
+        id="ssEditPreviewId"
         class="btn full"
-        value="${oldId}"
+        style="text-align:left;margin-bottom:12px"
+        value="${seat.id}"
       />
 
-      定員
-      <div style="display:flex;gap:10px">
+      <div style="margin-bottom:6px;font-weight:900">定員</div>
+      <div style="display:flex;gap:10px;margin-bottom:12px">
         <button class="btn" id="ssEditCapMinus">◀</button>
-        <div id="ssEditCapVal" class="pill">
-          ${state.seatSetup.capacity}
+        <div id="ssEditCapVal" class="pill" style="flex:1">
+          ${Math.max(0, ssNum(seat.cap))}
         </div>
         <button class="btn" id="ssEditCapPlus">▶</button>
       </div>
 
-      削除
-      <input id="ssEditDeleteSlide"
+      <div style="margin-bottom:6px;font-weight:900;color:var(--danger)">削除</div>
+      <input
+        id="ssEditDeleteSlide"
+        class="range"
         type="range"
         min="0"
         max="100"
         value="0"
       />
     `,
-
     [
       {
         label:"保存",
         lime:true,
         onClick:()=>{
 
-          const newId =
-            $("ssEditPreviewId").value.trim();
-
+          const newId = String(($("ssEditPreviewId").value || "")).trim();
           if(!newId){
-            toast("番号を入力");
+            toast("席番号を入力してください");
             return;
           }
 
-          if(ids.some((x,i)=> x===newId && i!==idx)){
-            toast("重複");
-            return;
-          }
-
-          ids[idx] = newId;
-
-          state.seatSetup.capacity =
-            ssNum($("ssEditCapVal").textContent);
+          seat.id = newId;
+          seat.cap = Math.max(0, ssNum($("ssEditCapVal").textContent || 0));
 
           closeModal();
-
-          renderSeatSetupCounters_v8();
-          renderSeatSetupPreview_v8();
+          renderSeatSetupPreview_v9();
+          toast("変更しました");
         }
       },
-
       {
         label:"戻る",
+        lime:false,
         onClick:()=> closeModal()
       }
     ]
@@ -4629,32 +4664,31 @@ function openSeatSetupPreviewEditor_v8(oldId){
   setTimeout(()=>{
 
     $("ssEditCapMinus").onclick = ()=>{
-      $("ssEditCapVal").textContent =
-        Math.max(
-          0,
-          ssNum($("ssEditCapVal").textContent) - 1
-        );
+      const cur = Math.max(0, ssNum($("ssEditCapVal").textContent || 0) - 1);
+      $("ssEditCapVal").textContent = String(cur);
     };
 
     $("ssEditCapPlus").onclick = ()=>{
-      $("ssEditCapVal").textContent =
-        ssNum($("ssEditCapVal").textContent) + 1;
+      const cur = Math.max(0, ssNum($("ssEditCapVal").textContent || 0) + 1);
+      $("ssEditCapVal").textContent = String(cur);
     };
 
     $("ssEditDeleteSlide").onchange = ()=>{
-
-      if(ssNum($("ssEditDeleteSlide").value) < 88){
+      const v = ssNum($("ssEditDeleteSlide").value || 0);
+      if(v < 88){
         $("ssEditDeleteSlide").value = 0;
         return;
       }
 
-      ids.splice(idx,1);
-      state.seatSetup.count = ids.length;
+      state.seatSetup.previewSeats =
+        (state.seatSetup.previewSeats || []).filter(x => x.uid !== uid);
+
+      state.seatSetup.count = state.seatSetup.previewSeats.length;
 
       closeModal();
-
-      renderSeatSetupCounters_v8();
-      renderSeatSetupPreview_v8();
+      renderSeatSetupCounters_v9();
+      renderSeatSetupPreview_v9();
+      toast("削除しました");
     };
 
   },0);
@@ -4664,10 +4698,9 @@ function openSeatSetupPreviewEditor_v8(oldId){
   save seat
 ========================= */
 
-function ssCreateSeatObject_v8(id, cap){
+function ssCreateSeatObject_v9(id, cap){
 
   return normalizeSeat({
-
     id:id,
     status:"empty",
     people:0,
@@ -4676,38 +4709,50 @@ function ssCreateSeatObject_v8(id, cap){
     bills:0,
     reserve:null,
     merged:false,
+    mergeLabel:"",
     sub:null,
+    orders:[],
+    orderLog:[],
     groupId:null,
     groupColor:null,
     groupRoot:null,
-    cap:cap
-
+    cap:Math.max(0, ssNum(cap))
   });
 }
 
-function ssHasDuplicateIds_v8(ids){
+function ssHasDuplicateInsideSameName_v9(name, ids){
 
-  return ids.some(id =>
-    state.seats.some(s=> s.id===id)
-  );
+  const normalized = ids.map(x => String(x || "").trim()).filter(Boolean);
+  const dupInPreview = new Set();
+
+  normalized.forEach(id=>{
+    if(dupInPreview.has(id)) return;
+    const n = normalized.filter(x => x === id).length;
+    if(n >= 2) dupInPreview.add(id);
+  });
+
+  if(dupInPreview.size > 0) return true;
+
+  const sameNameGroups = (state.seatSetup.groups || []).filter(g => g.name === name);
+  const existingIds = sameNameGroups.flatMap(g => Array.isArray(g.seatIds) ? g.seatIds : []);
+
+  return normalized.some(id => existingIds.includes(id));
 }
 
 /* =========================
   hook
 ========================= */
 
-(function hookSeatSetup_v8(){
+(function hookSeatSetup_v9(){
 
-  if(hookSeatSetup_v8._done) return;
-  hookSeatSetup_v8._done = true;
+  if(hookSeatSetup_v9._done) return;
+  hookSeatSetup_v9._done = true;
 
   $("ssNameCommit").onclick = ()=>{
 
-    const pick =
-      state.seatSetup.selectedName;
-
+    const pick = state.seatSetup.selectedName;
     if(!pick){
-      toast("名称選択");
+      toast("名称を選択してください");
       return;
     }
 
@@ -4715,30 +4760,44 @@ function ssHasDuplicateIds_v8(ids){
 
       openModal(
         "名称作成",
-
-        `<input id="ssNewName"
-          class="btn full"
-        />`,
-
+        `
+          <input
+            id="ssNewName"
+            class="btn full"
+            style="text-align:left"
+            placeholder="例：窓側テラス"
+          />
+        `,
         [
           {
             label:"追加",
             lime:true,
             onClick:()=>{
 
-              const v =
-                $("ssNewName").value.trim();
+              const v = String(($("ssNewName").value || "")).trim();
+              if(!v){
+                toast("名称を入力してください");
+                return;
+              }
 
-              if(!v) return;
+              if(ssAllNames().includes(v)){
+                toast("同じ名称があります");
+                return;
+              }
 
               state.seatSetup.customNames.push(v);
-
               state.seatSetup.selectedName = v;
               state.seatSetup.committedName = v;
 
               closeModal();
-              renderSeatSetupNames_v8();
+              renderSeatSetupNames_v9();
+              toast("名称を追加しました");
             }
+          },
+          {
+            label:"戻る",
+            lime:false,
+            onClick:()=> closeModal()
           }
         ]
       );
@@ -4747,260 +4806,265 @@ function ssHasDuplicateIds_v8(ids){
     }
 
     state.seatSetup.committedName = pick;
-    renderSeatSetupNames_v8();
+    renderSeatSetupNames_v9();
+    toast(`名称：${pick}`);
   };
 
   $("ssCntMinus").onclick = ()=>{
-    state.seatSetup.count--;
-    if(state.seatSetup.count < 0)
-      state.seatSetup.count = 0;
-
-    renderSeatSetupCounters_v8();
-    renderSeatSetupPreview_v8();
+    state.seatSetup.count = Math.max(0, ssNum(state.seatSetup.count) - 1);
+    ssRebuildPreviewSeats_v9();
+    renderSeatSetupCounters_v9();
+    renderSeatSetupPreview_v9();
   };
 
   $("ssCntPlus").onclick = ()=>{
-    state.seatSetup.count++;
-    renderSeatSetupCounters_v8();
-    renderSeatSetupPreview_v8();
+    state.seatSetup.count = Math.max(0, ssNum(state.seatSetup.count) + 1);
+    ssRebuildPreviewSeats_v9();
+    renderSeatSetupCounters_v9();
+    renderSeatSetupPreview_v9();
   };
 
   $("ssCapMinus").onclick = ()=>{
-    state.seatSetup.capacity--;
-    if(state.seatSetup.capacity < 0)
-      state.seatSetup.capacity = 0;
-
-    renderSeatSetupCounters_v8();
-    renderSeatSetupPreview_v8();
+    state.seatSetup.capacity = Math.max(0, ssNum(state.seatSetup.capacity) - 1);
+    ssRebuildPreviewSeats_v9();
+    renderSeatSetupCounters_v9();
+    renderSeatSetupPreview_v9();
   };
 
   $("ssCapPlus").onclick = ()=>{
-    state.seatSetup.capacity++;
-    renderSeatSetupCounters_v8();
-    renderSeatSetupPreview_v8();
+    state.seatSetup.capacity = Math.max(0, ssNum(state.seatSetup.capacity) + 1);
+    ssRebuildPreviewSeats_v9();
+    renderSeatSetupCounters_v9();
+    renderSeatSetupPreview_v9();
   };
 
   $("ssPredictToggle").onclick = ()=>{
-    state.seatSetup.predictOn =
-      !state.seatSetup.predictOn;
-
-    renderSeatSetupCounters_v8();
-    renderSeatSetupPreview_v8();
+    state.seatSetup.predictOn = !state.seatSetup.predictOn;
+    ssRebuildPreviewSeats_v9();
+    renderSeatSetupCounters_v9();
+    renderSeatSetupPreview_v9();
   };
 
   $("ssApplyLabel").onclick = ()=>{
 
-    state.seatSetup.startLabel =
-      $("ssStartLabel").value.trim();
+    state.seatSetup.startLabel = String(($("ssStartLabel").value || "")).trim();
+    if(!state.seatSetup.startLabel){
+      toast("席番号を入力してください");
+      return;
+    }
 
-    renderSeatSetupPreview_v8();
+    ssRebuildPreviewSeats_v9();
+    renderSeatSetupCounters_v9();
+    renderSeatSetupPreview_v9();
   };
 
   $("ssSave").onclick = ()=>{
 
-    const name =
-      state.seatSetup.committedName;
-
-    const count =
-      ssNum(state.seatSetup.count);
-
-    const cap =
-      ssNum(state.seatSetup.capacity);
-
-    const ids =
-      state.seatSetup.previewSeatIds || [];
+    const name = String(state.seatSetup.committedName || "").trim();
+    const count = Math.max(0, ssNum(state.seatSetup.count));
+    const previewSeats = state.seatSetup.previewSeats || [];
 
     if(!name){
-      toast("名称決定");
+      toast("名称を決定してください");
       return;
     }
 
-    if(!count){
-      toast("席数");
+    if(count <= 0){
+      toast("作成席数を入力してください");
       return;
     }
 
-    if(!cap){
-      toast("定員");
+    if(previewSeats.length !== count){
+      toast("作成予定席を確認してください");
       return;
     }
 
+    const ids = previewSeats.map(x => String(x.id || "").trim()).filter(Boolean);
     if(ids.length !== count){
-      toast("番号決定");
+      toast("席番号を確認してください");
       return;
     }
 
-    if(ssHasDuplicateIds_v8(ids)){
-      toast("重複");
+    if(ssHasDuplicateInsideSameName_v9(name, ids)){
+      toast("同じ名称内で同じ席番号が使われています");
       return;
     }
 
-    ids.forEach(id=>{
-      state.seats.push(
-        ssCreateSeatObject_v8(id, cap)
-      );
+    previewSeats.forEach(pv=>{
+      state.seats.push(ssCreateSeatObject_v9(pv.id, pv.cap));
     });
 
     state.seatSetup.groups.push({
-
       gid:ssNewGid(),
       name:name,
-      seatIds:[...ids],
-      capacity:cap
-
+      seatIds:previewSeats.map(x => x.id),
+      capacities:previewSeats.map(x => ({ id:x.id, cap:x.cap })),
+      capacity:Math.max(0, ...previewSeats.map(x => ssNum(x.cap))),
+      createdTs:nowTs()
     });
 
     normalizeAllSeats();
 
-    renderSeats();
-    renderSeatSetupGroups_v8();
-    resetSeatSetupForm_v8();
+    if(typeof renderSeats === "function") renderSeats();
+    if(typeof persistAll === "function") persistAll();
+    if(typeof emitEvent === "function"){
+      emitEvent("seat_setup_save", {
+        name,
+        seatIds: previewSeats.map(x => x.id),
+        capacities: previewSeats.map(x => ({ id:x.id, cap:x.cap }))
+      });
+    }
 
+    renderSeatSetupGroups_v9();
+    resetSeatSetupForm_v9();
+    toast("保存しました");
   };
 
 })();
 
 /* =========================
-  PART6-3：席登録（完全版 v8）
-  作成済み一覧 / 名称変更 / 削除 / 元席削除対応
+  PART6-3：席登録（完全版 v9）
+  作成済み一覧 / 名称変更 / 削除 / 個別席編集
 ========================= */
 
-function renderSeatSetupGroups_v8(){
+function ssFindSeatCapFromGroup_v9(g, seatId){
+  const caps = Array.isArray(g?.capacities) ? g.capacities : [];
+  const hit = caps.find(x => x && x.id === seatId);
+  if(hit) return Math.max(0, ssNum(hit.cap));
+  return Math.max(0, ssNum(g?.capacity || 0));
+}
+
+function renderSeatSetupGroups_v9(){
 
   const box = $("ssGroups");
   if(!box) return;
 
   box.innerHTML = "";
 
-  const groups = state.seatSetup.groups || [];
-
-  if(groups.length === 0){
-    box.innerHTML = `<div style="opacity:.85">まだ作成されていません</div>`;
-  }else{
-    groups.forEach(g=>{
-
-      const wrap = document.createElement("div");
-      wrap.style.marginBottom = "14px";
-
-      const head = document.createElement("button");
-      head.className = "btn full";
-      head.style.textAlign = "left";
-      head.style.fontWeight = "900";
-      head.textContent = `${g.name}（定員 ${Math.max(0, ssNum(g.capacity))}名）`;
-      head.onclick = ()=> openSeatSetupGroupEditor_v8(g.gid);
-      wrap.appendChild(head);
-
-      const grid = document.createElement("div");
-      grid.className = "seatGrid";
-      grid.style.marginTop = "10px";
-
-      (g.seatIds || []).forEach(id=>{
-
-        const seat = seatById(id);
-        const cap = Math.max(0, ssNum(seat?.cap ?? g.capacity ?? 0));
-
-        const c = document.createElement("div");
-        c.className = "seatCard in";
-        c.style.minHeight = "92px";
-        c.style.display = "flex";
-        c.style.flexDirection = "column";
-        c.style.alignItems = "center";
-        c.style.justifyContent = "center";
-        c.style.gap = "4px";
-        c.style.fontWeight = "900";
-
-        c.innerHTML = `
-          <div style="font-size:13px;opacity:.78">${g.name}</div>
-          <div style="font-size:22px">${id}</div>
-          <div style="font-size:13px;opacity:.85">定員 ${cap}名</div>
-        `;
-
-        c.onclick = ()=> openSavedSeatEditor_v8(g.gid, id);
-        grid.appendChild(c);
-      });
-
-      wrap.appendChild(grid);
-      box.appendChild(wrap);
-    });
-  }
-
-  renderSeatSetupBaseSeats_v8();
-}
-
-/* =========================
-  元からある席一覧
-========================= */
-
-function renderSeatSetupBaseSeats_v8(){
-
-  const box = $("ssGroups");
-  if(!box) return;
+  const groups = Array.isArray(state.seatSetup.groups) ? state.seatSetup.groups : [];
 
   const groupedIds = new Set(
-    (state.seatSetup.groups || []).flatMap(g => g.seatIds || [])
+    groups.flatMap(g => Array.isArray(g.seatIds) ? g.seatIds : [])
   );
 
   const baseSeats = (state.seats || []).filter(s => !groupedIds.has(s.id));
-  if(baseSeats.length === 0) return;
 
-  const wrap = document.createElement("div");
-  wrap.style.marginTop = "18px";
+  if(groups.length === 0 && baseSeats.length === 0){
+    box.innerHTML = `<div style="opacity:.85">まだ作成されていません</div>`;
+    return;
+  }
 
-  const title = document.createElement("div");
-  title.style.fontWeight = "900";
-  title.style.marginBottom = "8px";
-  title.textContent = "元からある席";
-  wrap.appendChild(title);
+  groups.forEach(g=>{
 
-  const grid = document.createElement("div");
-  grid.className = "seatGrid";
+    const wrap = document.createElement("div");
+    wrap.style.marginBottom = "14px";
 
-  baseSeats.forEach(seat=>{
+    const head = document.createElement("button");
+    head.className = "btn full";
+    head.style.textAlign = "left";
+    head.style.fontWeight = "900";
+    head.textContent = g.name;
+    head.onclick = ()=> openSeatSetupGroupEditor_v9(g.gid);
+    wrap.appendChild(head);
 
-    const busy = ssIsBusy(seat);
+    const grid = document.createElement("div");
+    grid.className = "seatGrid";
+    grid.style.marginTop = "10px";
 
-    const c = document.createElement("div");
-    c.className = "seatCard";
-    c.style.minHeight = "92px";
-    c.style.display = "flex";
-    c.style.flexDirection = "column";
-    c.style.alignItems = "center";
-    c.style.justifyContent = "center";
-    c.style.gap = "4px";
-    c.style.fontWeight = "900";
+    (g.seatIds || []).forEach(id=>{
 
-    if(busy){
-      c.style.background = "#d85c5c";
-      c.style.borderColor = "#8f1f1f";
-      c.style.color = "#fff";
-    }
+      const seat = seatById(id);
+      const cap = seat ? Math.max(0, ssNum(seat.cap)) : ssFindSeatCapFromGroup_v9(g, id);
+      const busy = ssIsBusy(seat);
 
-    c.innerHTML = `
-      <div style="font-size:13px;opacity:.9">既存席</div>
-      <div style="font-size:22px">${seat.id}</div>
-      <div style="font-size:13px;opacity:.9">
-        ${busy ? "使用中で削除不可" : `定員 ${Math.max(0, ssNum(seat.cap || 0))}名`}
-      </div>
-    `;
+      const c = document.createElement("div");
+      c.className = "seatCard in";
+      c.style.minHeight = "96px";
+      c.style.display = "flex";
+      c.style.flexDirection = "column";
+      c.style.alignItems = "center";
+      c.style.justifyContent = "center";
+      c.style.gap = "4px";
+      c.style.fontWeight = "900";
 
-    c.onclick = ()=>{
-      openBaseSeatEditor_v8(seat.id);
-    };
+      if(busy){
+        c.style.background = "#d94b4b";
+        c.style.borderColor = "#8a1f1f";
+        c.style.color = "#fff";
+      }
 
-    grid.appendChild(c);
+      c.innerHTML = `
+        <div style="font-size:13px;opacity:.88">${g.name}</div>
+        <div style="font-size:22px">${id}</div>
+        <div style="font-size:13px;opacity:.9">定員 ${cap}名</div>
+      `;
+
+      c.onclick = ()=> openSavedSeatEditor_v9(g.gid, id);
+      grid.appendChild(c);
+    });
+
+    wrap.appendChild(grid);
+    box.appendChild(wrap);
   });
 
-  wrap.appendChild(grid);
-  box.appendChild(wrap);
+  if(baseSeats.length > 0){
+
+    const wrap = document.createElement("div");
+    wrap.style.marginTop = "18px";
+
+    const title = document.createElement("div");
+    title.style.fontWeight = "900";
+    title.style.marginBottom = "8px";
+    title.textContent = "元からある席";
+    wrap.appendChild(title);
+
+    const grid = document.createElement("div");
+    grid.className = "seatGrid";
+
+    baseSeats.forEach(seat=>{
+
+      const cap = Math.max(0, ssNum(seat.cap || 0));
+      const busy = ssIsBusy(seat);
+
+      const c = document.createElement("div");
+      c.className = "seatCard";
+      c.style.minHeight = "96px";
+      c.style.display = "flex";
+      c.style.flexDirection = "column";
+      c.style.alignItems = "center";
+      c.style.justifyContent = "center";
+      c.style.gap = "4px";
+      c.style.fontWeight = "900";
+
+      if(busy){
+        c.style.background = "#d94b4b";
+        c.style.borderColor = "#8a1f1f";
+        c.style.color = "#fff";
+      }
+
+      c.innerHTML = `
+        <div style="font-size:13px;opacity:.9">既存席</div>
+        <div style="font-size:22px">${seat.id}</div>
+        <div style="font-size:13px;opacity:.9">定員 ${cap}名</div>
+        ${busy ? `<div style="font-size:11px;font-weight:900">使用中のため削除不可</div>` : ``}
+      `;
+
+      c.onclick = ()=> openBaseSeatEditor_v9(seat.id);
+      grid.appendChild(c);
+    });
+
+    wrap.appendChild(grid);
+    box.appendChild(wrap);
+  }
 }
 
 /* =========================
   名称編集
 ========================= */
 
-function openSeatSetupGroupEditor_v8(gid){
+function openSeatSetupGroupEditor_v9(gid){
 
-  const g = (state.seatSetup.groups || []).find(x=> x.gid === gid);
+  const g = (state.seatSetup.groups || []).find(x => x.gid === gid);
   if(!g) return;
 
   openModal(
@@ -5013,7 +5077,11 @@ function openSeatSetupGroupEditor_v8(gid){
       </div>
     `,
     [
-      { label:"戻る", lime:false, onClick:()=> closeModal() }
+      {
+        label:"戻る",
+        lime:false,
+        onClick:()=> closeModal()
+      }
     ]
   );
 
@@ -5023,20 +5091,29 @@ function openSeatSetupGroupEditor_v8(gid){
 
       openModal(
         "名称変更",
-        `<input id="ssRenameGroupVal" class="btn full" style="text-align:left" value="${g.name}" />`,
+        `
+          <input
+            id="ssRenameGroupVal"
+            class="btn full"
+            style="text-align:left"
+            value="${g.name}"
+          />
+        `,
         [
           {
             label:"変更",
             lime:true,
             onClick:()=>{
-              const v = ($("ssRenameGroupVal").value || "").trim();
+
+              const v = String(($("ssRenameGroupVal").value || "")).trim();
+
               if(!v){
-                toast("名称を入力");
+                toast("名称を入力してください");
                 return;
               }
 
               if(v !== g.name && ssAllNames().includes(v)){
-                toast("同じ名称");
+                toast("同じ名称があります");
                 return;
               }
 
@@ -5044,19 +5121,27 @@ function openSeatSetupGroupEditor_v8(gid){
               g.name = v;
 
               state.seatSetup.customNames =
-                (state.seatSetup.customNames || []).map(x=> x === oldName ? v : x);
+                (state.seatSetup.customNames || []).map(x => x === oldName ? v : x);
 
-              if(state.seatSetup.committedName === oldName) state.seatSetup.committedName = v;
-              if(state.seatSetup.selectedName === oldName) state.seatSetup.selectedName = v;
+              if(state.seatSetup.committedName === oldName){
+                state.seatSetup.committedName = v;
+              }
+              if(state.seatSetup.selectedName === oldName){
+                state.seatSetup.selectedName = v;
+              }
 
               closeModal();
-              renderSeatSetupNames_v8();
-              renderSeatSetupGroups_v8();
+              renderSeatSetupNames_v9();
+              renderSeatSetupGroups_v9();
               if(typeof persistAll === "function") persistAll();
-              toast("変更しました");
+              toast("名称を変更しました");
             }
           },
-          { label:"戻る", lime:false, onClick:()=> closeModal() }
+          {
+            label:"戻る",
+            lime:false,
+            onClick:()=> closeModal()
+          }
         ]
       );
     };
@@ -5069,7 +5154,7 @@ function openSeatSetupGroupEditor_v8(gid){
       });
 
       if(blocked){
-        toast("使用中があるため削除不可");
+        toast("使用中・予約中・合流中の席があるため削除できません");
         return;
       }
 
@@ -5079,35 +5164,58 @@ function openSeatSetupGroupEditor_v8(gid){
           <div style="color:var(--danger);font-weight:900;margin-bottom:10px">
             名称「${g.name}」と席を削除します
           </div>
-          <input id="ssDeleteGroupSlide" class="range" type="range" min="0" max="100" value="0" />
+          <input
+            id="ssDeleteGroupSlide"
+            class="range"
+            type="range"
+            min="0"
+            max="100"
+            value="0"
+          />
         `,
         [
-          { label:"戻る", lime:false, onClick:()=> closeModal() }
+          {
+            label:"戻る",
+            lime:false,
+            onClick:()=> closeModal()
+          }
         ]
       );
 
       setTimeout(()=>{
+
         $("ssDeleteGroupSlide").onchange = ()=>{
+
           const v = ssNum($("ssDeleteGroupSlide").value || 0);
           if(v < 88){
             $("ssDeleteGroupSlide").value = 0;
             return;
           }
 
-          state.seats = state.seats.filter(s=> !(g.seatIds || []).includes(s.id));
-          state.seatSetup.groups = (state.seatSetup.groups || []).filter(x=> x.gid !== gid);
-          state.seatSetup.customNames = (state.seatSetup.customNames || []).filter(x=> x !== g.name);
+          state.seats =
+            state.seats.filter(s => !(g.seatIds || []).includes(s.id));
 
-          if(state.seatSetup.committedName === g.name) state.seatSetup.committedName = null;
-          if(state.seatSetup.selectedName === g.name) state.seatSetup.selectedName = null;
+          state.seatSetup.groups =
+            (state.seatSetup.groups || []).filter(x => x.gid !== gid);
+
+          state.seatSetup.customNames =
+            (state.seatSetup.customNames || []).filter(x => x !== g.name);
+
+          if(state.seatSetup.committedName === g.name){
+            state.seatSetup.committedName = null;
+          }
+          if(state.seatSetup.selectedName === g.name){
+            state.seatSetup.selectedName = null;
+          }
 
           closeModal();
-          renderSeatSetupNames_v8();
-          renderSeatSetupGroups_v8();
+          renderSeatSetupNames_v9();
+          renderSeatSetupGroups_v9();
           if(typeof renderSeats === "function") renderSeats();
           if(typeof persistAll === "function") persistAll();
           toast("削除しました");
         };
+
       },0);
     };
 
@@ -5118,24 +5226,32 @@ function openSeatSetupGroupEditor_v8(gid){
   保存済み席編集
 ========================= */
 
-function openSavedSeatEditor_v8(gid, seatId){
+function openSavedSeatEditor_v9(gid, seatId){
 
-  const g = (state.seatSetup.groups || []).find(x=> x.gid === gid);
+  const g = (state.seatSetup.groups || []).find(x => x.gid === gid);
   const seat = seatById(seatId);
   if(!g || !seat) return;
 
-  if(ssIsBusy(seat)){
-    toast("使用中・予約中・合流中は編集不可");
-    return;
-  }
+  const busy = ssIsBusy(seat);
 
   openModal(
     "席編集",
     `
       <div style="font-weight:900;margin-bottom:10px">席：${seat.id}</div>
 
+      ${busy ? `
+        <div style="background:#d94b4b;color:#fff;padding:10px;border-radius:12px;margin-bottom:12px;font-weight:900">
+          使用中のため削除できません
+        </div>
+      ` : ``}
+
       <div style="margin-bottom:6px;font-weight:900">番号変更</div>
-      <input id="ssSavedSeatNewId" class="btn full" style="text-align:left;margin-bottom:12px" value="${seat.id}" />
+      <input
+        id="ssSavedSeatNewId"
+        class="btn full"
+        style="text-align:left;margin-bottom:12px"
+        value="${seat.id}"
+      />
 
       <div style="margin-bottom:6px;font-weight:900">定員変更</div>
       <div style="display:flex;gap:10px;margin-bottom:12px">
@@ -5145,67 +5261,106 @@ function openSavedSeatEditor_v8(gid, seatId){
       </div>
 
       <div style="margin-bottom:6px;font-weight:900;color:var(--danger)">削除</div>
-      <input id="ssSavedSeatDeleteSlide" class="range" type="range" min="0" max="100" value="0" />
+      <input
+        id="ssSavedSeatDeleteSlide"
+        class="range"
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+        ${busy ? "disabled" : ""}
+      />
     `,
     [
       {
         label:"保存",
         lime:true,
         onClick:()=>{
-          const newId = ($("ssSavedSeatNewId").value || "").trim();
-          if(!newId){
-            toast("席番号を入力");
+
+          if(busy){
+            toast("使用中の席は編集できません");
             return;
           }
-          if(state.seats.some(s=> s.id === newId && s !== seat)){
-            toast("同じ席番号");
+
+          const newId = String(($("ssSavedSeatNewId").value || "")).trim();
+
+          if(!newId){
+            toast("席番号を入力してください");
+            return;
+          }
+
+          const sameNameIds = (g.seatIds || []).filter(x => x !== seat.id);
+          if(sameNameIds.includes(newId)){
+            toast("同じ名称内で同じ席番号が使われています");
             return;
           }
 
           const oldId = seat.id;
           seat.id = newId;
           seat.cap = Math.max(0, ssNum($("ssSavedCapVal").textContent || 0));
-          g.seatIds = (g.seatIds || []).map(x=> x === oldId ? newId : x);
+
+          g.seatIds = (g.seatIds || []).map(x => x === oldId ? newId : x);
+          g.capacities = (g.capacities || []).map(x=>{
+            if(x && x.id === oldId){
+              return { id:newId, cap:seat.cap };
+            }
+            return x;
+          });
 
           closeModal();
-          renderSeatSetupGroups_v8();
+          renderSeatSetupGroups_v9();
           if(typeof renderSeats === "function") renderSeats();
           if(typeof persistAll === "function") persistAll();
           toast("変更しました");
         }
       },
-      { label:"戻る", lime:false, onClick:()=> closeModal() }
+      {
+        label:"戻る",
+        lime:false,
+        onClick:()=> closeModal()
+      }
     ]
   );
 
   setTimeout(()=>{
 
     $("ssSavedCapMinus").onclick = ()=>{
-      $("ssSavedCapVal").textContent =
-        Math.max(0, ssNum($("ssSavedCapVal").textContent || 0) - 1);
+      if(busy) return;
+      const cur = Math.max(0, ssNum($("ssSavedCapVal").textContent || 0) - 1);
+      $("ssSavedCapVal").textContent = String(cur);
     };
 
     $("ssSavedCapPlus").onclick = ()=>{
-      $("ssSavedCapVal").textContent =
-        ssNum($("ssSavedCapVal").textContent || 0) + 1;
+      if(busy) return;
+      const cur = Math.max(0, ssNum($("ssSavedCapVal").textContent || 0) + 1);
+      $("ssSavedCapVal").textContent = String(cur);
     };
 
     $("ssSavedSeatDeleteSlide").onchange = ()=>{
+
+      if(busy){
+        $("ssSavedSeatDeleteSlide").value = 0;
+        toast("使用中の席は削除できません");
+        return;
+      }
+
       const v = ssNum($("ssSavedSeatDeleteSlide").value || 0);
       if(v < 88){
         $("ssSavedSeatDeleteSlide").value = 0;
         return;
       }
 
-      state.seats = state.seats.filter(s=> s.id !== seatId);
-      g.seatIds = (g.seatIds || []).filter(x=> x !== seatId);
+      state.seats = state.seats.filter(s => s.id !== seatId);
+      g.seatIds = (g.seatIds || []).filter(x => x !== seatId);
+      g.capacities = (g.capacities || []).filter(x => x && x.id !== seatId);
 
       if((g.seatIds || []).length === 0){
-        state.seatSetup.groups = (state.seatSetup.groups || []).filter(x=> x.gid !== gid);
+        state.seatSetup.groups =
+          (state.seatSetup.groups || []).filter(x => x.gid !== gid);
       }
 
       closeModal();
-      renderSeatSetupGroups_v8();
+      renderSeatSetupGroups_v9();
       if(typeof renderSeats === "function") renderSeats();
       if(typeof persistAll === "function") persistAll();
       toast("削除しました");
@@ -5215,10 +5370,10 @@ function openSavedSeatEditor_v8(gid, seatId){
 }
 
 /* =========================
-  元席編集
+  元からある席編集
 ========================= */
 
-function openBaseSeatEditor_v8(seatId){
+function openBaseSeatEditor_v9(seatId){
 
   const seat = seatById(seatId);
   if(!seat) return;
@@ -5236,7 +5391,11 @@ function openBaseSeatEditor_v8(seatId){
         <div>定員：${Math.max(0, ssNum(seat.cap || 0))}名</div>
       `,
       [
-        { label:"戻る", lime:false, onClick:()=> closeModal() }
+        {
+          label:"戻る",
+          lime:false,
+          onClick:()=> closeModal()
+        }
       ]
     );
     return;
@@ -5248,10 +5407,21 @@ function openBaseSeatEditor_v8(seatId){
       <div style="font-weight:900;margin-bottom:10px">席番号：${seat.id}</div>
       <div style="margin-bottom:10px">定員：${Math.max(0, ssNum(seat.cap || 0))}名</div>
       <div style="margin-bottom:6px;font-weight:900;color:var(--danger)">削除</div>
-      <input id="ssBaseSeatDeleteSlide" class="range" type="range" min="0" max="100" value="0" />
+      <input
+        id="ssBaseSeatDeleteSlide"
+        class="range"
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+      />
     `,
     [
-      { label:"戻る", lime:false, onClick:()=> closeModal() }
+      {
+        label:"戻る",
+        lime:false,
+        onClick:()=> closeModal()
+      }
     ]
   );
 
@@ -5263,10 +5433,10 @@ function openBaseSeatEditor_v8(seatId){
         return;
       }
 
-      state.seats = state.seats.filter(s=> s.id !== seatId);
+      state.seats = state.seats.filter(s => s.id !== seatId);
 
       closeModal();
-      renderSeatSetupGroups_v8();
+      renderSeatSetupGroups_v9();
       if(typeof renderSeats === "function") renderSeats();
       if(typeof persistAll === "function") persistAll();
       toast("削除しました");
@@ -5275,26 +5445,26 @@ function openBaseSeatEditor_v8(seatId){
 }
 
 /* =========================
-  hook
+  hook / init
 ========================= */
 
 registerScreenHook("scrSeatSetup", ()=>{
   try{
-    renderSeatSetupNames_v8();
-    renderSeatSetupCounters_v8();
-    renderSeatSetupPreview_v8();
-    renderSeatSetupGroups_v8();
+    renderSeatSetupNames_v9();
+    renderSeatSetupCounters_v9();
+    renderSeatSetupPreview_v9();
+    renderSeatSetupGroups_v9();
   }catch(e){
     console.warn(e);
   }
 });
 
-(function initSeatSetupPart6_v8(){
+(function initSeatSetupPart6_v9(){
   try{
-    renderSeatSetupNames_v8();
-    renderSeatSetupCounters_v8();
-    renderSeatSetupPreview_v8();
-    renderSeatSetupGroups_v8();
+    renderSeatSetupNames_v9();
+    renderSeatSetupCounters_v9();
+    renderSeatSetupPreview_v9();
+    renderSeatSetupGroups_v9();
   }catch(e){
     console.warn(e);
   }
