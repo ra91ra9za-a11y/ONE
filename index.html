@@ -301,103 +301,93 @@
         0 0 0 2px rgba(210,34,34,.18);
     }
 
-    .seatNo{
-      font-size:22px;
-      font-weight:900;
-      line-height:1.08;
-      word-break:break-word;
-      display:-webkit-box;
-      -webkit-line-clamp:2;
-      -webkit-box-orient:vertical;
-      overflow:hidden;
-      min-height:46px;
-      margin-bottom:4px;
-      padding-right:30px;
-    }
+.seatNo{
+  font-size:20px;
+  font-weight:900;
+  line-height:1.06;
+  word-break:break-word;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  min-height:42px;
+  margin-top:24px;
+  margin-bottom:4px;
+  padding-right:0;
+  width:100%;
+}
 
-    .seatPeople{
-      font-size:15px;
-      font-weight:900;
-      line-height:1.1;
-      margin-bottom:4px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+.seatPeople{
+  position:absolute;
+  left:8px;
+  top:6px;
+  right:52px; /* Gタグぶんだけ空ける */
+  font-size:15px;
+  font-weight:900;
+  line-height:1;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 
-    .seatName{
-      font-size:15px;
-      font-weight:900;
-      line-height:1.1;
-      min-height:17px;
-      margin-bottom:4px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+.seatName{
+  font-size:15px;
+  font-weight:900;
+  line-height:1.1;
+  min-height:17px;
+  margin-bottom:4px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 
-    .seatState{
-      font-size:15px;
-      font-weight:900;
-      line-height:1.1;
-      min-height:17px;
-      margin-bottom:3px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+.seatState{
+  font-size:15px;
+  font-weight:900;
+  line-height:1.1;
+  min-height:17px;
+  margin-bottom:3px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 
-    .seatSub{
-      font-size:13px;
-      font-weight:800;
-      line-height:1.05;
-      opacity:.78;
-      min-height:15px;
-      margin-bottom:2px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+.seatSub{
+  display:none; /* グループ表示は消す */
+}
 
-    .seatBills{
-      font-size:13px;
-      font-weight:800;
-      line-height:1.05;
-      opacity:.78;
-      min-height:15px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+.seatBills{
+  font-size:13px;
+  font-weight:800;
+  line-height:1.05;
+  opacity:.78;
+  min-height:15px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 
-    .seatPrice{
-      margin-top:auto;
-      font-size:15px;
-      font-weight:900;
-      line-height:1.05;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      color: inherit;
-    }
+.seatPrice{
+  display:none; /* 料金は載せない */
+}
 
-    .groupTag{
-      position:absolute;
-      right:6px;
-      top:6px;
-      min-width:26px;
-      height:20px;
-      padding:0 6px;
-      border-radius:999px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:11px;
-      font-weight:900;
-      background:rgba(255,255,255,0.72);
-      color:#222;
-      border:1px solid rgba(0,0,0,0.12);
-    }
+.groupTag{
+  position:absolute;
+  right:8px;
+  top:6px;
+  min-width:34px;
+  height:24px;
+  padding:0 8px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:900;
+  background:rgba(255,255,255,0.82);
+  color:#222;
+  border:1px solid rgba(0,0,0,0.12);
+}
 
     /* =========================
       Bottom Nav
@@ -1039,73 +1029,66 @@
       }
     }
 
-    function renderSeats(){
-      const grid = $("seatGrid");
-      if(!grid) return;
-      grid.innerHTML = "";
+  function renderSeats(){
+  const grid = $("seatGrid");
+  if(!grid) return;
+  grid.innerHTML = "";
 
-      state.seats.forEach(seat=>{
-        const card = document.createElement("div");
-        card.className = "seatCard " + (seat.status==="reserve" ? "reserve" : seat.status==="in" ? "in" : "empty");
+  state.seats.forEach(seat=>{
+    const card = document.createElement("div");
+    card.className = "seatCard " + (seat.status==="reserve" ? "reserve" : seat.status==="in" ? "in" : "empty");
 
-        if(seat.groupColor){
-          card.classList.add("group-" + seat.groupColor);
-        }
-        if(mainSelectedIds().includes(seat.id)){
-          card.classList.add("isSelected");
-        }
-
-        const seatLabel = seat.id;
-        const bills = Number(seat.bills||0);
-
-        let peopleText = "";
-        let nameLine = "";
-        let stateLine = "";
-        let subLine = "";
-        let billsLine = "";
-
-        if(seat.status==="in"){
-          peopleText = `着席${Number(seat.people||0)}名`;
-          nameLine = seat.name || "";
-          stateLine = seat.fromSeatLabels ? `→${seat.fromSeatLabels}` : "来店";
-          subLine = seat.groupId ? `グループ ${seat.groupId}` : "";
-          if(bills>=2) billsLine = `別会計${bills}件`;
-        }else if(seat.status==="reserve"){
-          peopleText = `予約${Number(seat.people||0)}名`;
-          nameLine = seat.reserve?.name || seat.name || "";
-          stateLine = "予約";
-          subLine = seat.reserve?.time || "";
-        }else{
-          peopleText = `${Number(seat.cap||1)}名席`;
-          nameLine = "";
-          stateLine = "空席";
-          subLine = "";
-        }
-
-        const money = (seat.status==="in") ? yen(calcSeatTotal(seat)) : "";
-
-        card.innerHTML = `
-          ${seat.groupId ? `<div class="groupTag">${seat.groupId}</div>` : ``}
-          <div class="seatNo">${seatLabel}</div>
-          <div class="seatPeople">${peopleText || " "}</div>
-          <div class="seatName">${nameLine || " "}</div>
-          <div class="seatState">${stateLine || " "}</div>
-          <div class="seatSub">${subLine || " "}</div>
-          <div class="seatBills">${billsLine || " "}</div>
-          <div class="seatPrice">${money || " "}</div>
-        `;
-
-        card.onclick = ()=> toggleSelectSeat(seat.id);
-        grid.appendChild(card);
-      });
-
-      const selected = mainSelectedIds().length;
-      $("mainHint").textContent = selected>0
-        ? `空席 ${selected}席を選択中`
-        : "空席は複数選択できます";
+    if(seat.groupColor){
+      card.classList.add("group-" + seat.groupColor);
+    }
+    if(mainSelectedIds().includes(seat.id)){
+      card.classList.add("isSelected");
     }
 
-    // PART2から使う用
+    const seatLabel = seat.id;
+    const bills = Number(seat.bills||0);
+
+    let peopleText = "";
+    let nameLine = "";
+    let stateLine = "";
+    let billsLine = "";
+
+    if(seat.status==="in"){
+      peopleText = `${Number(seat.people||0)}名`;
+      nameLine = seat.name || "";
+      stateLine = seat.fromSeatLabels ? `→${seat.fromSeatLabels}` : "来店";
+      if(bills>=2) billsLine = `別会計${bills}件`;
+    }else if(seat.status==="reserve"){
+      peopleText = `${Number(seat.people||0)}名`;
+      nameLine = seat.reserve?.name || seat.name || "";
+      stateLine = "予約";
+    }else{
+      peopleText = `${Number(seat.cap||1)}名席`;
+      nameLine = "";
+      stateLine = "空席";
+    }
+
+    card.innerHTML = `
+      ${seat.groupId ? `<div class="groupTag">${seat.groupId}</div>` : ``}
+      <div class="seatPeople">${peopleText || " "}</div>
+      <div class="seatNo">${seatLabel}</div>
+      <div class="seatName">${nameLine || " "}</div>
+      <div class="seatState">${stateLine || " "}</div>
+      <div class="seatBills">${billsLine || " "}</div>
+      <div class="seatPrice"></div>
+    `;
+
+    card.onclick = ()=> toggleSelectSeat(seat.id);
+    grid.appendChild(card);
+  });
+
+  const selected = mainSelectedIds().length;
+  $("mainHint").textContent = selected>0
+    ? `空席 ${selected}席を選択中`
+    : "空席は複数選択できます";
+}
+
+// PART2から使う用
     window.ONE_MAIN_GET_SELECTED_IDS = ()=> [...mainSelectedIds()];
     window.ONE_MAIN_CLEAR_SELECTION = ()=>{
       clearMainSelection();
@@ -2385,6 +2368,36 @@ function seatSortKey(id){
   return `~~~~_${t}`;
 }
 
+function getWholeMoveSourceSeats_v4(fromIds){
+
+  const picked =
+    fromIds
+      .map(id=> seatById(id))
+      .filter(Boolean);
+
+  const byId = {};
+
+  picked.forEach(seat=>{
+
+    if(seat.groupId){
+
+      getGroupSeats(seat.groupId)
+        .forEach(gs=>{
+          byId[gs.id] = gs;
+        });
+
+    }else{
+
+      byId[seat.id] = seat;
+
+    }
+
+  });
+
+  return Object.values(byId);
+
+}
+
 function moveSelectionGridHtml(seats, selectedIds, dataKey){
   return `
     <div class="seatGrid">
@@ -2532,134 +2545,314 @@ function openMoveHome(){
 }
 
 function doSeatMove_v4(fromIds, toIds){
-  const fromSeats = fromIds.map(id=> seatById(id)).filter(Boolean);
-  const toSeats   = toIds.map(id=> seatById(id)).filter(Boolean);
+
+  const fromSeats =
+    getWholeMoveSourceSeats_v4(fromIds);
+
+  const toSeats =
+    toIds
+      .map(id=> seatById(id))
+      .filter(Boolean);
 
   if(!fromSeats.length || !toSeats.length){
     toast("席が見つかりません");
     return;
   }
 
-  const payloadSeat = fromSeats[0];
-  const people = Number(payloadSeat.people||0);
-  const targetCap = toSeats.reduce((sum, s)=> sum + Number(s.cap||1), 0);
+  const invalidTo =
+    toSeats.some(s=>
+      (s.status !== "empty"
+       && !fromSeats.some(f=> f.id===s.id))
+    );
 
-  const doMove = ()=>{
-    const payload = cloneSeatPayload(payloadSeat);
-
-    fromSeats.forEach(s=> clearSeatToEmpty(s));
-   const movedFromLabel = fromIds.join("");
-
-toSeats.forEach((s, idx)=>{
-  s.status = payload.status;
-  s.people = payload.people;
-  s.name = idx===0 ? payload.name : "";
-  s.bills = payload.bills;
-  s.total = idx===0 ? payload.total : 0;
-  s.orders = idx===0 ? payload.orders : [];
-  s.orderLog = idx===0 ? payload.orderLog : [];
-  s.reserve = payload.reserve;
-  s.groupId = payload.groupId;
-  s.groupColor = payload.groupColor;
-  s.groupRoot = toSeats[0].id;
-  s.fromSeatLabels = idx===0 ? movedFromLabel : "";
-});
-
-    renderSeats();
-    closeModal();
-    toast("移動しました");
-  };
-
-  const invalidTo = toSeats.some(s=> (s.status !== "empty" && !fromIds.includes(s.id)));
   if(invalidTo){
-    toast("移動先は空席または現在使用中の自席だけにしてください");
+    toast("移動先は空席だけにしてください");
     return;
   }
 
-  if(targetCap < people){
+
+  const payloadRoot =
+    fromSeats.find(s=> s.groupRoot === s.id)
+    || fromSeats[0];
+
+
+  const payload = {
+
+    status: payloadRoot.status || "in",
+    name: payloadRoot.name || "",
+    reserve: payloadRoot.reserve
+      ? JSON.parse(JSON.stringify(payloadRoot.reserve))
+      : null,
+
+    bills: 1,
+
+    orders:
+      Array.isArray(payloadRoot.orders)
+        ? JSON.parse(JSON.stringify(payloadRoot.orders))
+        : [],
+
+    orderLog:
+      Array.isArray(payloadRoot.orderLog)
+        ? JSON.parse(JSON.stringify(payloadRoot.orderLog))
+        : [],
+
+    total: Number(payloadRoot.total || 0),
+
+    groupId: payloadRoot.groupId || null,
+    groupColor: payloadRoot.groupColor || null,
+
+  };
+
+
+  const movedPeople =
+    Math.max(
+      ...fromSeats.map(s=> Number(s.people||0)),
+      fromSeats.length
+    );
+
+
+  const targetCap =
+    toSeats.reduce(
+      (sum, s)=> sum + Number(s.cap||1),
+      0
+    );
+
+
+  const movedFromLabel =
+    fromIds.join("");
+
+
+  const doMove = ()=>{
+
+    fromSeats.forEach(s=> clearSeatToEmpty(s));
+
+    const rootId = toSeats[0].id;
+
+    toSeats.forEach((s, idx)=>{
+
+      s.status = payload.status;
+
+      s.people = movedPeople;
+
+      s.name =
+        idx===0
+          ? payload.name
+          : "";
+
+      s.bills = payload.bills;
+
+      s.total =
+        idx===0
+          ? payload.total
+          : 0;
+
+      s.orders =
+        idx===0
+          ? JSON.parse(JSON.stringify(payload.orders))
+          : [];
+
+      s.orderLog =
+        idx===0
+          ? JSON.parse(JSON.stringify(payload.orderLog))
+          : [];
+
+      s.reserve =
+        payload.reserve
+          ? JSON.parse(JSON.stringify(payload.reserve))
+          : null;
+
+      s.groupId = payload.groupId;
+      s.groupColor = payload.groupColor;
+      s.groupRoot = rootId;
+
+      s.fromSeatLabels =
+        idx===0
+          ? movedFromLabel
+          : "";
+
+    });
+
+    renderSeats();
+
+    closeModal();
+
+    toast("移動しました");
+
+  };
+
+
+  if(targetCap < movedPeople){
+
     openModal(
       "確認",
-      `<div style="font-weight:1000;">席数と人数が合ってません。移動しますか？</div>`,
+      `<div>席数と人数が合ってません</div>`,
       [
         {label:"移動する", lime:true, onClick:()=> doMove()},
         {label:"戻る", lime:false, onClick:()=> closeModal()},
       ]
     );
+
     return;
+
   }
 
   doMove();
+
 }
 
 function doSeatMerge_v4(fromIds, toIds){
-  const fromSeats = fromIds.map(id=> seatById(id)).filter(Boolean);
-  const toSeats   = toIds.map(id=> seatById(id)).filter(Boolean);
+
+  const fromSeats =
+    fromIds
+      .map(id=> seatById(id))
+      .filter(Boolean);
+
+  const toSeats =
+    toIds
+      .map(id=> seatById(id))
+      .filter(Boolean);
 
   if(!fromSeats.length || !toSeats.length){
     toast("席が見つかりません");
     return;
   }
 
-  const invalidFrom = fromSeats.some(s=> s.status !== "in");
-  if(invalidFrom){
-    toast("合流元は来店中の席だけにしてください");
-    return;
-  }
 
-  const invalidTo = toSeats.some(s=> s.status !== "in" && s.status !== "empty");
-  if(invalidTo){
-    toast("合流先が不正です");
-    return;
-  }
+  const base =
+    fromSeats.find(s=> s.groupRoot === s.id)
+    || fromSeats[0];
 
-  const base = fromSeats[0];
-  const mergeIds = [...new Set([...fromIds, ...toIds])];
-  const groupInfo = window.ONE_MAIN_ASSIGN_GROUP_TO_IDS
-    ? window.ONE_MAIN_ASSIGN_GROUP_TO_IDS(mergeIds, base.people || 1, "in")
-    : null;
 
-  const gid = groupInfo?.groupId || ("G" + String(state.groupSeq||1));
-  const color = groupInfo?.groupColor || "pink";
-  const root = groupInfo?.groupRoot || mergeIds[0];
+  const mergeIds =
+    [...new Set([...fromIds, ...toIds])];
 
-  const combinedOrders = [];
-  const combinedLog = [];
+
+  const groupInfo =
+    window.ONE_MAIN_ASSIGN_GROUP_TO_IDS
+      ? window.ONE_MAIN_ASSIGN_GROUP_TO_IDS(
+          mergeIds,
+          Math.max(
+            ...fromSeats.map(s=> Number(s.people||0)),
+            fromIds.length
+          ),
+          "in"
+        )
+      : null;
+
+
+  const gid =
+    groupInfo?.groupId
+    || ("G" + String(state.groupSeq||1));
+
+  const color =
+    groupInfo?.groupColor
+    || "pink";
+
+  const root =
+    groupInfo?.groupRoot
+    || mergeIds[0];
+
+
   let total = 0;
   let people = 0;
 
-  mergeIds.forEach((id, idx)=>{
+  const combinedOrders = [];
+  const combinedLog = [];
+
+
+  mergeIds.forEach(id=>{
+
     const s = seatById(id);
     if(!s) return;
-    people = Math.max(people, Number(s.people||0));
+
+    people =
+      Math.max(
+        people,
+        Number(s.people||0)
+      );
+
     total += Number(s.total||0);
-    (s.orders || []).forEach(o=> combinedOrders.push(JSON.parse(JSON.stringify(o))));
-    (s.orderLog || []).forEach(l=> combinedLog.push(JSON.parse(JSON.stringify(l))));
+
+    (s.orders||[])
+      .forEach(o=>
+        combinedOrders.push(
+          JSON.parse(JSON.stringify(o))
+        )
+      );
+
+    (s.orderLog||[])
+      .forEach(l=>
+        combinedLog.push(
+          JSON.parse(JSON.stringify(l))
+        )
+      );
+
   });
 
- const mergeFromLabel = fromIds.join("");
 
-mergeIds.forEach((id, idx)=>{
-  const s = seatById(id);
-  if(!s) return;
-  s.status = "in";
-  s.people = people || 1;
-  s.groupId = gid;
-  s.groupColor = color;
-  s.groupRoot = root;
-  s.name = (id===root ? base.name : "");
-  s.reserve = null;
-  s.bills = 1;
-  s.orders = (id===root ? combinedOrders : []);
-  s.orderLog = (id===root ? combinedLog : []);
-  s.total = (id===root ? total : 0);
-  s.fromSeatLabels = (id===root ? mergeFromLabel : "");
-});
+  people =
+    Math.max(
+      people,
+      fromIds.length
+    );
+
+
+  const mergeFromLabel =
+    fromIds.join("");
+
+
+  mergeIds.forEach(id=>{
+
+    const s = seatById(id);
+    if(!s) return;
+
+    s.status = "in";
+
+    s.people = people;
+
+    s.groupId = gid;
+    s.groupColor = color;
+    s.groupRoot = root;
+
+    s.name =
+      id===root
+        ? base.name
+        : "";
+
+    s.reserve = null;
+
+    s.bills = 1;
+
+    s.orders =
+      id===root
+        ? combinedOrders
+        : [];
+
+    s.orderLog =
+      id===root
+        ? combinedLog
+        : [];
+
+    s.total =
+      id===root
+        ? total
+        : 0;
+
+    s.fromSeatLabels =
+      id===root
+        ? mergeFromLabel
+        : "";
+
+  });
+
 
   renderSeats();
-  closeModal();
-  toast("合流しました");
-}
 
+  closeModal();
+
+  toast("合流しました");
+
+}
 
 /* =========================================================
    11) フック / ボタン再接続
