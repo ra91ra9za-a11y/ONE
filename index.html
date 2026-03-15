@@ -6289,9 +6289,6 @@ function openMailSendModal(){
   );
 }
 
-/* =========================================================
-   E) 本日の営業終了
-========================================================= */
 function openCloseBusinessModal(){
   ensureSettingsEx();
   const s = state.settingsEx.store;
@@ -6331,9 +6328,6 @@ function openCloseBusinessModal(){
   );
 }
 
-/* =========================================================
-   F) ヘルプ / Q&A
-========================================================= */
 const QA_LIST_V2 = [
   {q:"会計合算はどうやって行いますか？", a:"同じグループ内の席をまとめて処理します。別グループを直接まとめることはしません。"},
   {q:"電波がない場所でも使えますか？", a:"使えます。ただし端末間同期はできないため、通信が戻ったら同期してください。"},
@@ -6438,13 +6432,31 @@ function openTerms(){
   `;
 })();
 
-state.menu = state.menu || {
-  cat: null,
-  genres: { food: [], drink: [] },
-  selectedGenre: null,
-  tax: null,
-  items: []
-};
+/* ★ 修正：state.menu の初期化不足対策 */
+function ensureMenuState(){
+  state.menu = state.menu || {};
+
+  state.menu.cat = state.menu.cat || null;
+  state.menu.selectedGenre = state.menu.selectedGenre || null;
+  state.menu.tax = (state.menu.tax===8 || state.menu.tax===10) ? state.menu.tax : null;
+
+  if(!state.menu.genres || typeof state.menu.genres !== "object"){
+    state.menu.genres = {};
+  }
+
+  if(!Array.isArray(state.menu.genres.food)){
+    state.menu.genres.food = [];
+  }
+  if(!Array.isArray(state.menu.genres.drink)){
+    state.menu.genres.drink = [];
+  }
+
+  if(!Array.isArray(state.menu.items)){
+    state.menu.items = [];
+  }
+}
+
+ensureMenuState();
 
 function setCardHL(el, on){
   if(!el) return;
@@ -6453,14 +6465,15 @@ function setCardHL(el, on){
 }
 
 /* =========================
-  PART8-2：設定・ヘルプ・有料導線 ＋ メニュー登録（後半）
-  重要：ここでHTMLを閉じて完成
+  PART8-2：設定・ヘルプ・有料導線 ＋ メニュー登録（中盤）
 ========================= */
 
 /* =========================================================
    H) メニュー登録 ロジック
 ========================================================= */
 function renderGenres(){
+  ensureMenuState();
+
   const grid = $("genreGrid");
   if(!grid) return;
   grid.innerHTML = "";
@@ -6520,6 +6533,8 @@ function renderGenres(){
 }
 
 function renderItems(){
+  ensureMenuState();
+
   const box = $("itemList");
   if(!box) return;
   box.innerHTML = "";
@@ -6608,6 +6623,8 @@ function renderItems(){
 }
 
 (function hookMenu_v2(){
+  ensureMenuState();
+
   const food = $("catFood");
   const drink = $("catDrink");
   if(!food || !drink) return;
@@ -6734,6 +6751,11 @@ function renderItems(){
   };
 })();
 
+/* =========================
+  PART8-3：設定・ヘルプ・有料導線 ＋ メニュー登録（後半）
+  重要：ここでHTMLを閉じて完成
+========================= */
+
 /* =========================================================
    I) 設定画面ボタン接続
 ========================================================= */
@@ -6770,8 +6792,11 @@ registerScreenHook("scrSettings", ()=>{
 
 registerScreenHook("scrMenu", ()=>{
   try{
+    ensureMenuState();
     state.menu.cat = null;
     state.menu.selectedGenre = null;
+    state.menu.tax = null;
+
     if($("genreArea")) $("genreArea").style.display = "none";
     if($("itemArea")) $("itemArea").style.display = "none";
     setCardHL($("catFood"), false);
@@ -6787,6 +6812,7 @@ registerScreenHook("scrMenu", ()=>{
 (function finalizePart8(){
   try{
     ensureSettingsEx();
+    ensureMenuState();
     if(typeof renderSeats==="function") renderSeats();
   }catch(e){
     console.warn(e);
