@@ -6609,11 +6609,18 @@ function renderItems(){
       );
 
       setTimeout(()=>{
-        const setTax = (v)=>{
-          it.tax = v;
-          $("e8").classList.toggle("lime", v===8);
-          $("e10").classList.toggle("lime", v===10);
-        };
+      const setTax = (v)=>{
+  it.tax = v;
+
+  $("e8").classList.toggle("lime", v===8);
+  $("e10").classList.toggle("lime", v===10);
+
+  $("e8").style.outline = (v===8) ? "3px solid #d22" : "";
+  $("e10").style.outline = (v===10) ? "3px solid #d22" : "";
+
+  $("e8").style.outlineOffset = (v===8) ? "-1px" : "";
+  $("e10").style.outlineOffset = (v===10) ? "-1px" : "";
+}; 
         $("e8").onclick = ()=> setTax(8);
         $("e10").onclick = ()=> setTax(10);
         setTax(it.tax || 10);
@@ -6709,11 +6716,17 @@ function renderItems(){
     $("itemArea").style.display = "block";
 
     const setTax = (v)=>{
-      state.menu.tax = v;
-      $("tax8").classList.toggle("lime", v===8);
-      $("tax10").classList.toggle("lime", v===10);
-    };
+  state.menu.tax = v;
 
+  $("tax8").classList.toggle("lime", v===8);
+  $("tax10").classList.toggle("lime", v===10);
+
+  $("tax8").style.outline = (v===8) ? "3px solid #d22" : "";
+  $("tax10").style.outline = (v===10) ? "3px solid #d22" : "";
+
+  $("tax8").style.outlineOffset = (v===8) ? "-1px" : "";
+  $("tax10").style.outlineOffset = (v===10) ? "-1px" : "";
+};
     $("tax8").onclick = ()=> setTax(8);
     $("tax10").onclick = ()=> setTax(10);
     setTax(10);
