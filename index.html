@@ -1949,7 +1949,7 @@ function openOrderDeltaModal_v4(seat, item){
     `,
     [
       {label:"戻る", lime:false, onClick:()=> closeModal()},
-      {label:"決定", lime:true, onClick:()=>{
+            {label:"決定", lime:true, onClick:()=>{
         if(delta===0){
           closeModal();
           return;
@@ -1958,6 +1958,12 @@ function openOrderDeltaModal_v4(seat, item){
         upsertOrderAgg(bucket, item, delta);
         pushOrderLog(bucket, item, delta, "追加");
         seat.total = calcOrdersTotal(bucket.orders || []);
+
+        for(let i=0; i<delta; i++){
+          if(typeof addKitchenFromOrder === "function"){
+            addKitchenFromOrder(seat, state.order.subId || seat.id, item);
+          }
+        }
 
         if(seat.groupId){
           const list = getGroupSeats(seat.groupId);
@@ -1974,6 +1980,14 @@ function openOrderDeltaModal_v4(seat, item){
         closeModal();
         renderSeats();
         renderOrder_v4();
+
+        try{
+          if(typeof renderKitchen === "function"){
+            renderKitchen();
+          }
+        }catch(e){
+          console.warn(e);
+        }
       }},
     ],
     getSeatDisplayLabel(seat)
