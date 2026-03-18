@@ -4229,16 +4229,24 @@ function applyFixAsCorrection_v2(){
   state.fix.stage = "edit";
   state.fix.draft = null;
 
-  toast("訂正伝票を追加しました");
-
-  showScreen("scrSales");
-
   try{
-    if(typeof renderSales_v2 === "function") renderSales_v2();
-    else if(typeof renderSales === "function") renderSales();
-  }catch(e){
-    console.warn(e);
+  if(typeof persistAll === "function"){
+    persistAll();
   }
+}catch(e){
+  console.warn(e);
+}
+
+toast("訂正伝票を追加しました");
+
+showScreen("scrSales");
+
+try{
+  if(typeof renderSales_v2 === "function") renderSales_v2();
+  else if(typeof renderSales === "function") renderSales();
+}catch(e){
+  console.warn(e);
+}
 }
 
 /* ===== 互換用 ===== */
