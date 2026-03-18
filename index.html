@@ -476,6 +476,13 @@ body{
       padding:8px 10px;
       min-height:40px;
     }
+    
+    .payActive{
+  border:3px solid #d40000 !important;
+  box-shadow:
+    0 0 0 2px rgba(212,0,0,.15),
+    inset 0 0 0 999px rgba(212,0,0,.08);
+}
 
     .pill{
       display:inline-flex;
@@ -2229,16 +2236,27 @@ function calcTargetTotal(target){
 
 function setPayBtnHL_v4(){
   const m = state.checkout.method;
-  const on = (id, flag)=> $(id)?.classList.toggle("lime", !!flag);
 
-  on("coPayCash", m==="cash");
-  on("coPayCard", m==="card");
-  on("coPayQR",   m==="qr");
+  const btnCash = $("coPayCash");
+  const btnCard = $("coPayCard");
+  const btnQR   = $("coPayQR");
 
-  $("coPaySelected").textContent =
-    m==="cash" ? "現金" :
-    m==="card" ? "カード" :
-    m==="qr" ? "QR" : "未選択";
+  if(btnCash){
+    btnCash.classList.remove("payActive");
+    btnCash.classList.remove("lime");
+  }
+  if(btnCard){
+    btnCard.classList.remove("payActive");
+    btnCard.classList.remove("lime");
+  }
+  if(btnQR){
+    btnQR.classList.remove("payActive");
+    btnQR.classList.remove("lime");
+  }
+
+  if(m==="cash" && btnCash) btnCash.classList.add("payActive");
+  if(m==="card" && btnCard) btnCard.classList.add("payActive");
+  if(m==="qr" && btnQR) btnQR.classList.add("payActive");
 }
 
 function renderCheckout_v4(){
