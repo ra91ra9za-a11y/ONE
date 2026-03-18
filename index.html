@@ -2874,17 +2874,15 @@ state.kitchen = state.kitchen || {
   const st = document.createElement("style");
   st.id = "kitchenCssV2";
   st.textContent = `
-    .kRow{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      padding:10px;
-      border-radius:14px;
-      background:rgba(255,255,255,0.45);
-      border:2px solid rgba(0,0,0,0.05);
-      margin-bottom:10px;
-    }
+  
+ .kRow{
+  display:block;
+  padding:10px;
+  border-radius:14px;
+  background:rgba(255,255,255,0.45);
+  border:2px solid rgba(0,0,0,0.05);
+  margin-bottom:10px;
+}
     .kLeft{
       min-width:0;
       flex:1;
@@ -2919,15 +2917,15 @@ state.kitchen = state.kitchen || {
       font-weight:900;
     }
     .kSlide{
-      width:30vw;
-      max-width:170px;
-      min-width:120px;
-      display:flex;
-      align-items:center;
-      justify-content:flex-end;
-      gap:8px;
-      flex:0 0 auto;
-    }
+  width:42vw;
+  max-width:220px;
+  min-width:150px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  flex:0 0 auto;
+}
     .kRange{
       width:100%;
     }
