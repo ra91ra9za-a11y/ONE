@@ -453,6 +453,18 @@ body{
       min-height:44px;
       line-height:1.1;
     }
+    .payDim{
+  opacity:0.45;
+  filter:grayscale(20%);
+}
+
+.payActive{
+  opacity:1 !important;
+  border:3px solid #d40000 !important;
+  box-shadow:
+    0 0 0 2px rgba(212,0,0,.15),
+    inset 0 0 0 999px rgba(212,0,0,.08);
+}
     .btn.full{ width:100%; }
     .btn.lime{
       background: rgba(23,75,47,.92);
@@ -2241,22 +2253,28 @@ function setPayBtnHL_v4(){
   const btnCard = $("coPayCard");
   const btnQR   = $("coPayQR");
 
-  if(btnCash){
-    btnCash.classList.remove("payActive");
-    btnCash.classList.remove("lime");
-  }
-  if(btnCard){
-    btnCard.classList.remove("payActive");
-    btnCard.classList.remove("lime");
-  }
-  if(btnQR){
-    btnQR.classList.remove("payActive");
-    btnQR.classList.remove("lime");
+  const all = [btnCash, btnCard, btnQR];
+
+  all.forEach(b=>{
+    if(!b) return;
+    b.classList.remove("payActive");
+    b.classList.add("payDim");
+  });
+
+  if(m==="cash" && btnCash){
+    btnCash.classList.remove("payDim");
+    btnCash.classList.add("payActive");
   }
 
-  if(m==="cash" && btnCash) btnCash.classList.add("payActive");
-  if(m==="card" && btnCard) btnCard.classList.add("payActive");
-  if(m==="qr" && btnQR) btnQR.classList.add("payActive");
+  if(m==="card" && btnCard){
+    btnCard.classList.remove("payDim");
+    btnCard.classList.add("payActive");
+  }
+
+  if(m==="qr" && btnQR){
+    btnQR.classList.remove("payDim");
+    btnQR.classList.add("payActive");
+  }
 }
 
 function renderCheckout_v4(){
