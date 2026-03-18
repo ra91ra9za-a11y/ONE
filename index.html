@@ -1997,16 +1997,24 @@ function openOrderDeltaModal_v4(seat, item){
     }
 
     closeModal();
-    renderSeats();
-    renderOrder_v4();
+renderSeats();
+renderOrder_v4();
 
-    try{
-      if(typeof renderKitchen === "function"){
-        renderKitchen();
-      }
-    }catch(e){
-      console.warn(e);
-    }
+try{
+  if(typeof renderKitchen === "function"){
+    renderKitchen();
+  }
+}catch(e){
+  console.warn(e);
+}
+
+try{
+  if(typeof persistAll === "function"){
+    persistAll();
+  }
+}catch(e){
+  console.warn(e);
+}
   }},
 
   {label:"取消", lime:false, wide:true, onClick:()=> closeModal()},
@@ -2129,9 +2137,18 @@ function openHistoryFix_v4(seat, itemId){
         seat.total = calcOrdersTotal(bucket.orders || []);
 
         closeModal();
-        renderSeats();
-        renderOrder_v4();
-        toast("修正しました");
+renderSeats();
+renderOrder_v4();
+
+try{
+  if(typeof persistAll === "function"){
+    persistAll();
+  }
+}catch(e){
+  console.warn(e);
+}
+
+toast("修正しました");
       }},
     ],
     getSeatDisplayLabel(seat)
@@ -3100,9 +3117,17 @@ function kitchenRowEl(item, isDone){
     }
 
     item.status = isDone ? "todo" : "done";
-    item.ts = nowTs(); // 動かした時間に更新
-    range.value = 0;
-    renderKitchen_v2();
+item.ts = nowTs();
+range.value = 0;
+renderKitchen_v2();
+
+try{
+  if(typeof persistAll === "function"){
+    persistAll();
+  }
+}catch(e){
+  console.warn(e);
+}
   };
 
   return row;
