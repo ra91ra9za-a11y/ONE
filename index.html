@@ -1613,16 +1613,24 @@ function applyArriveDecision_v3(ids, people, name){
 
 if(window.ONE_MAIN_CLEAR_SELECTION) window.ONE_MAIN_CLEAR_SELECTION();
 
-  closeModal();
-  renderSeats();
+closeModal();
+renderSeats();
 
-  state.order.seatId = rootId;
-  state.order.subId = rootId;
-  state.order.cat = null;
-  state.order.genre = null;
+state.order.seatId = rootId;
+state.order.subId = rootId;
+state.order.cat = null;
+state.order.genre = null;
 
-  showScreen("scrOrder");
-  renderOrder_v4();
+try{
+  if(typeof persistAll === "function"){
+    persistAll();
+  }
+}catch(e){
+  console.warn(e);
+}
+
+showScreen("scrOrder");
+renderOrder_v4();
 }
 
 function openReserveInputMulti_v3(ids){
@@ -1712,9 +1720,18 @@ function applyReserveDecision_v3(ids, people, name, tel, time){
   if(window.ONE_MAIN_CLEAR_SELECTION) window.ONE_MAIN_CLEAR_SELECTION();
 
   closeModal();
-  renderSeats();
-  toast("予約を保存しました");
-  showScreen("scrMain");
+renderSeats();
+
+try{
+  if(typeof persistAll === "function"){
+    persistAll();
+  }
+}catch(e){
+  console.warn(e);
+}
+
+toast("予約を保存しました");
+showScreen("scrMain");
 }
 
 
@@ -2393,8 +2410,17 @@ function finalizeCheckoutCore_v4(target){
   state.order.subId = null;
 
   renderSeats();
-  toast("会計を確定しました");
-  showScreen("scrMain");
+
+try{
+  if(typeof persistAll === "function"){
+    persistAll();
+  }
+}catch(e){
+  console.warn(e);
+}
+
+toast("会計を確定しました");
+showScreen("scrMain");
 }
 
 
