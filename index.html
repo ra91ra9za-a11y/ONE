@@ -1798,15 +1798,23 @@ function applyReserveToArrive_v3(seat){
 });
 
   closeModal();
-  renderSeats();
+renderSeats();
 
-  state.order.seatId = root.id;
-  state.order.subId = root.id;
-  state.order.cat = null;
-  state.order.genre = null;
+state.order.seatId = root.id;
+state.order.subId = root.id;
+state.order.cat = null;
+state.order.genre = null;
 
-  showScreen("scrOrder");
-  renderOrder_v4();
+try{
+  if(typeof persistAll === "function"){
+    persistAll();
+  }
+}catch(e){
+  console.warn(e);
+}
+
+showScreen("scrOrder");
+renderOrder_v4();
 }
 
 function cancelReserve_v3(seat){
@@ -1814,9 +1822,18 @@ function cancelReserve_v3(seat){
   list.forEach(clearSeatToEmpty);
 
   closeModal();
-  renderSeats();
-  toast("予約をキャンセルしました");
-  showScreen("scrMain");
+renderSeats();
+
+try{
+  if(typeof persistAll === "function"){
+    persistAll();
+  }
+}catch(e){
+  console.warn(e);
+}
+
+toast("予約をキャンセルしました");
+showScreen("scrMain");
 }
 
 
