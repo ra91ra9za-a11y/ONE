@@ -2841,8 +2841,11 @@ window.openMoveHome = openMoveHome;
   if(!scr) return;
 
   scr.innerHTML = `
-    <div style="font-weight:900; margin-bottom:10px">キッチン</div>
-
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px">
+    <div style="font-weight:900;">キッチン</div>
+    <button class="btn" id="kRefreshBtn" style="min-width:88px;">更新</button>
+  </div>
+  
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px">
       <div style="opacity:.9; font-weight:900">表示：</div>
       <button class="btn lime" id="kFilterFood">料理</button>
@@ -3179,8 +3182,19 @@ function renderKitchen_v2(){
   const bf = $("kFilterFood");
   const bd = $("kFilterDrink");
   const bt = $("kToggleDone");
-  if(!bf || !bd || !bt) return;
-
+  const br = $("kRefreshBtn");
+  if(!bf || !bd || !bt || !br) return;
+  
+    br.onclick = ()=>{
+    try{
+      renderKitchen_v2();
+      toast("更新しました");
+    }catch(e){
+      console.warn(e);
+      toast("更新に失敗しました");
+    }
+  };
+  
   bf.onclick = ()=>{
     state.kitchen.showFood = !state.kitchen.showFood;
     renderKitchen_v2();
