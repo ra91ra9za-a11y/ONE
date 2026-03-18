@@ -2841,10 +2841,15 @@ window.openMoveHome = openMoveHome;
   if(!scr) return;
 
   scr.innerHTML = `
-  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px">
-    <div style="font-weight:900;">キッチン</div>
-    <button class="btn" id="kRefreshBtn" style="min-width:88px;">更新</button>
+  <div style="text-align:center; margin-bottom:10px;">
+    <button class="btn" id="kRefreshBtn" style="
+      font-weight:900;
+      padding:10px 24px;
+      border-radius:999px;
+    ">更新</button>
   </div>
+
+  <div style="font-weight:900; margin-bottom:10px">キッチン</div>
   
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px">
       <div style="opacity:.9; font-weight:900">表示：</div>
