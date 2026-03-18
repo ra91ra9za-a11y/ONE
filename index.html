@@ -3075,10 +3075,18 @@ function renderKitchen_v2(){
 
   if(!listBox || !doneWrap || !doneBox || !btnFood || !btnDrink || !btnDone) return;
 
-  btnFood.classList.toggle("lime", !!state.kitchen.showFood);
-  btnDrink.classList.toggle("lime", !!state.kitchen.showDrink);
-  btnDone.classList.toggle("lime", !!state.kitchen.showDone);
+    btnFood.classList.add("kFilterBtn");
+  btnDrink.classList.add("kFilterBtn");
+  btnDone.classList.add("kFilterBtn");
 
+  btnFood.classList.remove("lime");
+  btnDrink.classList.remove("lime");
+  btnDone.classList.remove("lime");
+
+  btnFood.classList.toggle("active", !!state.kitchen.showFood);
+  btnDrink.classList.toggle("active", !!state.kitchen.showDrink);
+  btnDone.classList.toggle("active", !!state.kitchen.showDone);
+  
   listBox.innerHTML = "";
   doneBox.innerHTML = "";
 
