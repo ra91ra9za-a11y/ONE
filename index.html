@@ -618,14 +618,14 @@ body{
       background:#e6f2de;
     }
     .modalActions{
-      padding:12px 14px 14px;
-      display:flex;
-      gap:12px;
-      justify-content:flex-end;
-      flex-wrap:wrap;
-      flex:0 0 auto;
-      background:#ecf6e6;
-    }
+  padding:12px 14px 14px;
+  display:flex;
+  gap:44px;
+  justify-content:center;
+  flex-wrap:wrap;
+  flex:0 0 auto;
+  background:#ecf6e6;
+}
     .bigBtn{
       min-height:52px;
       padding:12px 14px;
@@ -794,12 +794,19 @@ body{
       const box = $("modalActions");
       box.innerHTML = "";
       (actions||[]).forEach(a=>{
-        const b = document.createElement("button");
-        b.className = "btn bigBtn" + (a.lime ? " lime" : "");
-        b.textContent = a.label;
-        b.onclick = ()=> a.onClick && a.onClick();
-        box.appendChild(b);
-      });
+  const b = document.createElement("button");
+  b.className = "btn bigBtn" + (a.lime ? " lime" : "");
+  b.textContent = a.label;
+
+  if(a.wide){
+    b.style.minWidth = "120px";
+    b.style.height = "54px";
+    b.style.padding = "12px 24px";
+  }
+
+  b.onclick = ()=> a.onClick && a.onClick();
+  box.appendChild(b);
+});
 
       $("modalBackdrop").classList.add("show");
       lockBody();
@@ -1961,48 +1968,49 @@ function openOrderDeltaModal_v4(seat, item){
       <div class="muted">※ 追加する数を選んでください（0なら追加なし）</div>
     `,
     [
-      {label:"戻る", lime:false, onClick:()=> closeModal()},
-            {label:"決定", lime:true, onClick:()=>{
-        if(delta===0){
-          closeModal();
-          return;
-        }
+  {label:"決定", lime:true, wide:true, onClick:()=>{
+    if(delta===0){
+      closeModal();
+      return;
+    }
 
-        upsertOrderAgg(bucket, item, delta);
-        pushOrderLog(bucket, item, delta, "追加");
-        seat.total = calcOrdersTotal(bucket.orders || []);
+    upsertOrderAgg(bucket, item, delta);
+    pushOrderLog(bucket, item, delta, "追加");
+    seat.total = calcOrdersTotal(bucket.orders || []);
 
-        for(let i=0; i<delta; i++){
-          if(typeof addKitchenFromOrder === "function"){
-            addKitchenFromOrder(seat, state.order.subId || seat.id, item);
-          }
-        }
+    for(let i=0; i<delta; i++){
+      if(typeof addKitchenFromOrder === "function"){
+        addKitchenFromOrder(seat, state.order.subId || seat.id, item);
+      }
+    }
 
-        if(seat.groupId){
-          const list = getGroupSeats(seat.groupId);
-          list.forEach(s=>{
-            s.people = seat.people;
-            s.status = "in";
-            s.bills = 1;
-          });
-        }else{
-          seat.status = "in";
-          seat.bills = 1;
-        }
+    if(seat.groupId){
+      const list = getGroupSeats(seat.groupId);
+      list.forEach(s=>{
+        s.people = seat.people;
+        s.status = "in";
+        s.bills = 1;
+      });
+    }else{
+      seat.status = "in";
+      seat.bills = 1;
+    }
 
-        closeModal();
-        renderSeats();
-        renderOrder_v4();
+    closeModal();
+    renderSeats();
+    renderOrder_v4();
 
-        try{
-          if(typeof renderKitchen === "function"){
-            renderKitchen();
-          }
-        }catch(e){
-          console.warn(e);
-        }
-      }},
-    ],
+    try{
+      if(typeof renderKitchen === "function"){
+        renderKitchen();
+      }
+    }catch(e){
+      console.warn(e);
+    }
+  }},
+
+  {label:"取消", lime:false, wide:true, onClick:()=> closeModal()},
+],
     getSeatDisplayLabel(seat)
   );
 
