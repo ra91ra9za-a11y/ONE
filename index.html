@@ -3035,17 +3035,35 @@ function kitchenRowEl(item, isDone){
   const qtyText = Number(item.qty || 0) >= 2 ? `×${item.qty}` : "";
 
   row.innerHTML = `
-    <div class="kLeft">
-      <div class="kTime">${kitchenHM(item.ts)}</div>
-      <div class="kSeat">${kitchenSeatText(item)}</div>
-      <div class="kName">${item.name}<span class="kQty">${qtyText}</span></div>
+  <!-- 1行目 -->
+  <div style="
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:6px;
+    font-weight:900;
+  ">
+    <div class="kTime">${kitchenHM(item.ts)}</div>
+    <div class="kName" style="flex:1;">
+      ${item.name}<span class="kQty">${qtyText}</span>
     </div>
+  </div>
+
+  <!-- 2行目 -->
+  <div style="
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  ">
+    <div class="kSeat">${kitchenSeatText(item)}</div>
 
     <div class="kSlide">
       ${isDone ? `<span class="kDoneBadge">完了</span>` : ``}
       <input class="kRange" type="range" min="0" max="100" value="0" />
     </div>
-  `;
+  </div>
+`;
 
   const range = row.querySelector(".kRange");
   range.onchange = ()=>{
