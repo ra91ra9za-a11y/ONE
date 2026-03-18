@@ -460,6 +460,15 @@ body{
       color:#fff;
       font-weight:700;
     }
+    .kFilterBtn{
+  opacity:0.4;
+  border:2px solid transparent;
+}
+
+.kFilterBtn.active{
+  opacity:1;
+  border:3px solid #d40000;
+}
     .btn.ghost{
       background: transparent;
       border-color: transparent;
@@ -1807,7 +1816,10 @@ window.openOrderFor_v3 = function openOrderFor_v3(seatId){
 
 function setBtnHL(btn, on){
   if(!btn) return;
-  btn.classList.toggle("lime", !!on);
+
+  btn.classList.add("kFilterBtn");
+  btn.classList.remove("lime");
+  btn.classList.toggle("active", !!on);
 }
 
 function listGenresByCat(cat){
