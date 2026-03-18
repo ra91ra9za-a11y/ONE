@@ -2725,9 +2725,17 @@ function doSeatMove_v4(fromIds, toIds){
 
     renderSeats();
 
-    closeModal();
+try{
+  if(typeof persistAll === "function"){
+    persistAll();
+  }
+}catch(e){
+  console.warn(e);
+}
 
-    toast("移動しました");
+closeModal();
+
+toast("移動しました");
 
   };
 
@@ -2828,8 +2836,17 @@ function doSeatMerge_v4(fromIds, toIds){
   });
 
   renderSeats();
-  closeModal();
-  toast("合流しました");
+
+try{
+  if(typeof persistAll === "function"){
+    persistAll();
+  }
+}catch(e){
+  console.warn(e);
+}
+
+closeModal();
+toast("合流しました");
 }
 
 /* =========================================================
