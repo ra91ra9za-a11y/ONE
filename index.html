@@ -1307,7 +1307,7 @@ document.addEventListener("touchmove", function(e){
   z-index:35;
   max-width:980px;
   margin:0 auto;
-  background:rgba(230,242,222,.98);
+  background:rgba(226,211,191,.96);
   border:2px solid rgba(23,75,47,.16);
   border-radius:18px;
   padding:5px 8px;
@@ -1521,15 +1521,25 @@ function getOrderBucket(seat){
   return seat;
 }
 
+function getOrderItemKey(item){
+  return String(
+    item?.id ||
+    `${item?.cat || ""}__${item?.genre || ""}__${item?.name || ""}__${item?.price || 0}__${item?.tax || 0}`
+  );
+}
+
 function upsertOrderAgg(bucket, item, delta){
-  bucket.orders = bucket.orders || [];
-  let o = bucket.orders.find(x=> x.itemId===item.id);
+  bucket.orders = Array.isArray(bucket.orders) ? bucket.orders : [];
+
+  const key = getOrderItemKey(item);
+  let o = bucket.orders.find(x=> x.itemKey === key);
   const d = Number(delta||0);
 
   if(!o){
     if(d <= 0) return;
     bucket.orders.push({
-      itemId:item.id,
+      itemKey:key,
+      itemId:item.id || "",
       name:item.name,
       price:item.price,
       tax:item.tax,
@@ -1542,20 +1552,24 @@ function upsertOrderAgg(bucket, item, delta){
 
   o.qty = Number(o.qty||0) + d;
   if(o.qty <= 0){
-    bucket.orders = bucket.orders.filter(x=> x.itemId!==item.id);
+    bucket.orders = bucket.orders.filter(x=> x.itemKey !== key);
   }
 }
 
 function upsertDraftAgg(bucket, item, delta){
-  bucket.currentOrderDraft = Array.isArray(bucket.currentOrderDraft) ? bucket.currentOrderDraft : [];
+  bucket.currentOrderDraft = Array.isArray(bucket.currentOrderDraft)
+    ? bucket.currentOrderDraft
+    : [];
 
-  let o = bucket.currentOrderDraft.find(x=> x.itemId===item.id);
+  const key = getOrderItemKey(item);
+  let o = bucket.currentOrderDraft.find(x=> x.itemKey === key);
   const d = Number(delta||0);
 
   if(!o){
     if(d <= 0) return;
     bucket.currentOrderDraft.push({
-      itemId:item.id,
+      itemKey:key,
+      itemId:item.id || "",
       name:item.name,
       price:item.price,
       tax:item.tax,
@@ -1568,7 +1582,8 @@ function upsertDraftAgg(bucket, item, delta){
 
   o.qty = Number(o.qty||0) + d;
   if(o.qty <= 0){
-    bucket.currentOrderDraft = bucket.currentOrderDraft.filter(x=> x.itemId!==item.id);
+    bucket.currentOrderDraft =
+      bucket.currentOrderDraft.filter(x=> x.itemKey !== key);
   }
 }
 
@@ -2255,14 +2270,14 @@ function renderOrderHistory_v4(seat){
           <div style="font-weight:1000; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:18px">${a.name} × ${a.qty}</div>
           <div class="muted" style="margin-top:4px; font-weight:1000; font-size:18px">${yen(Number(a.price||0) * Number(a.qty||0))}</div>
         </div>
-        <button class="btn" data-hfix="${a.itemId}">修正</button>
+       <button class="btn" data-hfix="${a.itemKey}">修正</button>
       </div>
     `;
     box.appendChild(row);
 
-    row.querySelector(`[data-hfix="${a.itemId}"]`).onclick = ()=>{
-      openHistoryFix_v4(seat, a.itemId);
-    };
+  row.querySelector(`[data-hfix="${a.itemKey}"]`).onclick = ()=>{
+  openHistoryFix_v4(seat, a.itemKey);
+};
   });
 }
 
@@ -2418,9 +2433,10 @@ slide.onchange = ()=>{
 ========================================================= */
 const ORDER_FIX_REASONS = ["未提供","数え間違い","注文取り違い","提供済み取消","その他"];
 
-function openHistoryFix_v4(seat, itemId){
+function openHistoryFix_v4(seat, itemKey){
   const bucket = getOrderBucket(seat);
-  const agg = (bucket.orders || []).find(x=> x.itemId===itemId);
+  const agg = (bucket.orders || []).find(x=> x.itemKey===itemKey);
+
   if(!agg) return;
 
   let delta = 0;
