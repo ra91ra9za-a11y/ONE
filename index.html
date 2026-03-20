@@ -265,6 +265,17 @@ body{
   flex-direction:column;
   justify-content:flex-start;
 }
+.seatCard.empty{
+  background: var(--emptyBg);
+}
+
+.seatCard.in{
+  background: var(--cardBg);
+}
+
+.seatCard.reserve{
+  background: var(--reserveBg);
+}
 
 .seatCard.isSelected{
   border:3px solid #d22;
@@ -1042,7 +1053,28 @@ body{
 
   state.seats.forEach(seat=>{
     const card = document.createElement("div");
-    card.className = "seatCard " + (seat.status==="reserve" ? "reserve" : seat.status==="in" ? "in" : "empty");
+card.className = "seatCard";
+
+const groupBgMap = {
+  pink:   "var(--pinkBg)",
+  yellow: "var(--yellowBg)",
+  purple: "var(--purpleBg)",
+  blue:   "var(--blueBg)",
+  orange: "var(--orangeBg)"
+};
+
+if(seat.groupColor && groupBgMap[seat.groupColor]){
+  card.style.background = groupBgMap[seat.groupColor];
+}
+else if(seat.status==="reserve"){
+  card.style.background = "var(--reserveBg)";
+}
+else if(seat.status==="in"){
+  card.style.background = "var(--cardBg)";
+}
+else{
+  card.style.background = "var(--emptyBg)";
+}
 
     if(seat.groupColor){
       card.classList.add("group-" + seat.groupColor);
