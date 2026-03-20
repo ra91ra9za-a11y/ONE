@@ -1294,7 +1294,7 @@ document.addEventListener("touchmove", function(e){
 
 <div style="height:12px; border-bottom:2px solid rgba(23,75,47,.18); margin:12px 0;"></div>
 
-<div style="margin-top:10px; padding-bottom:160px;">
+<div style="margin-top:10px; padding-bottom:110px;">
   <div style="font-weight:1000; margin-bottom:8px; font-size:20px">注文履歴</div>
   <div id="orderHistory"></div>
 </div>
@@ -1310,7 +1310,7 @@ document.addEventListener("touchmove", function(e){
   background:rgba(230,242,222,.98);
   border:2px solid rgba(23,75,47,.16);
   border-radius:18px;
-  padding:10px 12px;
+  padding:5px 8px;
   box-shadow:0 10px 22px rgba(0,0,0,.12);
 " id="orderBottomDock">
 
@@ -1320,7 +1320,9 @@ document.addEventListener("touchmove", function(e){
     gap:12px;
     align-items:center;
     font-weight:1000;
-    margin-bottom:8px;
+    margin-bottom:4px;
+    font-size:15px;
+    line-height:1;
   ">
     <div id="orderDockSeat">席 -</div>
     <div id="orderDockDraftCount">新規注文 0</div>
@@ -1328,12 +1330,36 @@ document.addEventListener("touchmove", function(e){
 
   <div style="display:flex; gap:10px; align-items:center;">
     <div style="flex:1; min-width:0;">
-      <div style="font-size:14px; font-weight:1000; color:#b12525; margin-bottom:6px; text-align:center;">
-        注文確定スライド
+      <div style="position:relative;">
+        <input class="range" id="orderConfirmSlide" type="range" min="0" max="100" value="0"
+          style="width:100%; height:30px; padding:0 6px;" />
+        <div style="
+          position:absolute;
+          left:0;
+          right:0;
+          top:50%;
+          transform:translateY(-50%);
+          text-align:center;
+          font-size:14px;
+          font-weight:1000;
+          color:#8b1f1f;
+          pointer-events:none;
+          line-height:1;
+        ">
+          注文確定
+        </div>
       </div>
-      <input class="range" id="orderConfirmSlide" type="range" min="0" max="100" value="0" />
     </div>
-    <button class="btn" id="orderCancelDraftBtn" style="flex:0 0 110px; min-height:52px;">取消</button>
+
+    <button class="btn" id="orderCancelDraftBtn"
+      style="
+        flex:0 0 110px;
+        min-height:36px;
+        padding:4px 10px;
+        line-height:1;
+      ">
+      取消
+    </button>
   </div>
 
 </div>
