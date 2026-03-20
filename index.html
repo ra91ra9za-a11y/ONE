@@ -403,7 +403,7 @@ body{
         );
       flex:0 0 4px;
     }
-    .navBtn{
+  .navBtn{
   flex:1;
   height:44px;
   background: var(--tanFill);
@@ -453,7 +453,7 @@ body{
       min-height:44px;
       line-height:1.1;
     }
-    .payDim{
+　.payDim{
   opacity:0.45;
   filter:grayscale(20%);
 }
@@ -473,7 +473,7 @@ body{
       font-weight:700;
     }
     .kFilterBtn{
-  opacity:0.4;
+  opacity:0.5;
   border:2px solid transparent;
 }
 
@@ -488,8 +488,8 @@ body{
       padding:8px 10px;
       min-height:40px;
     }
-    
-    .payActive{
+
+　.payActive{
   border:3px solid #d40000 !important;
   box-shadow:
     0 0 0 2px rgba(212,0,0,.15),
@@ -636,7 +636,7 @@ body{
       min-height:0;
       background:#e6f2de;
     }
-    .modalActions{
+  .modalActions{
   padding:12px 14px 14px;
   display:flex;
   gap:44px;
@@ -812,7 +812,7 @@ body{
 
       const box = $("modalActions");
       box.innerHTML = "";
-      (actions||[]).forEach(a=>{
+   (actions||[]).forEach(a=>{
   const b = document.createElement("button");
   b.className = "btn bigBtn" + (a.lime ? " lime" : "");
   b.textContent = a.label;
@@ -1197,9 +1197,9 @@ body{
       ここでは閉じない。PART2へ続く
     ========================= */
 /* =========================
-  PART2-1：注文 / 来店予約 / 予約詳細 / 会計
-  新仕様対応の丸ごと差し替え版
-  ※PART1-2の続きにそのまま貼る
+  PART2-1/3：注文 / 来店予約 / 予約詳細 / 会計
+  新仕様フル版
+  ※今のPART2全文の 1/3
   ※このPARTではまだ /script を閉じない
 ========================= */
 
@@ -1240,7 +1240,7 @@ body{
     startY = t.clientY;
   }, {passive:true});
 
-document.addEventListener("touchmove", function(e){
+  document.addEventListener("touchmove", function(e){
     const t = e.touches && e.touches[0];
     if(!t) return;
 
@@ -1256,44 +1256,161 @@ document.addEventListener("touchmove", function(e){
   }, {passive:false});
 })();
 
+
 /* =========================================================
    1) 注文UI
 ========================================================= */
-(function buildOrderUI_v4(){
-  if(buildOrderUI_v4._built) return;
-  buildOrderUI_v4._built = true;
+(function injectOrderCss_v5(){
+  if(document.getElementById("orderCssV5")) return;
+
+  const st = document.createElement("style");
+  st.id = "orderCssV5";
+  st.textContent = `
+    .orderDivider{
+      height:2px;
+      background:rgba(23,75,47,.18);
+      border-radius:999px;
+      margin:12px 0;
+    }
+    .orderDock{
+      position:fixed;
+      left:10px;
+      right:10px;
+      bottom:calc(10px + var(--sab));
+      z-index:35;
+      max-width:980px;
+      margin:0 auto;
+      background:rgba(230,242,222,.98);
+      border:2px solid rgba(23,75,47,.16);
+      border-radius:18px;
+      padding:10px 12px;
+      box-shadow:0 10px 22px rgba(0,0,0,.12);
+    }
+    .orderDockRow1{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      font-weight:1000;
+      margin-bottom:8px;
+    }
+    .orderDockRow2{
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .orderSlideWrap{
+      flex:1;
+      min-width:0;
+    }
+    .orderSlideHint{
+      font-size:14px;
+      font-weight:1000;
+      color:#b12525;
+      margin-bottom:6px;
+      text-align:center;
+    }
+    .orderCancelBtn{
+      flex:0 0 110px;
+      min-height:52px;
+    }
+    .orderSectionTitle{
+      font-weight:1000;
+      margin-bottom:8px;
+      font-size:18px;
+    }
+    .orderEmpty{
+      padding:10px;
+      border-radius:14px;
+      background:rgba(255,255,255,.45);
+      border:2px solid rgba(0,0,0,.05);
+      font-weight:900;
+      opacity:.8;
+    }
+    .orderTopRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .orderTopLeft{
+      min-width:0;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex:1;
+    }
+    .orderTopTitle{
+      font-weight:1000;
+      font-size:22px;
+      white-space:nowrap;
+    }
+    .orderTopSeat{
+      font-weight:1000;
+      opacity:.9;
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+  `;
+  document.head.appendChild(st);
+})();
+
+(function buildOrderUI_v5(){
+  if(buildOrderUI_v5._built) return;
+  buildOrderUI_v5._built = true;
 
   const scr = $("scrOrder");
   if(!scr) return;
 
   scr.innerHTML = `
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px">
-      <div style="font-weight:1000; font-size:22px">注文</div>
-      <div style="font-weight:1000; opacity:.9" id="orderSeatLabel"></div>
+    <div class="orderTopRow">
+      <div class="orderTopLeft">
+        <div class="orderTopTitle">注文</div>
+        <div class="orderTopSeat" id="orderSeatLabel"></div>
+      </div>
       <button class="btn lime" id="orderGoPay">会計</button>
     </div>
 
-    <div style="display:flex; gap:10px; margin-bottom:10px">
-      <button class="btn" id="orderCatFood" style="flex:1">料理</button>
-      <button class="btn" id="orderCatDrink" style="flex:1">ドリンク</button>
-      <button class="btn" id="orderBackMain" style="flex:1">メイン</button>
-    </div>
+    <div id="orderTopNav"></div>
 
     <div id="orderGenreWrap" style="display:none; margin-bottom:12px">
       <div class="seatGrid" id="orderGenreGrid"></div>
     </div>
 
     <div id="orderItemsWrap" style="display:none; margin-bottom:12px">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px">
-        <div style="font-weight:1000; font-size:20px" id="orderPickedGenre"></div>
-        <button class="btn" id="orderItemsBack">戻る</button>
-      </div>
       <div class="seatGrid" id="orderItemsGrid"></div>
     </div>
 
+    <div class="orderDivider"></div>
+
     <div style="margin-top:10px">
-      <div style="font-weight:1000; margin-bottom:8px; font-size:20px">注文履歴</div>
+      <div class="orderSectionTitle">新規注文履歴</div>
+      <div id="orderDraftHistory"></div>
+    </div>
+
+    <div class="orderDivider"></div>
+
+    <div style="margin-top:10px; padding-bottom:160px;">
+      <div class="orderSectionTitle">注文履歴</div>
       <div id="orderHistory"></div>
+    </div>
+
+    <div class="orderDock" id="orderBottomDock">
+      <div class="orderDockRow1">
+        <div id="orderDockSeat">席 -</div>
+        <div id="orderDockDraftCount">新規注文 0</div>
+      </div>
+
+      <div class="orderDockRow2">
+        <div class="orderSlideWrap">
+          <div class="orderSlideHint">注文確定スライド</div>
+          <input class="range" id="orderConfirmSlide" type="range" min="0" max="100" value="0" />
+        </div>
+        <button class="btn orderCancelBtn" id="orderCancelDraftBtn">取消</button>
+      </div>
     </div>
   `;
 })();
@@ -1321,9 +1438,6 @@ document.addEventListener("touchmove", function(e){
         <button class="btn full" id="coPayCash">現金</button>
         <button class="btn full" id="coPayCard">カード</button>
         <button class="btn full" id="coPayQR">QR</button>
-      </div>
-      <div class="muted" style="font-weight:800; margin-bottom:12px;">
-        選択中：<span id="coPaySelected">未選択</span>
       </div>
 
       <div class="panel" style="margin:12px 0;">
@@ -1405,6 +1519,7 @@ function clearSeatToEmpty(seat){
   seat.reserve = null;
   seat.orders = [];
   seat.orderLog = [];
+  seat.currentOrderDraft = [];
   seat.merged = false;
   seat.mergeLabel = "";
   seat.sub = null;
@@ -1421,6 +1536,7 @@ function clearGroupById(groupId){
 function assignOrdersToSeat(seat){
   seat.orders = Array.isArray(seat.orders) ? seat.orders : [];
   seat.orderLog = Array.isArray(seat.orderLog) ? seat.orderLog : [];
+  seat.currentOrderDraft = Array.isArray(seat.currentOrderDraft) ? seat.currentOrderDraft : [];
   return seat;
 }
 
@@ -1454,6 +1570,11 @@ function getOrderBucket(seat){
   return seat;
 }
 
+function getDraftBucket(seat){
+  assignOrdersToSeat(seat);
+  return seat;
+}
+
 function upsertOrderAgg(bucket, item, delta){
   bucket.orders = bucket.orders || [];
   let o = bucket.orders.find(x=> x.itemId===item.id);
@@ -1479,6 +1600,31 @@ function upsertOrderAgg(bucket, item, delta){
   }
 }
 
+function upsertDraftAgg(bucket, item, delta){
+  bucket.currentOrderDraft = bucket.currentOrderDraft || [];
+  let o = bucket.currentOrderDraft.find(x=> x.itemId===item.id);
+  const d = Number(delta||0);
+
+  if(!o){
+    if(d <= 0) return;
+    bucket.currentOrderDraft.push({
+      itemId:item.id,
+      name:item.name,
+      price:item.price,
+      tax:item.tax,
+      qty:d,
+      cat:item.cat,
+      genre:item.genre
+    });
+    return;
+  }
+
+  o.qty = Number(o.qty||0) + d;
+  if(o.qty <= 0){
+    bucket.currentOrderDraft = bucket.currentOrderDraft.filter(x=> x.itemId!==item.id);
+  }
+}
+
 function pushOrderLog(bucket, item, delta, reason){
   bucket.orderLog = bucket.orderLog || [];
   bucket.orderLog.unshift({
@@ -1496,7 +1642,22 @@ function formatHM(ts){
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
-state.order = state.order || { seatId:null, subId:null, cat:null, genre:null };
+function draftQtyTotal(seat){
+  const arr = Array.isArray(seat?.currentOrderDraft) ? seat.currentOrderDraft : [];
+  return arr.reduce((sum, x)=> sum + Number(x.qty||0), 0);
+}
+
+function confirmedQtyTotal(seat){
+  const arr = Array.isArray(seat?.orders) ? seat.orders : [];
+  return arr.reduce((sum, x)=> sum + Number(x.qty||0), 0);
+}
+
+state.order = state.order || {
+  seatId:null,
+  subId:null,
+  cat:null,
+  genre:null
+};
 state.checkout = state.checkout || { method:null, splitN:1 };
 
 
@@ -1613,43 +1774,42 @@ function applyArriveDecision_v3(ids, people, name){
     ? window.ONE_MAIN_ASSIGN_GROUP_TO_IDS(ids, people, "in")
     : null;
 
-  const groupId = groupInfo?.groupId || null;
   const rootId = groupInfo?.groupRoot || ids[0];
-  const rootSeat = seatById(rootId);
 
   ids.forEach((id, idx)=>{
-  const s = seatById(id);
-  if(!s) return;
-  s.status = "in";
-  s.people = Number(people||1);
-  s.name = (idx===0 ? (name || "") : "");
-  s.reserve = null;
-  s.bills = 1;
-  s.orders = s.orders || [];
-  s.orderLog = s.orderLog || [];
-  s.fromSeatLabels = "";
-}); 
+    const s = seatById(id);
+    if(!s) return;
+    s.status = "in";
+    s.people = Number(people||1);
+    s.name = (idx===0 ? (name || "") : "");
+    s.reserve = null;
+    s.bills = 1;
+    s.orders = Array.isArray(s.orders) ? s.orders : [];
+    s.orderLog = Array.isArray(s.orderLog) ? s.orderLog : [];
+    s.currentOrderDraft = Array.isArray(s.currentOrderDraft) ? s.currentOrderDraft : [];
+    s.fromSeatLabels = "";
+  });
 
-if(window.ONE_MAIN_CLEAR_SELECTION) window.ONE_MAIN_CLEAR_SELECTION();
+  if(window.ONE_MAIN_CLEAR_SELECTION) window.ONE_MAIN_CLEAR_SELECTION();
 
-closeModal();
-renderSeats();
+  closeModal();
+  renderSeats();
 
-state.order.seatId = rootId;
-state.order.subId = rootId;
-state.order.cat = null;
-state.order.genre = null;
+  state.order.seatId = rootId;
+  state.order.subId = rootId;
+  state.order.cat = null;
+  state.order.genre = null;
 
-try{
-  if(typeof persistAll === "function"){
-    persistAll();
+  try{
+    if(typeof persistAll === "function"){
+      persistAll();
+    }
+  }catch(e){
+    console.warn(e);
   }
-}catch(e){
-  console.warn(e);
-}
 
-showScreen("scrOrder");
-renderOrder_v4();
+  showScreen("scrOrder");
+  renderOrder_v5();
 }
 
 function openReserveInputMulti_v3(ids){
@@ -1720,37 +1880,38 @@ function openReserveInputMulti_v3(ids){
 }
 
 function applyReserveDecision_v3(ids, people, name, tel, time){
-  const groupInfo = window.ONE_MAIN_ASSIGN_GROUP_TO_IDS
-    ? window.ONE_MAIN_ASSIGN_GROUP_TO_IDS(ids, people, "reserve")
-    : null;
+  if(window.ONE_MAIN_ASSIGN_GROUP_TO_IDS){
+    window.ONE_MAIN_ASSIGN_GROUP_TO_IDS(ids, people, "reserve");
+  }
 
- ids.forEach(id=>{
-  const s = seatById(id);
-  if(!s) return;
-  s.status = "reserve";
-  s.people = Number(people||1);
-  s.name = "";
-  s.total = 0;
-  s.bills = 0;
-  s.reserve = { time, name, tel, note:"" };
-  s.fromSeatLabels = "";
-});
+  ids.forEach(id=>{
+    const s = seatById(id);
+    if(!s) return;
+    s.status = "reserve";
+    s.people = Number(people||1);
+    s.name = "";
+    s.total = 0;
+    s.bills = 0;
+    s.reserve = { time, name, tel, note:"" };
+    s.currentOrderDraft = [];
+    s.fromSeatLabels = "";
+  });
 
   if(window.ONE_MAIN_CLEAR_SELECTION) window.ONE_MAIN_CLEAR_SELECTION();
 
   closeModal();
-renderSeats();
+  renderSeats();
 
-try{
-  if(typeof persistAll === "function"){
-    persistAll();
+  try{
+    if(typeof persistAll === "function"){
+      persistAll();
+    }
+  }catch(e){
+    console.warn(e);
   }
-}catch(e){
-  console.warn(e);
-}
 
-toast("予約を保存しました");
-showScreen("scrMain");
+  toast("予約を保存しました");
+  showScreen("scrMain");
 }
 
 
@@ -1805,35 +1966,35 @@ function applyReserveToArrive_v3(seat){
   const list = seat.groupId ? getGroupSeats(seat.groupId) : [seat];
   const root = seat.groupId ? (getGroupRootSeat(seat.groupId) || seat) : seat;
 
- list.forEach((s, idx)=>{
-  s.status = "in";
-  s.bills = 1;
-  if(idx===0) s.name = seat.reserve?.name || "";
-  else s.name = "";
-  s.reserve = null;
-  s.orders = s.orders || [];
-  s.orderLog = s.orderLog || [];
-  s.fromSeatLabels = "";
-});
+  list.forEach((s, idx)=>{
+    s.status = "in";
+    s.bills = 1;
+    s.name = (idx===0 ? (seat.reserve?.name || "") : "");
+    s.reserve = null;
+    s.orders = Array.isArray(s.orders) ? s.orders : [];
+    s.orderLog = Array.isArray(s.orderLog) ? s.orderLog : [];
+    s.currentOrderDraft = Array.isArray(s.currentOrderDraft) ? s.currentOrderDraft : [];
+    s.fromSeatLabels = "";
+  });
 
   closeModal();
-renderSeats();
+  renderSeats();
 
-state.order.seatId = root.id;
-state.order.subId = root.id;
-state.order.cat = null;
-state.order.genre = null;
+  state.order.seatId = root.id;
+  state.order.subId = root.id;
+  state.order.cat = null;
+  state.order.genre = null;
 
-try{
-  if(typeof persistAll === "function"){
-    persistAll();
+  try{
+    if(typeof persistAll === "function"){
+      persistAll();
+    }
+  }catch(e){
+    console.warn(e);
   }
-}catch(e){
-  console.warn(e);
-}
 
-showScreen("scrOrder");
-renderOrder_v4();
+  showScreen("scrOrder");
+  renderOrder_v5();
 }
 
 function cancelReserve_v3(seat){
@@ -1841,18 +2002,18 @@ function cancelReserve_v3(seat){
   list.forEach(clearSeatToEmpty);
 
   closeModal();
-renderSeats();
+  renderSeats();
 
-try{
-  if(typeof persistAll === "function"){
-    persistAll();
+  try{
+    if(typeof persistAll === "function"){
+      persistAll();
+    }
+  }catch(e){
+    console.warn(e);
   }
-}catch(e){
-  console.warn(e);
-}
 
-toast("予約をキャンセルしました");
-showScreen("scrMain");
+  toast("予約をキャンセルしました");
+  showScreen("scrMain");
 }
 
 
@@ -1871,12 +2032,11 @@ window.openOrderFor_v3 = function openOrderFor_v3(seatId){
   state.order.genre = null;
 
   showScreen("scrOrder");
-  renderOrder_v4();
+  renderOrder_v5();
 };
 
 function setBtnHL(btn, on){
   if(!btn) return;
-
   btn.classList.add("kFilterBtn");
   btn.classList.remove("lime");
   btn.classList.toggle("active", !!on);
@@ -1890,1066 +2050,434 @@ function listItemsBy(cat, genre){
   return (state.menu?.items || []).filter(it=> it.cat===cat && it.genre===genre);
 }
 
-function renderOrder_v4(){
+/* =========================
+  ここから先は PART2-2/3
+========================= */
+
+/* =========================
+  PART2-2/3
+========================= */
+
+
+function renderOrder_v5(){
+
   const seat = getOrderTargetSeat();
   if(!seat){
     showScreen("scrMain");
     return;
   }
 
-  const orderSeatLabel = $("orderSeatLabel");
-  if(orderSeatLabel){
-    orderSeatLabel.textContent = getSeatDisplayLabel(seat);
-  }
+  assignOrdersToSeat(seat);
 
-  $("orderGoPay").onclick = ()=> openCheckout_v4();
-  $("orderBackMain").onclick = ()=>{
-    state.order.cat = null;
-    state.order.genre = null;
-    showScreen("scrMain");
-  };
+  $("orderSeatLabel").textContent = getSeatDisplayLabel(seat);
 
-  const foodBtn = $("orderCatFood");
-  const drinkBtn = $("orderCatDrink");
+  renderOrderTopNav_v5(seat);
 
-  foodBtn.onclick = ()=> toggleCat("food");
-  drinkBtn.onclick = ()=> toggleCat("drink");
-
-  function toggleCat(cat){
-    if(state.order.cat === cat){
-      state.order.cat = null;
-      state.order.genre = null;
-      renderOrder_v4();
-      return;
-    }
-    state.order.cat = cat;
-    state.order.genre = null;
-    renderOrder_v4();
-  }
-
-  setBtnHL(foodBtn, state.order.cat==="food");
-  setBtnHL(drinkBtn, state.order.cat==="drink");
-
-  const gw = $("orderGenreWrap");
-  const gg = $("orderGenreGrid");
-  const iw = $("orderItemsWrap");
-  const ig = $("orderItemsGrid");
-
-  gg.innerHTML = "";
-  ig.innerHTML = "";
-
-  if(!state.order.cat){
-    gw.style.display = "none";
-    iw.style.display = "none";
-  }else{
-    const genres = listGenresByCat(state.order.cat);
-    gw.style.display = "block";
-    iw.style.display = "none";
-
-    if(genres.length===0){
-      gg.innerHTML = `<div class="panel muted">ジャンルがありません。先にメニュー登録をしてください。</div>`;
-    }else{
-      genres.forEach(g=>{
-        const b = document.createElement("div");
-        b.className = "seatCard";
-        b.style.minHeight = "66px";
-        b.style.display = "flex";
-        b.style.alignItems = "center";
-        b.style.justifyContent = "center";
-        b.style.fontWeight = "1000";
-        b.style.fontSize = "18px";
-        b.textContent = g;
-        b.onclick = ()=>{
-          state.order.genre = g;
-          renderOrder_v4();
-        };
-        gg.appendChild(b);
-      });
-    }
-  }
-
-  if(state.order.cat && state.order.genre){
-    gw.style.display = "none";
-    iw.style.display = "block";
-    $("orderPickedGenre").textContent = state.order.genre;
-
-    $("orderItemsBack").onclick = ()=>{
-      state.order.genre = null;
-      renderOrder_v4();
-    };
-
-    const items = listItemsBy(state.order.cat, state.order.genre);
-    if(items.length===0){
-      ig.innerHTML = `<div class="panel muted">このジャンルに商品がありません</div>`;
-    }else{
-      items.forEach(it=>{
-        const c = document.createElement("div");
-        c.className = "seatCard";
-        c.style.minHeight = "96px";
-        c.style.display = "flex";
-        c.style.flexDirection = "column";
-        c.style.justifyContent = "space-between";
-        c.innerHTML = `
-          <div style="font-weight:1000; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:18px">${it.name}</div>
-          <div style="opacity:.9; font-weight:1000; font-size:18px">${yen(it.price)}</div>
-        `;
-        c.onclick = ()=> openOrderDeltaModal_v4(seat, it);
-        ig.appendChild(c);
-      });
-    }
-  }
+  renderOrderDraft_v5(seat);
 
   renderOrderHistory_v4(seat);
+
+  renderOrderDock_v5(seat);
 }
 
-function openOrderDeltaModal_v4(seat, item){
-  const bucket = getOrderBucket(seat);
-  let delta = 0;
+
+
+function renderOrderTopNav_v5(seat){
+
+  const box = $("orderTopNav");
+
+  box.innerHTML = "";
+
+  const row = document.createElement("div");
+  row.className = "seatGrid";
+
+  const makeBtn = (label, onClick)=>{
+    const b = document.createElement("button");
+    b.className = "btn";
+    b.textContent = label;
+    b.onclick = onClick;
+    return b;
+  };
+
+  if(!state.order.cat){
+
+    row.appendChild(makeBtn("料理", ()=>{
+      state.order.cat="food";
+      renderOrder_v5();
+    }));
+
+    row.appendChild(makeBtn("ドリンク", ()=>{
+      state.order.cat="drink";
+      renderOrder_v5();
+    }));
+
+    row.appendChild(makeBtn("戻る", ()=>{
+      showScreen("scrMain");
+    }));
+
+  }
+
+  else if(state.order.cat && !state.order.genre){
+
+    row.appendChild(makeBtn(state.order.cat==="food"?"料理":"ドリンク", ()=>{}));
+
+    row.appendChild(makeBtn("戻る", ()=>{
+      state.order.cat=null;
+      renderOrder_v5();
+    }));
+
+    const genres = listGenresByCat(state.order.cat);
+
+    const wrap = $("orderGenreWrap");
+    const grid = $("orderGenreGrid");
+
+    wrap.style.display="block";
+    grid.innerHTML="";
+
+    genres.forEach(g=>{
+
+      const b=document.createElement("button");
+      b.className="btn";
+      b.textContent=g;
+
+      b.onclick=()=>{
+        state.order.genre=g;
+        renderOrder_v5();
+      };
+
+      grid.appendChild(b);
+
+    });
+
+  }
+
+  else if(state.order.genre){
+
+    row.appendChild(makeBtn(state.order.genre, ()=>{}));
+
+    row.appendChild(makeBtn("戻る", ()=>{
+      state.order.genre=null;
+      renderOrder_v5();
+    }));
+
+    const wrap = $("orderItemsWrap");
+    const grid = $("orderItemsGrid");
+
+    wrap.style.display="block";
+    grid.innerHTML="";
+
+    const items = listItemsBy(state.order.cat,state.order.genre);
+
+    items.forEach(it=>{
+
+      const c=document.createElement("div");
+
+      c.className="seatCard";
+
+      c.innerHTML=`
+        <div style="font-weight:1000">${it.name}</div>
+        <div>${moneyText(it.price)}</div>
+      `;
+
+      c.onclick=()=>{
+        openOrderDeltaDraft_v5(seat,it);
+      };
+
+      grid.appendChild(c);
+
+    });
+
+  }
+
+  box.appendChild(row);
+
+}
+
+
+
+
+function openOrderDeltaDraft_v5(seat,item){
+
+  let delta=0;
 
   openModal(
     "注文",
     `
-      <div style="font-weight:1000; font-size:20px; margin-bottom:10px">${item.name}</div>
-      <div class="muted" style="margin-bottom:14px">${yen(item.price)} / 税${item.tax}%</div>
+      <div style="font-weight:1000">${item.name}</div>
+      <div>${moneyText(item.price)}</div>
 
-      <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:14px">
-        <button class="btn" id="odMinus" style="min-width:72px">◀︎</button>
-        <div class="pill" id="odVal" style="min-width:120px">0</div>
-        <button class="btn lime" id="odPlus" style="min-width:72px">▶︎</button>
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button class="btn" id="odMinus">−</button>
+        <div class="pill" id="odVal">0</div>
+        <button class="btn lime" id="odPlus">＋</button>
       </div>
-
-      <div class="muted">※ 追加する数を選んでください（0なら追加なし）</div>
     `,
     [
-  {label:"決定", lime:true, wide:true, onClick:()=>{
-    if(delta===0){
-      closeModal();
-      return;
-    }
+      {
+        label:"取消",
+        lime:false,
+        onClick:()=>closeModal()
+      },
+      {
+        label:"決定",
+        lime:true,
+        onClick:()=>{
 
-    upsertOrderAgg(bucket, item, delta);
-    pushOrderLog(bucket, item, delta, "追加");
-    seat.total = calcOrdersTotal(bucket.orders || []);
+          if(delta===0){
+            closeModal();
+            return;
+          }
 
-    for(let i=0; i<delta; i++){
-      if(typeof addKitchenFromOrder === "function"){
-        addKitchenFromOrder(seat, state.order.subId || seat.id, item);
+          upsertDraftAgg(seat,item,delta);
+
+          closeModal();
+
+          renderOrder_v5();
+
+        }
       }
-    }
-
-    if(seat.groupId){
-      const list = getGroupSeats(seat.groupId);
-      list.forEach(s=>{
-        s.people = seat.people;
-        s.status = "in";
-        s.bills = 1;
-      });
-    }else{
-      seat.status = "in";
-      seat.bills = 1;
-    }
-
-    closeModal();
-renderSeats();
-renderOrder_v4();
-
-try{
-  if(typeof renderKitchen === "function"){
-    renderKitchen();
-  }
-}catch(e){
-  console.warn(e);
-}
-
-try{
-  if(typeof persistAll === "function"){
-    persistAll();
-  }
-}catch(e){
-  console.warn(e);
-}
-  }},
-
-  {label:"取消", lime:false, wide:true, onClick:()=> closeModal()},
-],
-    getSeatDisplayLabel(seat)
-  );
-
-  setTimeout(()=>{
-    const setVal = ()=> $("odVal").textContent = String(delta);
-
-    $("odMinus").onclick = ()=>{
-      if(delta<=0) return;
-      delta -= 1;
-      setVal();
-    };
-    $("odPlus").onclick = ()=>{
-      delta += 1;
-      setVal();
-    };
-
-    setVal();
-  },0);
-}
-
-function renderOrderHistory_v4(seat){
-  const bucket = getOrderBucket(seat);
-  const box = $("orderHistory");
-  box.innerHTML = "";
-
-  const agg = (bucket.orders || []).slice().sort((a,b)=> (b.qty||0) - (a.qty||0));
-  if(agg.length===0){
-    box.innerHTML = `<div class="panel muted">まだありません</div>`;
-    return;
-  }
-
-  agg.forEach(a=>{
-    const row = document.createElement("div");
-    row.style.border = "none";
-    row.style.borderRadius = "26px";
-    row.style.padding = "12px";
-    row.style.background = "rgba(255,255,255,.45)";
-    row.style.marginBottom = "10px";
-
-    row.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:10px; align-items:center">
-        <div style="min-width:0">
-          <div style="font-weight:1000; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:18px">${a.name} × ${a.qty}</div>
-          <div class="muted" style="margin-top:4px; font-weight:1000; font-size:18px">${yen(Number(a.price||0) * Number(a.qty||0))}</div>
-        </div>
-        <button class="btn" data-hfix="${a.itemId}">修正</button>
-      </div>
-    `;
-    box.appendChild(row);
-
-    row.querySelector(`[data-hfix="${a.itemId}"]`).onclick = ()=>{
-      openHistoryFix_v4(seat, a.itemId);
-    };
-  });
-}
-
-/* =========================================================
-   8) 注文修正
-========================================================= */
-const ORDER_FIX_REASONS = ["未提供","数え間違い","注文取り違い","提供済み取消","その他"];
-
-function openHistoryFix_v4(seat, itemId){
-  const bucket = getOrderBucket(seat);
-  const agg = (bucket.orders || []).find(x=> x.itemId===itemId);
-  if(!agg) return;
-
-  let delta = 0;
-
-  openModal(
-    "修正",
-    `
-      <div style="font-weight:1000; font-size:20px; margin-bottom:8px">${agg.name}</div>
-      <div class="muted" style="margin-bottom:12px">現在：${agg.qty}</div>
-
-      <div style="margin-bottom:8px; font-weight:1000">理由（必須）</div>
-      <select id="ofWhy" class="btn full" style="text-align:left">
-        <option value="">選択してください</option>
-        ${ORDER_FIX_REASONS.map(x=> `<option value="${x}">${x}</option>`).join("")}
-      </select>
-
-      <div style="margin-top:14px; font-weight:1000; margin-bottom:8px">変更（差分）</div>
-      <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:10px">
-        <button class="btn" id="ofMinus" style="min-width:72px">◀︎</button>
-        <div class="pill" id="ofVal" style="min-width:140px">0</div>
-        <button class="btn lime" id="ofPlus" style="min-width:72px">▶︎</button>
-      </div>
-
-      <div class="muted">※ 合計が0未満にはできません</div>
-    `,
-    [
-      {label:"戻る", lime:false, onClick:()=> closeModal()},
-      {label:"決定", lime:true, onClick:()=>{
-        const reason = $("ofWhy").value || "";
-        if(!reason){
-          toast("理由を選択してください");
-          return;
-        }
-
-        const after = Number(agg.qty||0) + Number(delta||0);
-        if(after < 0){
-          toast("0未満にはできません");
-          return;
-        }
-
-        const item = {
-          id: agg.itemId,
-          name: agg.name,
-          price: agg.price,
-          tax: agg.tax,
-          cat: agg.cat,
-          genre: agg.genre
-        };
-
-        upsertOrderAgg(bucket, item, delta);
-        pushOrderLog(bucket, item, delta, reason);
-        seat.total = calcOrdersTotal(bucket.orders || []);
-
-        closeModal();
-renderSeats();
-renderOrder_v4();
-
-try{
-  if(typeof persistAll === "function"){
-    persistAll();
-  }
-}catch(e){
-  console.warn(e);
-}
-
-toast("修正しました");
-      }},
-    ],
-    getSeatDisplayLabel(seat)
-  );
-
-  setTimeout(()=>{
-    const setVal = ()=>{
-      const s = delta>0 ? `+${delta}` : String(delta);
-      $("ofVal").textContent = s;
-    };
-
-    $("ofMinus").onclick = ()=>{
-      const cur = Number(agg.qty||0) + delta;
-      if(cur <= 0) return;
-      delta -= 1;
-      setVal();
-    };
-    $("ofPlus").onclick = ()=>{
-      delta += 1;
-      setVal();
-    };
-
-    setVal();
-  },0);
-}
-
-
-/* =========================================================
-   9) 会計
-========================================================= */
-function openCheckout_v4(){
-  showScreen("scrCheckout");
-  bindCheckoutOnce_v4();
-  renderCheckout_v4();
-}
-
-function calcTargetTotal(target){
-  if(!target) return 0;
-  if(target.groupId){
-    return calcGroupTotal(target.groupId);
-  }
-  return Number(target.total || 0);
-}
-
-function setPayBtnHL_v4(){
-  const m = state.checkout.method;
-
-  const btnCash = $("coPayCash");
-  const btnCard = $("coPayCard");
-  const btnQR   = $("coPayQR");
-
-  const all = [btnCash, btnCard, btnQR];
-
-  all.forEach(b=>{
-    if(!b) return;
-    b.classList.remove("payActive");
-    b.classList.add("payDim");
-  });
-
-  if(m==="cash" && btnCash){
-    btnCash.classList.remove("payDim");
-    btnCash.classList.add("payActive");
-  }
-
-  if(m==="card" && btnCard){
-    btnCard.classList.remove("payDim");
-    btnCard.classList.add("payActive");
-  }
-
-  if(m==="qr" && btnQR){
-    btnQR.classList.remove("payDim");
-    btnQR.classList.add("payActive");
-  }
-}
-
-function renderCheckout_v4(){
-  const target = getCheckoutTarget();
-  if(!target){
-    toast("会計対象が見つかりません");
-    showScreen("scrMain");
-    return;
-  }
-
-  const total = calcTargetTotal(target);
-  $("coTotal").textContent = moneyText(total);
-
-  const n = Math.max(1, Number(state.checkout.splitN||1));
-  state.checkout.splitN = n;
-  $("coSplitN").textContent = String(n);
-  $("coPer").textContent = moneyText(Math.ceil(total / n));
-
-  setPayBtnHL_v4();
-  $("coSendReceipt").disabled = true;
-}
-
-function bindCheckoutOnce_v4(){
-  const payCash    = $("coPayCash");
-  const payCard    = $("coPayCard");
-  const payQR      = $("coPayQR");
-  const splitMinus = $("coSplitMinus");
-  const splitPlus  = $("coSplitPlus");
-  const backBtn    = $("coBack");
-  const confirmBtn = $("coConfirm");
-  const sendBtn    = $("coSendReceipt");
-
-  if(!(payCash && payCard && payQR && splitMinus && splitPlus && backBtn && confirmBtn && sendBtn)){
-    return;
-  }
-
-  payCash.onclick = ()=>{ state.checkout.method="cash"; setPayBtnHL_v4(); };
-  payCard.onclick = ()=>{ state.checkout.method="card"; setPayBtnHL_v4(); };
-  payQR.onclick   = ()=>{ state.checkout.method="qr";   setPayBtnHL_v4(); };
-
-  splitMinus.onclick = ()=>{
-    state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) - 1);
-    renderCheckout_v4();
-  };
-  splitPlus.onclick = ()=>{
-    state.checkout.splitN = Math.max(1, Number(state.checkout.splitN||1) + 1);
-    renderCheckout_v4();
-  };
-
-  backBtn.onclick = ()=> showScreen("scrOrder");
-  sendBtn.onclick = ()=> toast("無料版は送信できません（有料版）");
-  confirmBtn.onclick = ()=> finalizeCheckout_v4();
-}
-
-function finalizeCheckout_v4(){
-  const target = getCheckoutTarget();
-  if(!target){
-    toast("会計対象が見つかりません");
-    showScreen("scrMain");
-    return;
-  }
-
-  if(!state.checkout.method){
-    toast("支払い方法を選んでください");
-    return;
-  }
-
-  openCheckoutFinalConfirmModal_v4(target);
-}
-
-function openCheckoutFinalConfirmModal_v4(target){
-  const total  = calcTargetTotal(target);
-  const splitN = Math.max(1, Number(state.checkout.splitN||1));
-  const method = state.checkout.method;
-  const seatLabel = getSeatDisplayLabel(target);
-  const people = getEffectivePeopleLabel(target);
-
-  const methodText =
-    method==="cash" ? "現金" :
-    method==="card" ? "カード" :
-    method==="qr" ? "QR" : "未選択";
-
-  openModal(
-    "会計 最終確認",
-    `
-      <div style="font-weight:1000; font-size:18px; margin-bottom:10px">内容を確認してください</div>
-
-      <div class="panel" style="padding:12px; border-radius:16px">
-        <div style="display:flex; justify-content:space-between; gap:10px">
-          <div class="muted" style="font-weight:1000">席</div>
-          <div style="font-weight:1000">${seatLabel}</div>
-        </div>
-        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px">
-          <div class="muted" style="font-weight:1000">人数</div>
-          <div style="font-weight:1000">${people||"-"}</div>
-        </div>
-        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px">
-          <div class="muted" style="font-weight:1000">支払い方法</div>
-          <div style="font-weight:1000">${methodText}</div>
-        </div>
-        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px">
-          <div class="muted" style="font-weight:1000">合計</div>
-          <div style="font-weight:1000">${moneyText(total)}</div>
-        </div>
-        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px">
-          <div class="muted" style="font-weight:1000">割り勘</div>
-          <div style="font-weight:1000">${splitN}人 / 1人あたり ${moneyText(Math.ceil(total/splitN))}</div>
-        </div>
-      </div>
-
-      <div style="height:12px"></div>
-      <div style="color:#b12525; font-weight:1000; margin-bottom:8px">スライドで最終確定</div>
-      <input id="coFinalSlide" type="range" min="0" max="100" value="0" style="width:100%;" />
-      <div class="muted" style="margin-top:6px">※ 右端までスライドすると確定します</div>
-    `,
-    [
-      {label:"戻る", lime:false, onClick:()=> closeModal()},
     ]
   );
 
   setTimeout(()=>{
-    const sl = $("coFinalSlide");
-    if(!sl) return;
 
-    sl.onchange = ()=>{
-      const v = Number(sl.value||0);
-      if(v < 88){
-        sl.value = 0;
-        return;
-      }
-      closeModal();
-      finalizeCheckoutCore_v4(target);
+    const setVal=()=>$("odVal").textContent=delta;
+
+    $("odMinus").onclick=()=>{
+      delta=Math.max(0,delta-1);
+      setVal();
     };
+
+    $("odPlus").onclick=()=>{
+      delta++;
+      setVal();
+    };
+
+    setVal();
+
   },0);
-}
-
-function finalizeCheckoutCore_v4(target){
-  const total  = calcTargetTotal(target);
-  const method = state.checkout.method;
-
-  if(Array.isArray(state.sales)){
-    state.sales = { list: state.sales, tab:"today", dailyYmd:null };
-  }
-  state.sales = state.sales || { list: [], tab:"today", dailyYmd:null };
-  if(!Array.isArray(state.sales.list)) state.sales.list = [];
-
-  const tsNow = nowTs();
-  const payJP =
-    method==="cash" ? "現金" :
-    method==="card" ? "カード" :
-    method==="qr" ? "QR" : "現金";
-
-  const ordersSrc = (target.orders || []);
-  const items = ordersSrc.map(o=>({
-    name: o.name,
-    qty: Number(o.qty||0),
-    price: Number(o.price||0),
-    tax: Number(o.tax||0),
-  })).filter(x=> x.name && x.qty>0);
-
-  state.sales.list.push({
-    saleId: "s" + Math.random().toString(36).slice(2),
-    ts: tsNow,
-    inTs: tsNow,
-    outTs: tsNow,
-    seatId: getSeatDisplayLabel(target),
-    name: target.name || "",
-    pay: payJP,
-    amount: total,
-    receipt: false,
-    items,
-    corrections: [],
-  });
-
-  if(target.groupId){
-    clearGroupById(target.groupId);
-  }else{
-    clearSeatToEmpty(target);
-  }
-
-  state.checkout.method = null;
-  state.checkout.splitN = 1;
-  state.order.cat = null;
-  state.order.genre = null;
-  state.order.seatId = null;
-  state.order.subId = null;
-
-  renderSeats();
-
-try{
-  if(typeof persistAll === "function"){
-    persistAll();
-  }
-}catch(e){
-  console.warn(e);
-}
-
-toast("会計を確定しました");
-showScreen("scrMain");
-}
-
-
-/* =========================================================
-   10) 席移動 / 合流
-========================================================= */
-function getSeatStatusLabel(seat){
-  if((seat.status||"empty")==="empty") return "空席";
-  if((seat.status||"empty")==="reserve") return "予約";
-  if(seat.merged) return "合流";
-  return "来店";
-}
-
-function seatSortKey(id){
-  const t = String(id||"").trim();
-  const m = t.match(/^([A-Za-z]+)?\s*0*([0-9]+)?$/);
-  if(m){
-    const a = (m[1]||"").toUpperCase();
-    const n = m[2] ? Number(m[2]) : -1;
-    return `${a.padEnd(4,"~")}_${String(n).padStart(6,"0")}_${t}`;
-  }
-  return `~~~~_${t}`;
-}
-
-function getWholeMoveSourceSeats_v4(fromIds){
-
-  const picked =
-    fromIds
-      .map(id=> seatById(id))
-      .filter(Boolean);
-
-  const byId = {};
-
-  picked.forEach(seat=>{
-
-    if(seat.groupId){
-
-      getGroupSeats(seat.groupId)
-        .forEach(gs=>{
-          byId[gs.id] = gs;
-        });
-
-    }else{
-
-      byId[seat.id] = seat;
-
-    }
-
-  });
-
-  return Object.values(byId);
 
 }
 
-function moveSelectionGridHtml(seats, selectedIds, dataKey){
-  return `
-    <div class="seatGrid">
-      ${seats.map(seat=>{
-        const id = String(seat.id||"");
-        const sel = selectedIds.includes(id);
-        return `
-          <div class="seatCard ${sel ? "isSelected" : ""}" data-${dataKey}="${id}" style="min-height:90px;">
-            <div style="display:flex; height:100%; flex-direction:column; align-items:center; justify-content:center; gap:6px; font-weight:1000;">
-              <div style="font-size:26px;">${id}</div>
-              <div style="font-size:18px;">${getSeatStatusLabel(seat)}</div>
-              <div style="font-size:14px; opacity:.8;">${seat.cap||1}名席</div>
-            </div>
-          </div>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
 
-function cloneSeatPayload(seat){
-  return {
-    status: seat.status || "empty",
-    people: Number(seat.people||0),
-    name: seat.name || "",
-    bills: Number(seat.bills||0),
-    total: Number(seat.total||0),
-    orders: Array.isArray(seat.orders) ? JSON.parse(JSON.stringify(seat.orders)) : [],
-    orderLog: Array.isArray(seat.orderLog) ? JSON.parse(JSON.stringify(seat.orderLog)) : [],
-    reserve: seat.reserve ? JSON.parse(JSON.stringify(seat.reserve)) : null,
-    groupId: seat.groupId || null,
-    groupColor: seat.groupColor || null,
-    groupRoot: seat.groupRoot || null,
-    cap: Number(seat.cap||1),
-  };
-}
 
-function openMoveHome(){
-  const seats = (state.seats || []).slice().sort((a,b)=> seatSortKey(a.id).localeCompare(seatSortKey(b.id)));
-  if(!seats.length){
-    toast("席がありません");
+
+function renderOrderDraft_v5(seat){
+
+  const box=$("orderDraftHistory");
+
+  box.innerHTML="";
+
+  const arr=seat.currentOrderDraft||[];
+
+  if(!arr.length){
+    box.innerHTML=`<div class="orderEmpty">なし</div>`;
     return;
   }
 
-  let mode = "move";
-  let fromIds = [];
-  let toIds = [];
+  arr.forEach(o=>{
 
-  function renderBody(){
-    const hintText = mode==="move"
-      ? "※ どこから・どこへ どちらも複数選択できます"
-      : "※ 合流は相席用です。元席番号は会計終了まで識別用で保持します";
+    const row=document.createElement("div");
 
-    return `
-      <div style="display:flex; gap:10px; margin-bottom:12px">
-        <button class="btn ${mode==="move"?"lime":""}" id="mvModeMove" style="flex:1">移動</button>
-        <button class="btn ${mode==="merge"?"lime":""}" id="mvModeMerge" style="flex:1">合流</button>
-      </div>
+    row.className="panel";
 
-      <div style="font-weight:1000; margin-bottom:8px; font-size:18px">どこから</div>
-      ${moveSelectionGridHtml(seats, fromIds, "mvfrom")}
-
-      <div style="height:14px"></div>
-      <div style="font-weight:1000; margin-bottom:8px; font-size:18px">どこへ</div>
-      ${moveSelectionGridHtml(seats, toIds, "mvto")}
-
-      <div style="height:12px"></div>
-      <div class="muted">${hintText}</div>
-      <div style="height:10px"></div>
-      <div style="color:#b12525; font-weight:1000; margin-bottom:8px">スライドで確定</div>
-      <input id="mvSlide" type="range" min="0" max="100" value="0" style="width:100%;" />
+    row.innerHTML=`
+      <div>${o.name} × ${o.qty}</div>
+      <div>${moneyText(o.price*o.qty)}</div>
     `;
-  }
 
-  openModal(
-    "席移動",
-    `<div id="mvWrap">${renderBody()}</div>`,
-    [{label:"戻る", lime:false, onClick:()=> closeModal()}]
-  );
+    box.appendChild(row);
 
-  function wire(){
-    const wrap = $("mvWrap");
-    if(!wrap) return;
-
-    const rerender = ()=>{
-      wrap.innerHTML = renderBody();
-      wire();
-    };
-
-    $("mvModeMove").onclick = ()=>{
-      mode = "move";
-      fromIds = [];
-      toIds = [];
-      rerender();
-    };
-    $("mvModeMerge").onclick = ()=>{
-      mode = "merge";
-      fromIds = [];
-      toIds = [];
-      rerender();
-    };
-
-    wrap.querySelectorAll("[data-mvfrom]").forEach(el=>{
-      el.onclick = ()=>{
-        const id = el.getAttribute("data-mvfrom");
-        const i = fromIds.indexOf(id);
-        if(i >= 0) fromIds.splice(i,1);
-        else fromIds.push(id);
-        rerender();
-      };
-    });
-
-    wrap.querySelectorAll("[data-mvto]").forEach(el=>{
-      el.onclick = ()=>{
-        const id = el.getAttribute("data-mvto");
-        const i = toIds.indexOf(id);
-        if(i >= 0) toIds.splice(i,1);
-        else toIds.push(id);
-        rerender();
-      };
-    });
-
-    $("mvSlide").onchange = ()=>{
-      const v = Number($("mvSlide").value||0);
-      if(v < 88){
-        $("mvSlide").value = 0;
-        return;
-      }
-
-      if(!fromIds.length || !toIds.length){
-        toast("どこから・どこへ を選んでください");
-        $("mvSlide").value = 0;
-        return;
-      }
-
-      if(mode==="move"){
-        doSeatMove_v4(fromIds, toIds);
-      }else{
-        doSeatMerge_v4(fromIds, toIds);
-      }
-    };
-  }
-
-  setTimeout(wire, 0);
-}
-
-function doSeatMove_v4(fromIds, toIds){
-
-  const fromSeats =
-    getWholeMoveSourceSeats_v4(fromIds);
-
-  const toSeats =
-    toIds
-      .map(id=> seatById(id))
-      .filter(Boolean);
-
-  if(!fromSeats.length || !toSeats.length){
-    toast("席が見つかりません");
-    return;
-  }
-
-  const invalidTo =
-    toSeats.some(s=>
-      (s.status !== "empty"
-       && !fromSeats.some(f=> f.id===s.id))
-    );
-
-  if(invalidTo){
-    toast("移動先は空席だけにしてください");
-    return;
-  }
-
-
-  const payloadRoot =
-    fromSeats.find(s=> s.groupRoot === s.id)
-    || fromSeats[0];
-
-
-  const payload = {
-
-    status: payloadRoot.status || "in",
-    name: payloadRoot.name || "",
-    reserve: payloadRoot.reserve
-      ? JSON.parse(JSON.stringify(payloadRoot.reserve))
-      : null,
-
-    bills: 1,
-
-    orders:
-      Array.isArray(payloadRoot.orders)
-        ? JSON.parse(JSON.stringify(payloadRoot.orders))
-        : [],
-
-    orderLog:
-      Array.isArray(payloadRoot.orderLog)
-        ? JSON.parse(JSON.stringify(payloadRoot.orderLog))
-        : [],
-
-    total: Number(payloadRoot.total || 0),
-
-    groupId: payloadRoot.groupId || null,
-    groupColor: payloadRoot.groupColor || null,
-
-  };
-
-
-  const movedPeople =
-    Math.max(
-      ...fromSeats.map(s=> Number(s.people||0)),
-      fromSeats.length
-    );
-
-
-  const targetCap =
-    toSeats.reduce(
-      (sum, s)=> sum + Number(s.cap||1),
-      0
-    );
-
-
-  const movedFromLabel =
-    fromIds.join("");
-
-
-  const doMove = ()=>{
-
-    fromSeats.forEach(s=> clearSeatToEmpty(s));
-
-    const rootId = toSeats[0].id;
-
-    toSeats.forEach((s, idx)=>{
-
-      s.status = payload.status;
-
-      s.people = movedPeople;
-
-      s.name =
-        idx===0
-          ? payload.name
-          : "";
-
-      s.bills = payload.bills;
-
-      s.total =
-        idx===0
-          ? payload.total
-          : 0;
-
-      s.orders =
-        idx===0
-          ? JSON.parse(JSON.stringify(payload.orders))
-          : [];
-
-      s.orderLog =
-        idx===0
-          ? JSON.parse(JSON.stringify(payload.orderLog))
-          : [];
-
-      s.reserve =
-        payload.reserve
-          ? JSON.parse(JSON.stringify(payload.reserve))
-          : null;
-
-      s.groupId = payload.groupId;
-      s.groupColor = payload.groupColor;
-      s.groupRoot = rootId;
-
-      s.fromSeatLabels =
-        idx===0
-          ? movedFromLabel
-          : "";
-
-    });
-
-    renderSeats();
-
-try{
-  if(typeof persistAll === "function"){
-    persistAll();
-  }
-}catch(e){
-  console.warn(e);
-}
-
-closeModal();
-
-toast("移動しました");
-
-  };
-
-
-  if(targetCap < movedPeople){
-
-    openModal(
-      "確認",
-      `<div>席数と人数が合ってません</div>`,
-      [
-        {label:"移動する", lime:true, onClick:()=> doMove()},
-        {label:"戻る", lime:false, onClick:()=> closeModal()},
-      ]
-    );
-
-    return;
-
-  }
-
-  doMove();
-
-}
-
-function doSeatMerge_v4(fromIds, toIds){
-  const fromSeats = fromIds.map(id=> seatById(id)).filter(Boolean);
-  const toSeats   = toIds.map(id=> seatById(id)).filter(Boolean);
-
-  if(!fromSeats.length || !toSeats.length){
-    toast("席が見つかりません");
-    return;
-  }
-
-  const invalidFrom = fromSeats.some(s=> s.status !== "in");
-  if(invalidFrom){
-    toast("合流元は来店中の席だけにしてください");
-    return;
-  }
-
-  const rootSeat = toSeats[0];
-  if(!rootSeat){
-    toast("合流先が見つかりません");
-    return;
-  }
-
-  const mergeFromLabel = fromIds.join("");
-
-  const collectIds = [...new Set([...fromIds, ...toIds])];
-
-  let people = 0;
-  let total = 0;
-  const combinedOrders = [];
-  const combinedLog = [];
-
-  collectIds.forEach(id=>{
-    const s = seatById(id);
-    if(!s) return;
-    people = Math.max(people, Number(s.people||0));
-    total += Number(s.total||0);
-    (s.orders||[]).forEach(o=> combinedOrders.push(JSON.parse(JSON.stringify(o))));
-    (s.orderLog||[]).forEach(l=> combinedLog.push(JSON.parse(JSON.stringify(l))));
   });
 
-  people = Math.max(people, fromIds.length);
+}
 
-  const gid = "G" + String(state.groupSeq || 1);
-  const color = nextGroupColor();
-  state.groupSeq = Number(state.groupSeq||1) + 1;
+/* =========================
+  PART2-3/3
+========================= */
 
-  collectIds.forEach(id=>{
-    const s = seatById(id);
-    if(!s) return;
 
-    if(toIds.includes(id)){
-      s.status = "in";
-      s.people = people;
-      s.groupId = gid;
-      s.groupColor = color;
-      s.groupRoot = rootSeat.id;
-      s.reserve = null;
-      s.bills = 1;
+function renderOrderDock_v5(seat){
 
-      if(id === rootSeat.id){
-        s.name = rootSeat.name || fromSeats[0]?.name || "";
-        s.orders = combinedOrders;
-        s.orderLog = combinedLog;
-        s.total = total;
-        s.fromSeatLabels = mergeFromLabel;
-      }else{
-        s.name = "";
-        s.orders = [];
-        s.orderLog = [];
-        s.total = 0;
-        s.fromSeatLabels = "";
-      }
-    }else{
-      clearSeatToEmpty(s);
+  $("orderDockSeat").textContent =
+    "席 " + getSeatDisplayLabel(seat);
+
+  $("orderDockDraftCount").textContent =
+    "新規注文 " + draftQtyTotal(seat);
+
+  const slide = $("orderConfirmSlide");
+
+  slide.value = 0;
+
+  slide.onchange = ()=>{
+
+    if(Number(slide.value) < 90){
+      slide.value = 0;
+      return;
     }
+
+    confirmOrderDraft_v5(seat);
+
+  };
+
+  $("orderCancelDraftBtn").onclick = ()=>{
+
+    if(!seat.currentOrderDraft.length){
+      return;
+    }
+
+    openCancelDraftModal_v5(seat);
+
+  };
+
+}
+
+
+
+function confirmOrderDraft_v5(seat){
+
+  const draft = seat.currentOrderDraft || [];
+
+  if(!draft.length){
+    return;
+  }
+
+  draft.forEach(d=>{
+
+    upsertOrderAgg(seat,d,d.qty);
+
+    pushOrderLog(
+      seat,
+      d,
+      d.qty,
+      "追加"
+    );
+
+    for(let i=0;i<d.qty;i++){
+
+      if(typeof addKitchenFromOrder==="function"){
+        addKitchenFromOrder(
+          seat,
+          state.order.subId || seat.id,
+          d
+        );
+      }
+
+    }
+
   });
 
-  renderSeats();
+  seat.currentOrderDraft = [];
 
-try{
-  if(typeof persistAll === "function"){
-    persistAll();
-  }
-}catch(e){
-  console.warn(e);
-}
+  seat.total = calcOrdersTotal(seat.orders || []);
 
-closeModal();
-toast("合流しました");
-}
-
-/* =========================================================
-   11) フック / ボタン再接続
-========================================================= */
-registerScreenHook("scrOrder", ()=>{
-  try{ renderOrder_v4(); }catch(e){ console.warn(e); }
-});
-
-registerScreenHook("scrCheckout", ()=>{
   try{
-    bindCheckoutOnce_v4();
-    renderCheckout_v4();
+    if(typeof persistAll==="function"){
+      persistAll();
+    }
   }catch(e){
     console.warn(e);
   }
-});
 
-window.openMoveHome = openMoveHome;
+  renderOrder_v5();
+
+  renderSeats();
+
+  try{
+    if(typeof renderKitchen==="function"){
+      renderKitchen();
+    }
+  }catch(e){}
+
+}
 
 
-/* =========================================================
-   12) PART3へ続く
-========================================================= */
+
+function openCancelDraftModal_v5(seat){
+
+  openModal(
+    "注文取消",
+    `
+      <div>未確定の注文を取消します</div>
+
+      <input id="cancelDraftSlide"
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+        style="width:100%"
+      />
+
+    `,
+    [
+      {
+        label:"戻る",
+        lime:false,
+        onClick:()=>closeModal()
+      }
+    ]
+  );
+
+  setTimeout(()=>{
+
+    const sl = $("cancelDraftSlide");
+
+    if(!sl)return;
+
+    sl.onchange=()=>{
+
+      if(Number(sl.value)<90){
+        sl.value=0;
+        return;
+      }
+
+      seat.currentOrderDraft = [];
+
+      closeModal();
+
+      renderOrder_v5();
+
+    };
+
+  },0);
+
+}
+
+
+
+
+/* =========================
+  会計ボタン
+========================= */
+
+(function bindOrderPayBtn(){
+
+  const b = $("orderGoPay");
+
+  if(!b) return;
+
+  b.onclick = ()=>{
+
+    openCheckout_v4();
+
+  };
+
+})();
+
+
+
+
+/* =========================
+  初期呼び出し
+========================= */
+
+(function patchOrderRender(){
+
+  const old = window.renderOrder_v4;
+
+  window.renderOrder_v5 = renderOrder_v5;
+
+})();
 /* =========================
   PART3：キッチン（完成版）1/2
   役割：未調理一覧 / 同一メニューまとめ / スライド完了 / 提供済折りたたみ
@@ -2961,11 +2489,11 @@ window.openMoveHome = openMoveHome;
   const scr = $("scrKitchen");
   if(!scr) return;
 
-  scr.innerHTML = `
-  <div style="position:relative; margin-bottom:10px; min-height:44px;">
+scr.innerHTML = `
+ <div style="position:relative; margin-bottom:10px; min-height:44px;">
   <div style="font-weight:900; line-height:44px;">キッチン</div>
 
-  <button class="btn" id="kRefreshBtn" style="
+<button class="btn" id="kRefreshBtn" style="
   position:absolute;
   left:50%;
   top:50%;
@@ -2983,7 +2511,7 @@ window.openMoveHome = openMoveHome;
 更新
 </button>
 </div>
-  
+
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px">
       <div style="opacity:.9; font-weight:900">表示：</div>
       <button class="btn lime" id="kFilterFood">料理</button>
@@ -3015,8 +2543,8 @@ state.kitchen = state.kitchen || {
   const st = document.createElement("style");
   st.id = "kitchenCssV2";
   st.textContent = `
-  
- .kRow{
+
+   .kRow{
   display:block;
   padding:10px;
   border-radius:14px;
@@ -3057,7 +2585,7 @@ state.kitchen = state.kitchen || {
       opacity:.85;
       font-weight:900;
     }
-    .kSlide{
+   .kSlide{
   width:42vw;
   max-width:220px;
   min-width:150px;
@@ -3173,7 +2701,7 @@ function kitchenRowEl(item, isDone){
 
   const qtyText = Number(item.qty || 0) >= 2 ? `×${item.qty}` : "";
 
-  row.innerHTML = `
+row.innerHTML = `
   <!-- 1行目 -->
   <div style="
     display:flex;
@@ -3212,7 +2740,7 @@ function kitchenRowEl(item, isDone){
       return;
     }
 
-    item.status = isDone ? "todo" : "done";
+   item.status = isDone ? "todo" : "done";
 item.ts = nowTs();
 range.value = 0;
 renderKitchen_v2();
@@ -3240,7 +2768,7 @@ function renderKitchen_v2(){
 
   if(!listBox || !doneWrap || !doneBox || !btnFood || !btnDrink || !btnDone) return;
 
-    btnFood.classList.add("kFilterBtn");
+   btnFood.classList.add("kFilterBtn");
   btnDrink.classList.add("kFilterBtn");
   btnDone.classList.add("kFilterBtn");
 
@@ -3251,7 +2779,7 @@ function renderKitchen_v2(){
   btnFood.classList.toggle("active", !!state.kitchen.showFood);
   btnDrink.classList.toggle("active", !!state.kitchen.showDrink);
   btnDone.classList.toggle("active", !!state.kitchen.showDone);
-  
+
   listBox.innerHTML = "";
   doneBox.innerHTML = "";
 
@@ -3330,8 +2858,8 @@ function renderKitchen_v2(){
   const bt = $("kToggleDone");
   const br = $("kRefreshBtn");
   if(!bf || !bd || !bt || !br) return;
-  
-    br.onclick = ()=>{
+
+  br.onclick = ()=>{
     try{
       renderKitchen_v2();
       toast("更新しました");
@@ -3340,7 +2868,7 @@ function renderKitchen_v2(){
       toast("更新に失敗しました");
     }
   };
-  
+
   bf.onclick = ()=>{
     state.kitchen.showFood = !state.kitchen.showFood;
     renderKitchen_v2();
@@ -4265,7 +3793,7 @@ function applyFixAsCorrection_v2(){
   state.fix.stage = "edit";
   state.fix.draft = null;
 
-  try{
+ try{
   if(typeof persistAll === "function"){
     persistAll();
   }
@@ -6508,6 +6036,9 @@ function openMailSendModal(){
   );
 }
 
+/* =========================================================
+   E) 本日の営業終了
+========================================================= */
 function openCloseBusinessModal(){
   ensureSettingsEx();
   const s = state.settingsEx.store;
@@ -6547,6 +6078,9 @@ function openCloseBusinessModal(){
   );
 }
 
+/* =========================================================
+   F) ヘルプ / Q&A
+========================================================= */
 const QA_LIST_V2 = [
   {q:"会計合算はどうやって行いますか？", a:"同じグループ内の席をまとめて処理します。別グループを直接まとめることはしません。"},
   {q:"電波がない場所でも使えますか？", a:"使えます。ただし端末間同期はできないため、通信が戻ったら同期してください。"},
@@ -6651,31 +6185,13 @@ function openTerms(){
   `;
 })();
 
-/* ★ 修正：state.menu の初期化不足対策 */
-function ensureMenuState(){
-  state.menu = state.menu || {};
-
-  state.menu.cat = state.menu.cat || null;
-  state.menu.selectedGenre = state.menu.selectedGenre || null;
-  state.menu.tax = (state.menu.tax===8 || state.menu.tax===10) ? state.menu.tax : null;
-
-  if(!state.menu.genres || typeof state.menu.genres !== "object"){
-    state.menu.genres = {};
-  }
-
-  if(!Array.isArray(state.menu.genres.food)){
-    state.menu.genres.food = [];
-  }
-  if(!Array.isArray(state.menu.genres.drink)){
-    state.menu.genres.drink = [];
-  }
-
-  if(!Array.isArray(state.menu.items)){
-    state.menu.items = [];
-  }
-}
-
-ensureMenuState();
+state.menu = state.menu || {
+  cat: null,
+  genres: { food: [], drink: [] },
+  selectedGenre: null,
+  tax: null,
+  items: []
+};
 
 function setCardHL(el, on){
   if(!el) return;
@@ -6684,15 +6200,14 @@ function setCardHL(el, on){
 }
 
 /* =========================
-  PART8-2：設定・ヘルプ・有料導線 ＋ メニュー登録（中盤）
+  PART8-2：設定・ヘルプ・有料導線 ＋ メニュー登録（後半）
+  重要：ここでHTMLを閉じて完成
 ========================= */
 
 /* =========================================================
    H) メニュー登録 ロジック
 ========================================================= */
 function renderGenres(){
-  ensureMenuState();
-
   const grid = $("genreGrid");
   if(!grid) return;
   grid.innerHTML = "";
@@ -6752,8 +6267,6 @@ function renderGenres(){
 }
 
 function renderItems(){
-  ensureMenuState();
-
   const box = $("itemList");
   if(!box) return;
   box.innerHTML = "";
@@ -6828,18 +6341,11 @@ function renderItems(){
       );
 
       setTimeout(()=>{
-      const setTax = (v)=>{
-  it.tax = v;
-
-  $("e8").classList.toggle("lime", v===8);
-  $("e10").classList.toggle("lime", v===10);
-
-  $("e8").style.outline = (v===8) ? "3px solid #d22" : "";
-  $("e10").style.outline = (v===10) ? "3px solid #d22" : "";
-
-  $("e8").style.outlineOffset = (v===8) ? "-1px" : "";
-  $("e10").style.outlineOffset = (v===10) ? "-1px" : "";
-}; 
+        const setTax = (v)=>{
+          it.tax = v;
+          $("e8").classList.toggle("lime", v===8);
+          $("e10").classList.toggle("lime", v===10);
+        };
         $("e8").onclick = ()=> setTax(8);
         $("e10").onclick = ()=> setTax(10);
         setTax(it.tax || 10);
@@ -6849,8 +6355,6 @@ function renderItems(){
 }
 
 (function hookMenu_v2(){
-  ensureMenuState();
-
   const food = $("catFood");
   const drink = $("catDrink");
   if(!food || !drink) return;
@@ -6935,17 +6439,11 @@ function renderItems(){
     $("itemArea").style.display = "block";
 
     const setTax = (v)=>{
-  state.menu.tax = v;
+      state.menu.tax = v;
+      $("tax8").classList.toggle("lime", v===8);
+      $("tax10").classList.toggle("lime", v===10);
+    };
 
-  $("tax8").classList.toggle("lime", v===8);
-  $("tax10").classList.toggle("lime", v===10);
-
-  $("tax8").style.outline = (v===8) ? "3px solid #d22" : "";
-  $("tax10").style.outline = (v===10) ? "3px solid #d22" : "";
-
-  $("tax8").style.outlineOffset = (v===8) ? "-1px" : "";
-  $("tax10").style.outlineOffset = (v===10) ? "-1px" : "";
-};
     $("tax8").onclick = ()=> setTax(8);
     $("tax10").onclick = ()=> setTax(10);
     setTax(10);
@@ -6983,11 +6481,6 @@ function renderItems(){
   };
 })();
 
-/* =========================
-  PART8-3：設定・ヘルプ・有料導線 ＋ メニュー登録（後半）
-  重要：ここでHTMLを閉じて完成
-========================= */
-
 /* =========================================================
    I) 設定画面ボタン接続
 ========================================================= */
@@ -7024,11 +6517,8 @@ registerScreenHook("scrSettings", ()=>{
 
 registerScreenHook("scrMenu", ()=>{
   try{
-    ensureMenuState();
     state.menu.cat = null;
     state.menu.selectedGenre = null;
-    state.menu.tax = null;
-
     if($("genreArea")) $("genreArea").style.display = "none";
     if($("itemArea")) $("itemArea").style.display = "none";
     setCardHL($("catFood"), false);
@@ -7044,7 +6534,6 @@ registerScreenHook("scrMenu", ()=>{
 (function finalizePart8(){
   try{
     ensureSettingsEx();
-    ensureMenuState();
     if(typeof renderSeats==="function") renderSeats();
   }catch(e){
     console.warn(e);
